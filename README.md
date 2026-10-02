@@ -57,7 +57,8 @@ Release page: [AuronQ 1.7.3 Mainnet](https://github.com/promirmir/AuronQ/release
 SHA-256:
 
 ```text
-Checksums for 1.7.3 will be published with the release in SHA256SUMS.txt.
+a06c62561ab9c8673ac14384e1bba5af51e5e4f9b888cb9f7d1dbe238c0cfb23  AuronQ-1.7.3-Windows-x64.zip
+94eb50e5f8ddd2f1b1b37a7fc86521e309b5bd196de4cfc9d2445e5cf3501c46  AuronQ-1.7.3-Linux-amd64.tar.gz
 ```
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
