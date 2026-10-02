@@ -42,23 +42,23 @@ AuronQ may be relevant to developers, miners, node operators and researchers loo
 
 ## Project status
 
-Current stable desktop/full-node release: **AuronQ 1.7.1 Mainnet**.
+Current stable desktop/full-node release: **AuronQ 1.7.2 Mainnet**.
 
 The network is operational, but decentralization is still developing. At the time documented in this repository, the bootstrap manifest contains one confirmed public bootstrap endpoint. That endpoint has no consensus privileges; independent nodes validate the canonical chain themselves. Additional independently operated public nodes and independent discovery routes are needed to reduce first-contact dependency.
 
 ## Download
 
-**Windows x64:** [AuronQ-1.7.1-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.1/AuronQ-1.7.1-Windows-x64.zip)
+**Windows x64:** [AuronQ-1.7.2-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.2/AuronQ-1.7.2-Windows-x64.zip)
 
-**Linux amd64:** [AuronQ-1.7.1-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.1/AuronQ-1.7.1-Linux-amd64.tar.gz)
+**Linux amd64:** [AuronQ-1.7.2-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.2/AuronQ-1.7.2-Linux-amd64.tar.gz)
 
-Release page: [AuronQ 1.7.1 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.1)
+Release page: [AuronQ 1.7.2 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.2)
 
 SHA-256:
 
 ```text
-50a1b2d321117549d7ceab81aa5dfaa0bb072544915fb5e921eb9b2a24d68d8d  AuronQ-1.7.1-Windows-x64.zip
-6ddd97167f5e587cf7245ba9827d5d8c2219a96581a6ecb21a4a6d76a90270a0  AuronQ-1.7.1-Linux-amd64.tar.gz
+8e0a031e096797a6049221d318f470a9bdb0b094b845f940e0f6a468794dbb6c  AuronQ-1.7.2-Windows-x64.zip
+64986dbfe753badaa16974a00c28b373b66e6ae966ee2101c19ac125864557c1  AuronQ-1.7.2-Linux-amd64.tar.gz
 ```
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
