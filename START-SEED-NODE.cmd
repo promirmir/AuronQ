@@ -17,12 +17,11 @@ if exist "%TS%" (
   if defined TSHOST set "AURONQ_ADVERTISE=https://%TSHOST%"
 )
 
-call "%~dp0START-AURONQ.cmd"
-timeout /t 8 /nobreak >nul
-
 if exist "%TS%" (
   "%TS%" funnel --bg http://127.0.0.1:18444 >nul 2>&1
 )
+
+call "%~dp0START-AURONQ.cmd"
 
 if defined AURONQ_ADVERTISE (
   echo AuronQ public endpoint: %AURONQ_ADVERTISE%
