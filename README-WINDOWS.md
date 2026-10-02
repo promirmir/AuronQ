@@ -12,6 +12,15 @@ Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręc
 
 Użytkownik za NAT/CGNAT nadal może synchronizować, wysyłać transakcje, kopać i relayować dane przez połączenia wychodzące.
 
+## Pierwsze uruchomienie — skrót
+
+1. Zamknij starszą wersję AuronQ przyciskiem **Sieć → Zamknij AuronQ**.
+2. Rozpakuj cały oficjalny ZIP 1.7.3 do nowego folderu.
+3. Uruchom `START-AURONQ.cmd` tylko raz.
+4. Poczekaj, aż node rozpocznie synchronizację i pojawi się wysokość blockchaina.
+5. Utwórz lub zaimportuj portfel i wykonaj jego backup.
+6. Dane użytkownika są przechowywane w `%AppData%\AuronQ`; nie usuwaj tego katalogu podczas zwykłej aktualizacji.
+
 ## Suma kontrolna oficjalnego v1.7.3
 
 Oficjalny SHA-256 pliku Windows:
@@ -26,11 +35,11 @@ Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen mo
 
 ## Niezależny publiczny node
 
-Jeżeli użytkownik chce, aby jego komputer pomagał utrzymywać AuronQ również jako publicznie osiągalny pełny node, może użyć `START-PUBLIC-NODE.cmd`. Skrypt otwiera TCP/18444 w Zaporze Windows i uruchamia AuronQ Desktop.
+Zwykły użytkownik nie musi wystawiać publicznego portu i powinien uruchamiać `START-AURONQ.cmd`.
 
-To jest tryb opcjonalny. Przy routerze nadal może być potrzebne przekierowanie TCP/18444 na ten komputer. Przy CGNAT zwykle potrzebny jest VPS lub publiczny relay. AuronQ nie uznaje samej deklaracji adresu — inny node musi potwierdzić, że peer jest rzeczywiście osiągalny.
+Jeżeli operator świadomie chce udostępnić publicznie osiągalny pełny node/bootstrap, może użyć `START-SEED-NODE.cmd`. W aktualnym wydaniu skrypt korzysta z Tailscale Funnel, odczytuje publiczną nazwę `*.ts.net`, ustawia `AURONQ_ADVERTISE` i uruchamia AuronQ Desktop.
 
-Publiczne nody są wymieniane przez peer gossip i zapisywane lokalnie. Repozytorium ma też automatyczny crawler, który okresowo sprawdza osiągalne publiczne peery AuronQ i może dopisywać zweryfikowane adresy do `bootstrap.json`. Dzięki temu wraz ze wzrostem sieci nowe instalacje mogą przestać zależeć od pierwszego komputera bootstrap.
+Publiczne nody są wymieniane przez peer gossip i zapisywane lokalnie. Repozytorium ma też automatyczny crawler, który okresowo sprawdza osiągalne publiczne peery AuronQ i dopisuje zweryfikowane adresy do `bootstrap.json`.
 
 ## Operator publicznego bootstrap noda
 
@@ -42,7 +51,12 @@ Aktualne bootstrapy są publikowane w:
 
 `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
 
-Na moment publikacji dokumentu potwierdzony jest jeden publiczny bootstrap: `https://mir.taild63f46.ts.net`. Bootstrap nie ma uprawnień konsensusowych.
+Na moment aktualizacji dokumentu crawler potwierdza dwa publiczne bootstrapy:
+
+- `https://mir.taild63f46.ts.net`
+- `https://desktop-4nifg1j.taild63f46.ts.net`
+
+Bootstrapy nie mają żadnych dodatkowych uprawnień konsensusowych.
 
 ## Tożsamość sieci
 
