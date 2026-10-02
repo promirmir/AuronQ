@@ -1,6 +1,6 @@
-# AuronQ (AURQ)
+# AuronQ (AURQ) — Mainnet
 
-AuronQ is a Bitcoin-inspired UTXO proof-of-work cryptocurrency using ML-DSA-87 transaction signatures and the AQM64 proof-of-work construction.
+AuronQ is a public UTXO proof-of-work cryptocurrency with ML-DSA-87 transaction signatures and the AuronQ-specific AQM64 proof-of-work construction.
 
 ## Mainnet identity
 
@@ -12,36 +12,36 @@ Genesis hash:
 
 `5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4`
 
-Founder genesis allocation: 210,000 AURQ. Maximum supply: 21,000,000 AURQ. Initial block subsidy: 49.5 AURQ. Coinbase maturity: 100 blocks.
+Genesis founder allocation: 210,000 AURQ. Initial block subsidy: 49.5 AURQ. Coinbase maturity: 100 blocks.
 
-## Windows rc4
+## Public P2P discovery
 
-For two Windows PCs on the same private LAN:
+AuronQ does not use a central blockchain server. Every full node stores and validates its own chain. New nodes bootstrap similarly to Bitcoin-style seed discovery:
 
-1. Download the Windows x64 rc4 ZIP.
-2. Extract the complete archive.
-3. Run `START-AURONQ.cmd` on each PC and approve UAC on first launch.
-4. The launcher adds a Windows Firewall TCP 18444 rule limited to the local subnet and opens AuronQ Desktop.
-5. rc4 automatically scans the local RFC1918 /24 segment, verifies the AuronQ Network ID and adds matching LAN peers. No Tailscale, Cloudflare or manual peer entry is needed for two PCs on the same LAN.
+- previously learned public peers are persisted locally and retried;
+- fixed seed peers are supported;
+- DNS seeds are supported;
+- the official bounded HTTPS bootstrap manifest is an additional rendezvous source;
+- after first contact, nodes exchange verified public peer addresses and persist them;
+- NAT/CGNAT nodes participate through outbound connections without opening an inbound port;
+- publicly reachable nodes can announce themselves and become normal gossiped peers.
 
-The client also reads the stable bootstrap manifest:
+Official stable bootstrap manifest:
 
 `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
 
-That manifest currently contains no global public seed. Therefore unrelated networks on the public Internet still require at least one globally reachable bootstrap node before zero-touch global discovery is possible.
+The two initial bootstrap entries are stable Tailscale Funnel HTTPS front-ends to ordinary full AuronQ nodes. They are only first-contact relays and have no consensus privileges. Every peer independently validates blocks and cumulative chain work.
 
-## Verified rc4 behavior
+## Windows
 
-A real two-computer test reached the same chain at height 5 and the same tip after mining and synchronization. rc4 also fixed the missed-broadcast case by pushing missing same-branch blocks to a peer that is behind.
+Normal users extract the Windows package and run `START-AURONQ.cmd`. No Tailscale, Cloudflare, manual peer entry, Go or Docker is required for a normal participant.
 
-The frozen local tree passed:
+The two initial bootstrap operator machines run `START-SEED-NODE.cmd`, which starts the full node and backgrounds Tailscale Funnel when Tailscale is installed and Funnel is authorized.
 
-- `go test ./...`
-- `go vet ./...`
-- `go test -race ./...`
-- Windows amd64 Desktop/CLI build
-- Linux amd64 CLI build
+## Verified network behavior
+
+The rc4 networking fix was verified on two independent computers: a node that was at height 0 automatically caught up to height 4 from the stronger peer, and a newly mined block 5 then propagated so both nodes reached the same height and identical tip.
 
 ## Security status
 
-This is a release candidate. AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit. Do not treat the project as production-audited financial infrastructure yet.
+The code passes its included Go test/vet/race suites, but AQM64 and the full consensus/network implementation have **not** received an independent professional security or cryptographic audit. Mainnet availability and decentralization also depend on multiple independent operators keeping reachable nodes online.
