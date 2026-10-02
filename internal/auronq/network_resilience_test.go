@@ -2,6 +2,7 @@ package auronq
 
 import (
 	"context"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
