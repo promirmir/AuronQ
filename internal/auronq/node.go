@@ -997,4 +997,241 @@ func (n *Node) getJSON(peer, path string, out any) error {
 // postPeerJSON sends a bounded P2P POST and requires a successful HTTP status.
 // It is used by catch-up push so an outbound-only node can repair a public
 // bootstrap peer that missed a previously broadcast block.
-func (n *Node) postPeerJSON(peer, path string, v any) error {
+func (n *Node) postPeerJSON(peer, path string, v any) error {	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", peer+path, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := n.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("peer %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	return nil
+}
+
+// pushMissingExtension retries propagation when the remote peer is behind on
+// the exact same branch. This matters for NAT/outbound-only nodes: if the
+// original block broadcast failed transiently, the public seed cannot dial
+// back to the miner, so the miner must repair the seed on a later sync round.
+func (n *Node) pushMissingExtension(peer string, hello Hello, local ChainState) (bool, error) {
+	if hello.Height >= local.Height {
+		return false, nil
+	}
+	anchor, ok := n.Chain.Block(hello.Height)
+	if !ok || anchor.Hash() != hello.Tip {
+		return false, nil
+	}
+	end := local.Height
+	if end-hello.Height > maxSyncBlocksPerRound {
+		end = hello.Height + maxSyncBlocksPerRound
+	}
+	for h := hello.Height + 1; h <= end; h++ {
+		b, ok := n.Chain.Block(h)
+		if !ok {
+			return true, fmt.Errorf("local block %d missing", h)
+		}
+		if err := n.postPeerJSON(peer, "/p2p/block", b); err != nil {
+			return true, fmt.Errorf("push block %d: %w", h, err)
+		}
+	}
+	if end > hello.Height {
+		log.Printf("pushed extension to %s from height %d to %d", peer, hello.Height, end)
+	}
+	return true, nil
+}
+func (n *Node) announceSelf(peer string) {
+	adv := normalizePeer(n.cfg.Advertise)
+	if !isPublicAdvertisedPeer(adv) {
+		adv = ""
+	}
+	port := listenPort(n.cfg.Listen)
+	if adv == "" && port == 0 {
+		return
+	}
+	n.pmu.RLock()
+	_, done := n.announced[peer]
+	n.pmu.RUnlock()
+	if done {
+		return
+	}
+	a := PeerAnnounce{ProtocolVersion: 1, NetworkID: n.Chain.NetworkID(), Advertise: adv, ListenPort: port}
+	b, _ := json.Marshal(a)
+	req, _ := http.NewRequest("POST", peer+"/p2p/announce", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := n.client.Do(req)
+	if err != nil {
+		return
+	}
+	io.Copy(io.Discard, io.LimitReader(resp.Body, 1024))
+	resp.Body.Close()
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		n.pmu.Lock()
+		n.announced[peer] = struct{}{}
+		n.pmu.Unlock()
+	}
+}
+
+func (n *Node) verifyAndAddPeer(peer string) {
+	if !isPublicAdvertisedPeer(peer) {
+		return
+	}
+	var hello Hello
+	if err := n.getJSONLimit(peer, "/p2p/hello", smallP2PResponseLimit, &hello); err != nil {
+		return
+	}
+	if hello.ProtocolVersion != 1 || hello.NetworkID != n.Chain.NetworkID() {
+		return
+	}
+	n.addDiscoveredPeer(peer)
+}
+
+func (n *Node) syncPeer(peer string) error {
+	var hello Hello
+	if err := n.getJSONLimit(peer, "/p2p/hello", smallP2PResponseLimit, &hello); err != nil {
+		return fmt.Errorf("hello: %w", err)
+	}
+	if hello.ProtocolVersion != 1 || hello.NetworkID != n.Chain.NetworkID() {
+		return errors.New("peer network mismatch")
+	}
+	go n.announceSelf(peer)
+	if hello.Advertise != "" {
+		n.addDiscoveredPeer(hello.Advertise)
+	}
+	for _, p := range hello.Peers {
+		n.addDiscoveredPeer(p)
+	}
+	local := n.Chain.State()
+	rw := new(big.Int)
+	if _, ok := rw.SetString(hello.ChainWork, 16); !ok {
+		return errors.New("bad remote work")
+	}
+	lw := ChainWorkBig(local)
+	if rw.Cmp(lw) <= 0 {
+		// If the remote peer is simply behind on our exact branch, proactively
+		// repair it. This makes block propagation self-healing after a transient
+		// broadcast failure and is essential for outbound-only/NATed miners.
+		if pushed, err := n.pushMissingExtension(peer, hello, local); err != nil {
+			return err
+		} else if pushed {
+			return n.syncMempool(peer)
+		}
+		return n.syncMempool(peer)
+	}
+	max := local.Height
+	if hello.Height < max {
+		max = hello.Height
+	}
+	// Binary-search the common ancestor: hashes match at/below ancestor and differ above it.
+	lo, hi := uint64(0), max
+	for lo < hi {
+		mid := (lo + hi + 1) / 2
+		lb, ok := n.Chain.Block(mid)
+		if !ok {
+			return errors.New("local block missing")
+		}
+		var rh struct {
+			Height uint64 `json:"height"`
+			Hash   Hash   `json:"hash"`
+		}
+		if err := n.getJSONLimit(peer, fmt.Sprintf("/p2p/blockhash?height=%d", mid), smallP2PResponseLimit, &rh); err != nil {
+			return fmt.Errorf("blockhash %d: %w", mid, err)
+		}
+		if lb.Hash() == rh.Hash {
+			lo = mid
+		} else {
+			hi = mid - 1
+		}
+	}
+	ancestor := lo
+	targetHeight := hello.Height
+	if targetHeight-ancestor > maxSyncBlocksPerRound {
+		targetHeight = ancestor + maxSyncBlocksPerRound
+	}
+
+	// Fast path for the overwhelmingly common case: the peer extends our current
+	// tip. Validate and persist each block incrementally instead of copying,
+	// replaying and rewriting the entire canonical chain for every sync batch.
+	if ancestor == local.Height {
+		for h := ancestor + 1; h <= targetHeight; h++ {
+			var b Block
+			if err := n.getJSON(peer, fmt.Sprintf("/p2p/getblock?height=%d", h), &b); err != nil {
+				return fmt.Errorf("getblock %d: %w", h, err)
+			}
+			if err := n.Chain.AddBlock(&b); err != nil {
+				return fmt.Errorf("validate extension block %d: %w", h, err)
+			}
+		}
+		if targetHeight > ancestor {
+			log.Printf("synced extension from %s to height %d", peer, targetHeight)
+		}
+		return n.syncMempool(peer)
+	}
+
+	// Competing fork. Compare only suffix work because the shared prefix cancels.
+	// Before a full UTXO replay is allowed, each downloaded block must pass header,
+	// target, timestamp, merkle and AQM64 proof-of-work validation. This prevents an
+	// untrusted peer from forcing an O(chain) replay using fabricated target values.
+	localSuffixWork := n.Chain.WorkAfter(ancestor)
+	branchWork := new(big.Int)
+	history := n.Chain.RecentBlocksThrough(ancestor, DifficultyWindow+1)
+	branch := make([]Block, 0, targetHeight-ancestor)
+	for h := ancestor + 1; h <= targetHeight; h++ {
+		var b Block
+		if err := n.getJSON(peer, fmt.Sprintf("/p2p/getblock?height=%d", h), &b); err != nil {
+			return fmt.Errorf("getblock %d: %w", h, err)
+		}
+		if err := ValidateCandidateEnvelope(&b, history, time.Now().Unix()); err != nil {
+			return fmt.Errorf("candidate envelope %d: %w", h, err)
+		}
+		branch = append(branch, b)
+		branchWork.Add(branchWork, WorkForTarget(b.Header.Target))
+		history = append(history, b)
+		if len(history) > DifficultyWindow+1 {
+			history = append([]Block(nil), history[len(history)-(DifficultyWindow+1):]...)
+		}
+		if branchWork.Cmp(localSuffixWork) > 0 {
+			targetHeight = h
+			break
+		}
+	}
+	if branchWork.Cmp(localSuffixWork) <= 0 {
+		return errors.New("remote fork needs more validated work before reorganization")
+	}
+	candidate := n.Chain.BlocksThrough(ancestor)
+	candidate = append(candidate, branch...)
+	if err := n.Chain.ReplaceCanonical(candidate); err != nil {
+		return fmt.Errorf("validate downloaded fork through height %d: %w", targetHeight, err)
+	}
+	log.Printf("reorganized from %s to height %d", peer, targetHeight)
+	return n.syncMempool(peer)
+}
+
+func (n *Node) syncMempool(peer string) error {
+	var mp MempoolResponse
+	if err := n.getJSONLimit(peer, "/p2p/mempool", int64(MaxBlockBytes), &mp); err != nil {
+		return fmt.Errorf("mempool: %w", err)
+	}
+	accepted := 0
+	for _, tx := range mp.Transactions {
+		if _, err := n.Chain.AddMempool(tx); err != nil {
+			// Duplicates, conflicts, already-mined transactions and invalid entries are
+			// ignored individually; AddMempool performs the full validation.
+			continue
+		}
+		accepted++
+		go n.broadcast("/p2p/tx", tx, peer)
+	}
+	if accepted > 0 {
+		log.Printf("synced %d mempool transaction(s) from %s", accepted, peer)
+	}
+	return nil
+}
