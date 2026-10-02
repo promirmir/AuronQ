@@ -1,0 +1,9 @@
+AuronQ 1.7.0 Mainnet
+
+- Promotes the tested rc4 consensus/network code to public mainnet version 1.7.0 without changing genesis or Network ID.
+- Keeps persistent peer storage, peer gossip, fixed seeds, DNS seeds and bounded HTTPS bootstrap manifests.
+- Official bootstrap manifest moved to the stable GitHub URL.
+- Initial bootstrap set uses two stable Tailscale Funnel hostnames fronting ordinary full nodes; the relays have no consensus privileges.
+- Windows package includes START-AURONQ.cmd for normal users and START-SEED-NODE.cmd for the two initial bootstrap operators.
+- Retains rc4 same-branch catch-up repair verified in a live two-node test through height 5.
+- Security status remains unaudited by an independent professional cryptographic/security team.

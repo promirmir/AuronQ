@@ -1,0 +1,9 @@
+AuronQ Desktop 1.2.4
+
+- Zero-touch peer discovery for the current Windows testnet when Tailscale is installed:
+  Desktop reads the local Tailscale peer table and automatically adds online IPv4 peers on AuronQ port 18444.
+- Discovery is refreshed every 20 seconds, so an AuronQ node started later can be learned without restarting the app.
+- Existing network seed_peers remain the normal public-network bootstrap mechanism; manual peer entries are now optional/advanced.
+- Added P2P mempool catch-up endpoint and sync. A transaction already waiting in a peer mempool can be learned by a node that connects later.
+- Kept consensus rules unchanged. Network ID and existing testnet blockchain remain compatible.
+- Added tests for Tailscale status parsing and equal-chain-work mempool synchronization.

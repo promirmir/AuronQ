@@ -1,0 +1,8 @@
+AuronQ Desktop 1.2.1
+
+- Replaced OS-dependent ML-DSA-87 signing/verification with a portable Go implementation.
+- Nodes can validate signed AuronQ transactions on older supported Windows installations without Windows 11 24H2 CNG ML-DSA.
+- Wallet key generation/signing no longer requires Windows CNG ML-DSA or OpenSSL.
+- Added OpenSSL interoperability regression vector for ML-DSA-87.
+- P2P automatic synchronization now logs peer/synchronization validation errors instead of silently ignoring them.
+- No consensus-format change: existing testnet/mainnet keys, signatures, wallets, addresses and blocks remain compatible.

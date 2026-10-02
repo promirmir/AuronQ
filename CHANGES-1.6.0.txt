@@ -1,0 +1,14 @@
+AuronQ Desktop / Node 1.6.0
+
+CONSENSUS-BREAKING PRE-MAINNET TESTNET UPDATE
+
+- Added AuronQ-PoW v1 (AQM64), algorithm id 0x0001.
+- AQM64 = SHAKE256 domain separation + Argon2id v1.3 (64 MiB, t=2, p=1) + SHAKE256-512 final proof.
+- Block header version is now 2 and commits to pow_algo.
+- Block ID stays SHA-512; PoW value is now a separate AQM64 result.
+- Consensus fingerprint/Network ID commits to AQM64 parameters.
+- Pre-mainnet testnet PowLimit recalibrated to 10 leading zero bits; this is not final mainnet calibration.
+- Incoming expensive block validation is concurrency-bounded to limit Argon2 RAM pressure.
+- Mainnet genesis creation is deliberately disabled until public AQM64 testing and independent review are complete.
+- Existing 1.5.x testnet chains/network.json files are intentionally incompatible; create a fresh 1.6.0 AQM64 testnet.
+- Wallet format and ML-DSA-87 address/signature scheme are unchanged.

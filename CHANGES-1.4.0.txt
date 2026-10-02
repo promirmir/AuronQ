@@ -1,0 +1,19 @@
+AuronQ Desktop / Node 1.4.0
+
+Public P2P discovery hardening:
+- Added DNS seed discovery (`dns_seeds`) in addition to static `seed_peers`.
+- DNS seed results are resolved into public IP peers and refreshed periodically.
+- A normal node now announces its listening port automatically. The remote peer
+  derives the observed public source IP and verifies reachability before adding it.
+  `--advertise` is therefore optional for directly reachable nodes.
+- Peer gossip/cache remains limited to globally routable literal IP endpoints;
+  loopback/private/CGNAT/documentation ranges are rejected.
+- Learned peers with repeated connection failures are pruned; configured bootstrap
+  peers are retained and DNS seeds are periodically refreshed.
+- Desktop manual peers are now hidden under an advanced/fallback section.
+- Existing network IDs and consensus rules are unchanged. `seed_peers` and
+  `dns_seeds` are bootstrap metadata and are excluded from Network ID.
+
+This improves automatic participation and discovery, but Internet bootstrap still
+requires at least one reachable entry point somewhere (static seed, DNS seed, or a
+cached known peer). That is a networking constraint, not a consensus dependency.

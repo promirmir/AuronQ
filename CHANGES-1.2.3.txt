@@ -1,0 +1,7 @@
+AuronQ Desktop 1.2.3
+
+- Desktop full node can now persist bootstrap/seed peer URLs per network.
+- Network tab includes a bilingual PL/EN peer configuration UI.
+- Saving peers restarts the embedded node so wallet transactions and CPU-mined blocks are relayed by the same node used by the Desktop application.
+- Fixes the split-node situation where a separately configured CLI node was synchronized while Desktop mining remained isolated.
+- No consensus changes. Existing network.json, wallets and chain data remain compatible.

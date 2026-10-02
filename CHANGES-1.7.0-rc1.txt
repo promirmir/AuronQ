@@ -1,0 +1,11 @@
+AuronQ 1.7.0-rc1
+
+MAINNET-CAPABLE RELEASE CANDIDATE
+
+- Enables init-mainnet with mandatory --ack-unaudited-mainnet acknowledgement.
+- Freezes AQM64 v1 consensus parameters and 10-bit bootstrap PoW limit for RC1 compatibility.
+- Adds MAINNET-LAUNCH.md with founder-wallet/genesis ceremony and publication rules.
+- Adds GitHub Actions CI for Windows/Linux test, vet and builds.
+- Adds tag-triggered release artifact builds.
+- Keeps ML-DSA-87, UTXO rules, monetary policy, P2P hardening and AQM64 from 1.6.0.
+- Does not claim an independent audit.

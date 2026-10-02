@@ -1,0 +1,11 @@
+AuronQ 1.7.0-rc3
+
+- Keeps rc2 consensus, genesis identity, AQM64 parameters and monetary policy unchanged.
+- Adds zero-touch bootstrap manifests: HTTPS discovery documents can rotate seed URLs without changing Network ID.
+- Adds optional release-side bootstrap.json for Windows Desktop; it is accepted only when its Network ID matches the loaded mainnet.
+- Desktop now listens on [::]:18444 so Windows can accept IPv6 while retaining IPv4 dual-stack behavior where supported.
+- Remote manifest parsing is bounded, strict, Network-ID checked and expiry-aware.
+- Remote manifest DNS peers require HTTPS; private/loopback/CGNAT literal addresses are rejected.
+- Manifest-discovered peers are not permanent bootstrap entries, so dead tunnel URLs can be pruned.
+- network-set-seeds gains --bootstrap-manifest. Bootstrap metadata remains excluded from Network ID.
+- Desktop/CLI version synchronized to 1.7.0-rc3.

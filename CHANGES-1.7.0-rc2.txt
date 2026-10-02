@@ -1,0 +1,18 @@
+AuronQ 1.7.0-rc2
+Date: 2026-10-02
+
+- Hardens fork synchronization against fabricated-work / whole-chain replay DoS.
+- Uses incremental validation/persistence for normal chain extensions.
+- Bounds synchronization batches to 256 blocks.
+- Adds per-IP request and expensive block-submission rate limiting.
+- Expands consensus fingerprint and Network ID commitment to additional fixed rules and protocol version.
+- Hardens genesis transaction validation.
+- Rejects trailing JSON values and uses strict P2P height parsing.
+- Fixes optional legacycrypto/OpenSSL build-tag conflict.
+- Verifies portable ML-DSA-87 interoperability against OpenSSL 3.5.5 in both signing directions during the audit.
+- Synchronizes Desktop/CLI version to 1.7.0-rc2.
+- Allows Desktop clean first launch to import a bundled verified network.json beside the executable.
+- Aligns Docker build with Go 1.23 and the normal CGO-free portable crypto build.
+- Updates mainnet ceremony/security documentation and adds AUDIT-2026-10-02.md.
+
+Security status: mainnet-capable, not independently audited. See AUDIT-2026-10-02.md.

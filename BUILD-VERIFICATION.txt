@@ -1,0 +1,25 @@
+AuronQ 1.7.0-rc3 internal build verification
+Date: 2026-10-02
+Go: go1.23.2 linux/amd64
+Normal release path: CGO_ENABLED=0
+
+Verification performed on the frozen rc3 tree:
+- go test ./... : PASS
+- go vet ./... : PASS
+- go test -race ./... : PASS
+- Windows amd64 Desktop cross-build : PASS
+- Windows amd64 CLI cross-build : PASS
+- Linux amd64 CLI build : PASS
+- second build with identical Go version/flags : byte-for-byte identical for all three binaries
+
+SHA-256:
+a3a2ddc6a40614e729e0e8422b077d5295418c9c17098435fa4fa2f39c93d09d  AuronQ-Desktop.exe
+7db5ad084a4a32b9a2dd62f1be0bd178456cfd6643acbaf0e9cbbf72ecb223e8  auronq-cli.exe (Windows amd64)
+79ee2a5c682fa48c8e09d21e8c1e83b2ae70fd5170108aecf1fdca5b933af906  auronq (Linux amd64)
+
+rc3 consensus note:
+- no consensus constants, serialization, AQM64 parameters, subsidy rules or Network ID inputs were changed from rc2;
+- rc3 changes bootstrap/discovery only;
+- bootstrap.json/bootstrap_manifests are discovery metadata and do not affect Network ID.
+
+This is internal engineering verification, not an independent security audit.

@@ -1,0 +1,13 @@
+AuronQ Desktop / Node 1.5.0
+
+Public-testnet hardening release. No consensus or Network ID change.
+
+- Preserves valid disconnected transactions in the mempool after a higher-work reorganization.
+- Adds a 64 MiB / 10,000 transaction mempool policy ceiling to bound memory use.
+- Limits learned public peers per IPv4 /16 or IPv6 /32 netgroup to reduce simple eclipse/Sybil concentration.
+- Bounds each sync round to 8 peers and rotates through the peer set.
+- Downloads long chains in bounded 2,048-block sync batches; competing forks are adopted only after downloaded cumulative work exceeds the current chain.
+- Applies smaller response limits to hello/block-hash metadata and bounded mempool catch-up responses.
+- Enforces GET on read-only P2P endpoints.
+- Adds regression tests for netgroup diversity, reorg mempool restoration and mempool resource limits.
+- go test ./..., go vet ./..., smoke test and two-node integration test pass.

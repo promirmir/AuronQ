@@ -1,0 +1,14 @@
+AuronQ 1.7.0-rc4
+
+P2P self-healing hotfix after two-node mainnet testing:
+- fixes a propagation gap for outbound-only/NATed miners;
+- when a known peer is behind on the exact same branch, the stronger node now pushes missing blocks during periodic sync;
+- recovers automatically after a transient block-broadcast/tunnel failure;
+- push catch-up is capped to the normal per-round sync limit and the receiver performs full block validation;
+- consensus, genesis, Network ID, AQM64 and monetary rules are unchanged from rc3.
+- Desktop upgrades now merge bootstrap metadata only when bundled and existing network files have the exact same Network ID; this lets older installations learn the official GitHub bootstrap manifest without replacing consensus data, wallets or chain state.
+- Mainnet release metadata now points at the stable official GitHub bootstrap manifest under promirmir/AuronQ.
+
+- Windows Desktop: automatic same-LAN peer discovery for private RFC1918 /24 segments; peers are verified by Network ID before use and are not gossiped into the public peer table.
+- Windows package: START-AURONQ.cmd adds a LocalSubnet-only inbound TCP 18444 firewall rule on first launch, then starts the desktop app.
+- GitHub Actions: main branch builds and publishes rc4 Windows/Linux release assets automatically.

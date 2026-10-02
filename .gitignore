@@ -1,0 +1,12 @@
+/bin/
+/.smoke/
+/data/
+*.wallet
+founder-password.txt
+*.log
+node-data/
+nodes/
+wallets/
+peers.json
+public-peers.json
+cloudflared.exe

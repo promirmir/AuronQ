@@ -1,0 +1,6 @@
+AuronQ Desktop 1.2.2
+
+- Fixed peer discovery leaking loopback-only peers (127.0.0.1, localhost, ::1) to remote nodes.
+- Explicit local loopback peers still work as bootstrap peers on the same machine.
+- Added regression tests for loopback peer filtering in /p2p/hello and discovered-peer handling.
+- Retains portable ML-DSA-87 verification from 1.2.1 and full compatibility with the existing testnet/network.json and wallets.
