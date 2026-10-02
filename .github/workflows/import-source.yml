@@ -20,7 +20,7 @@ jobs:
           rm -rf .import
           mkdir .import
           unzip -q AuronQ-1.7.0-GitHub-source.zip -d .import
-          rsync -a --exclude='.git' .import/ ./
+          rsync -a --exclude='.git' --exclude='.github/workflows' .import/ ./
           rm -rf .import
       - name: Commit source tree
         run: |
@@ -31,5 +31,5 @@ jobs:
             echo "No source changes to commit."
             exit 0
           fi
-          git commit -m "Import AuronQ 1.7.0 mainnet source"
+          git commit -m "Import exact AuronQ 1.7.0 mainnet source"
           git push
