@@ -48,6 +48,48 @@ func TestHelloAdvertisesOnlyPublicPeers(t *testing.T) {
 	}
 }
 
+func TestHTTPSDNSPeerIsAcceptedForGossip(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	n := NewNode(c, NodeConfig{})
+	n.addDiscoveredPeer("https://node.example.com")
+	got := n.peerList()
+	if len(got) != 1 || got[0] != "https://node.example.com" {
+		t.Fatalf("peer list=%v", got)
+	}
+}
+
+func TestUnsafeDNSPeerIsRejected(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	n := NewNode(c, NodeConfig{})
+	for _, p := range []string{
+		"http://node.example.com",
+		"https://localhost",
+		"https://node.local",
+		"https://node.internal",
+		"https://node.home.arpa",
+	} {
+		n.addDiscoveredPeer(p)
+	}
+	if got := n.peerList(); len(got) != 0 {
+		t.Fatalf("unsafe DNS peers accepted: %v", got)
+	}
+}
+
+func TestPublicPeerTransportRejectsPrivateDNSResolution(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	n := NewNode(c, NodeConfig{LookupHost: func(ctx context.Context, host string) ([]string, error) {
+		if host != "node.example.com" {
+			t.Fatalf("unexpected host %q", host)
+		}
+		return []string{"127.0.0.1", "192.168.1.10", "100.64.0.10"}, nil
+	}})
+	var hello Hello
+	err := n.getJSONLimit("https://node.example.com", "/p2p/hello", smallP2PResponseLimit, &hello)
+	if err == nil || !strings.Contains(err.Error(), "no public addresses") {
+		t.Fatalf("expected private-resolution rejection, got %v", err)
+	}
+}
+
 func TestDiscoveredNonPublicPeerIsIgnored(t *testing.T) {
 	_, c := testPeerNetwork(t)
 	n := NewNode(c, NodeConfig{Peers: []string{"http://1.1.1.1:18445"}})
