@@ -21,6 +21,16 @@ Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
 
 The current Windows binaries are **not Authenticode-signed**, so Windows SmartScreen may warn on first launch. Verify the SHA-256 above and download only from this repository's Releases page.
 
+## Android alpha
+
+For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.1.0 Alpha**:
+
+- [AuronQ-Mobile-0.1.0-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.1.0-alpha/AuronQ-Mobile-0.1.0-alpha.apk)
+- Release page: [android-v0.1.0-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.1.0-alpha)
+- SHA-256: `cbcea7c5a43686a5192434b3563703a81b192decf789238a809dfc259f9a5c53`
+
+The Android alpha is a wallet client, not a full node. It keeps/signs with the encrypted AuronQ wallet locally and uses an HTTPS AuronQ Mainnet node for balances, UTXOs and transaction submission. It is debug-signed test software; do not use substantial value.
+
 ## Mainnet identity
 
 Network ID:
