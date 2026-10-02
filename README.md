@@ -26,6 +26,32 @@ The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 
 | FAQ | [FAQ.md](FAQ.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
+## Quick Start — Windows
+
+For a normal Windows user, no manual peer configuration, Tailscale, port forwarding, Go, Docker or command line setup is required.
+
+1. Download **[AuronQ-1.7.3-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.3/AuronQ-1.7.3-Windows-x64.zip)** from this repository's official Releases page.
+2. Verify the ZIP SHA-256 if possible:
+   `a06c62561ab9c8673ac14384e1bba5af51e5e4f9b888cb9f7d1dbe238c0cfb23`
+3. Extract the **entire ZIP** to a new folder. Do not run files directly from inside the archive.
+4. Run **`START-AURONQ.cmd` once**.
+5. AuronQ Desktop will start the full node, verify the Mainnet configuration, discover the public bootstrap nodes and begin synchronization automatically.
+6. In **Wallets**, create a wallet or import an existing one. Back up the wallet before using it for anything important.
+7. After the node is synchronized, you can receive/send AURQ and optionally use the built-in CPU miner.
+
+A normal user should use **`START-AURONQ.cmd`**.  
+**`START-SEED-NODE.cmd` is only for operators who intentionally want to expose a public bootstrap/full node through Tailscale Funnel.**
+
+AuronQ Desktop stores its persistent data under:
+
+`%AppData%\AuronQ`
+
+This includes wallets, chain data and learned peers. Updating the application does not require deleting that directory.
+
+Windows binaries are currently not Authenticode-signed. Windows SmartScreen may show a warning on first launch; verify that the archive came from this repository and that its SHA-256 matches the value published above before running it.
+
+For a longer Windows guide, see **[README-WINDOWS.md](README-WINDOWS.md)**.
+
 ## What makes AuronQ technically distinct?
 
 - **Post-quantum transaction signatures:** ML-DSA-87 is used for transaction signing.
@@ -44,7 +70,7 @@ AuronQ may be relevant to developers, miners, node operators and researchers loo
 
 Current stable desktop/full-node release: **AuronQ 1.7.3 Mainnet**.
 
-The network is operational, but decentralization is still developing. At the time documented in this repository, the bootstrap manifest contains one confirmed public bootstrap endpoint. That endpoint has no consensus privileges; independent nodes validate the canonical chain themselves. Additional independently operated public nodes and independent discovery routes are needed to reduce first-contact dependency.
+The network is operational, but decentralization is still developing. The bootstrap manifest currently contains **two independently reachable public bootstrap endpoints**, both externally verified by the repository crawler. Bootstrap nodes have no consensus privileges; every full node validates the canonical chain itself. Additional independently operated public nodes and discovery routes are still desirable to reduce first-contact dependency further.
 
 ## Download
 
@@ -103,15 +129,16 @@ The official stable manifest is:
 
 `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
 
-At present the manifest advertises **one confirmed public bootstrap endpoint**:
+At present the manifest advertises **two externally verified public bootstrap endpoints**:
 
-`https://mir.taild63f46.ts.net`
+- `https://mir.taild63f46.ts.net`
+- `https://desktop-4nifg1j.taild63f46.ts.net`
 
-That endpoint is only a first-contact relay to an ordinary full node. It has no consensus privileges. Full nodes independently validate blocks, transactions, Network ID and cumulative chain work.
+These endpoints are only first-contact relays to ordinary full nodes. It has no consensus privileges. Full nodes independently validate blocks, transactions, Network ID and cumulative chain work.
 
 AuronQ full nodes already persist verified public peers and exchange them through peer gossip. In addition, the repository now has a scheduled public-peer crawler that follows AuronQ gossip, verifies reachable Mainnet peers and can append them to `bootstrap.json` automatically. This means that, as independently operated public nodes appear, the first-contact registry can become multi-peer without relying on the founder's computer being online.
 
-This does **not** create independent peers out of nothing: today there is still only one confirmed public endpoint. Practical independence from the original computer requires at least a few other publicly reachable full nodes. A completely fresh install always needs some discovery route; AuronQ also supports DNS seeds for that purpose.
+This does **not** create independent peers out of nothing: the network currently has two crawler-verified public bootstrap endpoints. More independently operated public full nodes are still desirable for stronger practical resilience. A completely fresh install always needs some discovery route; AuronQ also supports DNS seeds for that purpose.
 
 NAT/CGNAT users can participate through outbound connections without port forwarding. Users who want to contribute a publicly reachable Windows full node can use the opt-in `START-PUBLIC-NODE.cmd` in future release packages (or run the node directly with public TCP/18444 reachability).
 
@@ -125,12 +152,10 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
 
-The immutable `v1.7.1` release tag points to commit:
-
-`776401065ac454ae4ad2246b9efdf7d5f134efa0`
+The current stable release is **v1.7.3**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
 
 ## Security status
 
-AuronQ 1.7.1 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
+AuronQ 1.7.3 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
 
 See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
