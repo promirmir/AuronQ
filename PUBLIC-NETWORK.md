@@ -1,4 +1,4 @@
-# AuronQ 1.7.0 public network
+# AuronQ public network
 
 AuronQ Mainnet is a permissionless full-node network. A normal user downloads the release, starts the client and participates through ordinary outbound P2P connections. There is no central blockchain database or privileged validation server.
 
@@ -35,11 +35,17 @@ This is a rendezvous path to an ordinary full node. It cannot create coins, appr
 
 A node behind NAT/CGNAT participates normally through outbound connections. A directly reachable node may be callback-verified and admitted to public gossip.
 
-## Availability boundary
+## Availability and independence
 
-A brand-new node always needs at least one reachable rendezvous path or previously known peer. This is also why mature cryptocurrency networks operate multiple independent seeds.
+AuronQ does not have a founder/master node. Once full nodes know each other, they persist verified public peers locally, exchange those peers in `/p2p/hello`, reconnect after restarts, synchronize by cumulative work and continue validating/mining even if the original bootstrap computer is offline.
 
-AuronQ currently has one confirmed bootstrap path. The next operational priority is to add independent public nodes on different networks/providers and DNS seeds. If the only bootstrap is offline, already connected/previously seeded nodes can continue operating, but a completely fresh installation with no known peers may be unable to find the network until a rendezvous path returns.
+A completely fresh installation still needs at least one discovery route. To reduce dependence on manual operator maintenance, the repository now contains an autonomous peer-registry crawler. GitHub Actions periodically starts from the current `bootstrap.json`, follows AuronQ peer gossip, callback-checks reachable candidates, requires the exact Mainnet Network ID/protocol, rejects private/CGNAT/documentation addresses, applies basic netgroup diversity and appends verified public peers to the bootstrap manifest.
+
+The crawler never changes consensus and never makes a peer trusted for blocks: every full node still validates the chain locally. It also deliberately preserves existing manifest entries during transient outages instead of deleting the registry.
+
+At present there is still only one confirmed public endpoint, so the network is **not yet operationally independent** of that endpoint for first-time installs. Independence is achieved in practice after multiple independently operated, publicly reachable nodes have been learned/published. Existing nodes can already continue with persisted/gossiped peers when the original bootstrap is unavailable.
+
+AuronQ also supports DNS seeds. Adding independently operated DNS seeds later gives a second discovery mechanism that does not depend on the repository manifest.
 
 ## P2P behavior
 
@@ -53,6 +59,12 @@ AuronQ currently has one confirmed bootstrap path. The next operational priority
 - request/body/concurrency limits and basic per-IP throttles reduce obvious resource-exhaustion attacks.
 
 These controls do not replace professional adversarial review or DDoS/Sybil testing.
+
+## Becoming an independent public node
+
+Windows source/release packaging includes an opt-in `START-PUBLIC-NODE.cmd`. It opens TCP/18444 in Windows Firewall and starts AuronQ Desktop. A router/public ISP path must still allow inbound TCP/18444; CGNAT normally requires a VPS or public relay. Public reachability is verified by another node before that address is accepted into peer gossip.
+
+Normal users do not need inbound connectivity and can keep using `START-AURONQ.cmd`.
 
 ## Operator example
 
