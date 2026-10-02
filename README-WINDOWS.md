@@ -24,6 +24,14 @@ Możesz też porównać wynik z `SHA256SUMS.txt` na stronie wydania GitHub.
 
 Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen może więc wyświetlić ostrzeżenie przy pierwszym uruchomieniu. Weryfikuj sumę SHA-256 i źródło pobrania.
 
+## Niezależny publiczny node
+
+Jeżeli użytkownik chce, aby jego komputer pomagał utrzymywać AuronQ również jako publicznie osiągalny pełny node, może użyć `START-PUBLIC-NODE.cmd`. Skrypt otwiera TCP/18444 w Zaporze Windows i uruchamia AuronQ Desktop.
+
+To jest tryb opcjonalny. Przy routerze nadal może być potrzebne przekierowanie TCP/18444 na ten komputer. Przy CGNAT zwykle potrzebny jest VPS lub publiczny relay. AuronQ nie uznaje samej deklaracji adresu — inny node musi potwierdzić, że peer jest rzeczywiście osiągalny.
+
+Publiczne nody są wymieniane przez peer gossip i zapisywane lokalnie. Repozytorium ma też automatyczny crawler, który okresowo sprawdza osiągalne publiczne peery AuronQ i może dopisywać zweryfikowane adresy do `bootstrap.json`. Dzięki temu wraz ze wzrostem sieci nowe instalacje mogą przestać zależeć od pierwszego komputera bootstrap.
+
 ## Operator publicznego bootstrap noda
 
 `START-SEED-NODE.cmd` jest przeznaczony wyłącznie dla operatora noda, który ma być publicznym punktem pierwszego kontaktu. Skrypt uruchamia AuronQ oraz, jeśli Tailscale jest zainstalowany i Funnel wcześniej autoryzowany, wystawia lokalny port AuronQ przez Funnel w tle.
