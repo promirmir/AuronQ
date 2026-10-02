@@ -1,0 +1,49 @@
+name: Refresh AuronQ public peer registry
+
+on:
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/auronq-peer-crawler/**'
+      - '.github/workflows/peer-registry.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auronq-peer-registry
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+
+      - name: Test crawler package
+        run: go test ./cmd/auronq-peer-crawler
+
+      - name: Crawl verified public AuronQ peers
+        run: go run ./cmd/auronq-peer-crawler -manifest bootstrap.json -mirror bootstrap.mainnet.json
+
+      - name: Commit newly discovered peers
+        run: |
+          if git diff --quiet -- bootstrap.json bootstrap.mainnet.json; then
+            echo "No bootstrap changes."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add bootstrap.json bootstrap.mainnet.json
+          git commit -m "Refresh verified AuronQ public peers"
+          git push origin HEAD:main
