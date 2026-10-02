@@ -1,25 +1,30 @@
-AuronQ 1.7.0-rc3 internal build verification
+AuronQ 1.7.0 Mainnet build verification
 Date: 2026-10-02
-Go: go1.23.2 linux/amd64
+Release tag: v1.7.0
+Tagged commit: a4f6e1ff4c2afc975831d42c45432b94fa14d5bb
+Go release workflow: 1.23.2
 Normal release path: CGO_ENABLED=0
 
-Verification performed on the frozen rc3 tree:
-- go test ./... : PASS
-- go vet ./... : PASS
-- go test -race ./... : PASS
-- Windows amd64 Desktop cross-build : PASS
-- Windows amd64 CLI cross-build : PASS
-- Linux amd64 CLI build : PASS
-- second build with identical Go version/flags : byte-for-byte identical for all three binaries
+The GitHub release workflow gates builds on:
+- go test ./...
+- go vet ./...
+- go test -race ./...
 
-SHA-256:
-a3a2ddc6a40614e729e0e8422b077d5295418c9c17098435fa4fa2f39c93d09d  AuronQ-Desktop.exe
-7db5ad084a4a32b9a2dd62f1be0bd178456cfd6643acbaf0e9cbbf72ecb223e8  auronq-cli.exe (Windows amd64)
-79ee2a5c682fa48c8e09d21e8c1e83b2ae70fd5170108aecf1fdca5b933af906  auronq (Linux amd64)
+Release assets published by GitHub Actions:
 
-rc3 consensus note:
-- no consensus constants, serialization, AQM64 parameters, subsidy rules or Network ID inputs were changed from rc2;
-- rc3 changes bootstrap/discovery only;
-- bootstrap.json/bootstrap_manifests are discovery metadata and do not affect Network ID.
+79f9e75b61ad17f26e6e90e3d8dc07883aa3cb00f1f7882bcf96dd6291a72f37  AuronQ-1.7.0-Windows-x64.zip
+9b4a022c333eb11c030a91a6325f85c7ade949958b493245a67a00bfe9014fbf  AuronQ-1.7.0-Linux-amd64.tar.gz
 
-This is internal engineering verification, not an independent security audit.
+Network ID:
+44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c
+
+Genesis:
+5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4
+
+Live two-node engineering test:
+- lagging node: height 0
+- stronger node: height 4
+- catch-up repair: PASS, both reached height 4 and identical tip
+- newly mined block 5 propagation: PASS, both reached height 5 and identical tip
+
+This is engineering verification, not an independent security audit.
