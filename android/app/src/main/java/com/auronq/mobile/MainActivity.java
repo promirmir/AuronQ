@@ -404,10 +404,10 @@ public class MainActivity extends Activity {
     }
 
     private void showScreen(String which) {
-        dashboardScreen.getParent().setVisibility("home".equals(which) ? View.VISIBLE : View.GONE);
-        walletScreen.getParent().setVisibility("wallet".equals(which) ? View.VISIBLE : View.GONE);
-        sendScreen.getParent().setVisibility("send".equals(which) ? View.VISIBLE : View.GONE);
-        networkScreen.getParent().setVisibility("network".equals(which) ? View.VISIBLE : View.GONE);
+        ((View) dashboardScreen.getParent()).setVisibility("home".equals(which) ? View.VISIBLE : View.GONE);
+        ((View) walletScreen.getParent()).setVisibility("wallet".equals(which) ? View.VISIBLE : View.GONE);
+        ((View) sendScreen.getParent()).setVisibility("send".equals(which) ? View.VISIBLE : View.GONE);
+        ((View) networkScreen.getParent()).setVisibility("network".equals(which) ? View.VISIBLE : View.GONE);
 
         navStyle(navHome, "home".equals(which));
         navStyle(navWallet, "wallet".equals(which));
