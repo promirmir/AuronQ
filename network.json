@@ -1,0 +1,37 @@
+{
+  "name": "AuronQ Mainnet",
+  "protocol_version": 1,
+  "network_byte": 81,
+  "founder_address": "aurq1keaacmqgcvostprfhfejx55noyd746frjzv3qusb62lmutxurypahx7yiqq3mbg2lq",
+  "genesis": {
+    "header": {
+      "version": 2,
+      "pow_algo": 1,
+      "height": 0,
+      "prev_hash": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "merkle_root": "4ec627ff8d4b6ec5957fd476d60d0b5cbc533476206983bdda1dcea08554198e84a987036fd223aca6b330a926fcba54365e98008a154061f35b46f49bff60be",
+      "timestamp": 1790951480,
+      "target": "003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "nonce": 169
+    },
+    "transactions": [
+      {
+        "version": 1,
+        "coinbase": true,
+        "outputs": [
+          {
+            "value": 21000000000000,
+            "scheme": 1,
+            "key_hash": "3206155d29be2539489bf7ad7607fe78b14e6bb85241f696ca4ef48e1e03dff8"
+          }
+        ],
+        "lock_height": 0
+      }
+    ]
+  },
+  "seed_peers": [],
+  "coinbase_maturity": 100,
+  "bootstrap_manifests": [
+    "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
+  ]
+}
