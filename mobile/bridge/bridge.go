@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	mobileVersion       = "0.2.0-alpha"
+	mobileVersion       = "0.3.0-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 	fallbackBootstrap    = "https://mir.taild63f46.ts.net"
@@ -305,6 +305,52 @@ func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 		"node":         nodeURL,
 		"blocks":       blocks,
 		"observed_at":  time.Now().UTC().Format(time.RFC3339),
+	}
+	b, _ := json.Marshal(out)
+	return string(b), nil
+}
+
+
+func PeerCandidates(nodeURL string) (string, error) {
+	nodeURL = strings.TrimRight(strings.TrimSpace(nodeURL), "/")
+	if err := checkNode(nodeURL); err != nil {
+		return "", err
+	}
+	cl := &http.Client{Timeout: 8 * time.Second}
+	req, _ := http.NewRequest(http.MethodGet, nodeURL+"/p2p/hello", nil)
+	req.Header.Set("User-Agent", "AuronQ-Mobile/"+mobileVersion)
+	resp, err := cl.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("peer hello HTTP %s", resp.Status)
+	}
+	var hello aq.Hello
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&hello); err != nil {
+		return "", err
+	}
+	if hello.ProtocolVersion != 1 || hello.NetworkID.String() != mainnetNetworkID {
+		return "", errors.New("peer hello Network ID mismatch")
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(hello.Peers)+2)
+	add := func(p string) {
+		p = strings.TrimRight(strings.TrimSpace(p), "/")
+		if p == "" || seen[p] || !strings.HasPrefix(p, "https://") {
+			return
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	add(nodeURL)
+	add(hello.Advertise)
+	for _, p := range hello.Peers {
+		add(p)
+		if len(out) >= 32 {
+			break
+		}
 	}
 	b, _ := json.Marshal(out)
 	return string(b), nil
