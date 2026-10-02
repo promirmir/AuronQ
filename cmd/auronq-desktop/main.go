@@ -997,4 +997,277 @@ func (a *App) handleWalletHistory(w http.ResponseWriter, r *http.Request) {
 	items, err := chain.HistoryForAddress(wf.Address, 250)
 	if err != nil {
 		apiError(w, 400, err)
+		return	}
+	writeJSON(w, map[string]any{
+		"ok":      true,
+		"wallet":  name,
+		"address": wf.Address,
+		"height":  chain.Height(),
+		"items":   items,
+	})
+}
+
+func (a *App) handleSend(w http.ResponseWriter, r *http.Request) {
+	var q struct{ Wallet, Password, To, Amount string }
+	if err := readBody(r, &q); err != nil {
+		apiError(w, 400, err)
 		return
+	}
+	a.mu.RLock()
+	run := a.nodeRun
+	a.mu.RUnlock()
+	if !run {
+		apiError(w, 400, errors.New("node nie jest uruchomiony"))
+		return
+	}
+	n := a.currentNetwork()
+	if n == nil {
+		apiError(w, 400, errors.New("brak sieci"))
+		return
+	}
+	p, err := a.walletPath(q.Wallet)
+	if err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	wa, err := aq.LoadWallet(p, q.Password)
+	if err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	defer wa.Close()
+	amt, err := aq.ParseAmount(strings.TrimSpace(q.Amount))
+	if err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	cl := aq.NewClient(a.nodeURL)
+	us, err := cl.UTXOs(wa.Address())
+	if err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	tx, fee, err := wa.BuildTransaction(us, strings.TrimSpace(q.To), amt, n.NetworkByte)
+	if err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	res, err := cl.SubmitTx(tx)
+	if err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	a.addLog("Wysłano " + aq.FormatAmount(amt) + " AURQ  tx " + short(res.TXID.String()))
+	writeJSON(w, map[string]any{"ok": true, "txid": res.TXID.String(), "fee": aq.FormatAmount(fee)})
+}
+
+func (a *App) startMiner(wallet string, threads int) error {
+	a.mu.Lock()
+	if a.miner.Running {
+		a.mu.Unlock()
+		return errors.New("miner już działa")
+	}
+	if !a.nodeRun {
+		a.mu.Unlock()
+		return errors.New("najpierw uruchom node")
+	}
+	a.mu.Unlock()
+	p, err := a.walletPath(wallet)
+	if err != nil {
+		return err
+	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return err
+	}
+	var wf aq.WalletFile
+	if err = json.Unmarshal(b, &wf); err != nil {
+		return err
+	}
+	if threads < 1 {
+		threads = 1
+	}
+	if threads > runtime.NumCPU() {
+		threads = runtime.NumCPU()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.mu.Lock()
+	a.miner = minerState{Running: true, Threads: threads, Wallet: wallet, Address: wf.Address, StartedAt: time.Now().Unix()}
+	a.minerCancel = cancel
+	a.mu.Unlock()
+	a.addLog(fmt.Sprintf("Mining start: %s, %d wątków", wallet, threads))
+	go a.miningLoop(ctx, wf.Address, threads)
+	return nil
+}
+func (a *App) miningLoop(ctx context.Context, address string, threads int) {
+	cl := aq.NewClient(a.nodeURL)
+	for {
+		select {
+		case <-ctx.Done():
+			a.finishMiner("")
+			return
+		default:
+		}
+		tpl, err := cl.Template(address)
+		if err != nil {
+			a.finishMiner(err.Error())
+			return
+		}
+		a.mu.Lock()
+		a.miner.Height = tpl.Header.Height
+		a.miner.Hashrate = 0
+		a.mu.Unlock()
+		res, err := aq.MineParallel(ctx, tpl, threads, func(h uint64, d time.Duration) {
+			if d > 0 {
+				a.mu.Lock()
+				a.miner.Hashrate = float64(h) / d.Seconds()
+				a.mu.Unlock()
+			}
+		})
+		if err != nil {
+			if ctx.Err() != nil {
+				a.finishMiner("")
+				return
+			}
+			a.finishMiner(err.Error())
+			return
+		}
+		br, err := cl.SubmitBlock(res.Block)
+		if err != nil {
+			a.addLog("Blok odrzucony, odświeżam template: " + err.Error())
+			continue
+		}
+		rate := float64(res.Hashes) / res.Duration.Seconds()
+		a.mu.Lock()
+		a.miner.Hashrate = rate
+		a.miner.BlocksFound++
+		a.miner.LastBlock = br.Hash.String()
+		a.miner.Height = br.Height
+		a.mu.Unlock()
+		a.addLog(fmt.Sprintf("Wykopano blok %d  %s", br.Height, short(br.Hash.String())))
+	}
+}
+func (a *App) finishMiner(errText string) {
+	a.mu.Lock()
+	if errText != "" {
+		a.miner.LastError = errText
+	}
+	a.miner.Running = false
+	a.miner.Hashrate = 0
+	a.minerCancel = nil
+	a.mu.Unlock()
+	if errText != "" {
+		a.addLog("Mining zatrzymany: " + errText)
+	} else {
+		a.addLog("Mining zatrzymany")
+	}
+}
+func (a *App) stopMiner() {
+	a.mu.Lock()
+	c := a.minerCancel
+	a.mu.Unlock()
+	if c != nil {
+		c()
+	}
+}
+func (a *App) handleMinerStart(w http.ResponseWriter, r *http.Request) {
+	var q struct {
+		Wallet  string
+		Threads int
+	}
+	if err := readBody(r, &q); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	if err := a.startMiner(q.Wallet, q.Threads); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+func (a *App) handleMinerStop(w http.ResponseWriter, r *http.Request) {
+	a.stopMiner()
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) handleOpenData(w http.ResponseWriter, r *http.Request) {
+	if runtime.GOOS == "windows" {
+		_ = exec.Command("explorer.exe", a.baseDir).Start()
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+func (a *App) handleExit(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"ok": true})
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		select {
+		case a.exit <- struct{}{}:
+		default:
+		}
+	}()
+}
+
+func short(s string) string {
+	if len(s) <= 18 {
+		return s
+	}
+	return s[:9] + "…" + s[len(s)-8:]
+}
+
+func reopenExisting(base string) bool {
+	c := &http.Client{Timeout: 750 * time.Millisecond}
+	r, err := c.Get(base + "/api/state")
+	if err != nil {
+		return false
+	}
+	defer r.Body.Close()
+	if r.StatusCode != http.StatusOK {
+		return false
+	}
+	var st appState
+	if json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&st) != nil || st.Version == "" {
+		return false
+	}
+	_ = openDesktopWindow(base + "/")
+	return true
+}
+
+func openDesktopWindow(url string) error {
+	if runtime.GOOS != "windows" {
+		return exec.Command("xdg-open", url).Start()
+	}
+	candidates := []string{
+		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("LocalAppData"), "Microsoft", "Edge", "Application", "msedge.exe"),
+	}
+	for _, p := range candidates {
+		if p != "" {
+			if _, err := os.Stat(p); err == nil {
+				return exec.Command(p, "--app="+url, "--start-maximized").Start()
+			}
+		}
+	}
+	return exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", url).Start()
+}
+
+func cryptoSelfTest() (bool, error) {
+	seed, pub, err := aq.GenerateMLDSA87()
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		for i := range seed {
+			seed[i] = 0
+		}
+	}()
+	msg := []byte("AURONQ_DESKTOP_CRYPTO_SELFTEST_V1")
+	sig, err := aq.SignMLDSA87(seed, msg)
+	if err != nil {
+		return false, err
+	}
+	if !aq.VerifyMLDSA87(pub, msg, sig) {
+		return false, errors.New("ML-DSA-87 self-test verification failed")
+	}
+	return true, nil
+}
