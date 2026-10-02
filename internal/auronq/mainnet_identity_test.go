@@ -1,6 +1,7 @@
 package auronq
 
 import (
+	"math/big"
 	"path/filepath"
 	"testing"
 )
@@ -8,6 +9,12 @@ import (
 // Mainnet identity is frozen. This test is intentionally exact: discovery,
 // UI, Android and test-harness work must never silently create a new network.
 func TestMainnetIdentityIsFrozen(t *testing.T) {
+	// TestMain intentionally lowers PoW cost/limit for fast consensus tests.
+	// Restore the frozen production PoW limit only for this identity check.
+	testPowLimit := PowLimit
+	PowLimit = TargetFromBig(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 502), big.NewInt(1)))
+	defer func() { PowLimit = testPowLimit }()
+
 	n, err := LoadNetwork(filepath.Join("..", "..", "network.json"))
 	if err != nil {
 		t.Fatal(err)
