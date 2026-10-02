@@ -6,6 +6,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -35,7 +36,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -56,6 +59,9 @@ public class MainActivity extends Activity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private SharedPreferences prefs;
+    private boolean english;
 
     private File walletDir;
     private File walletFile;
@@ -124,6 +130,10 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        prefs = getSharedPreferences("auronq_mobile", MODE_PRIVATE);
+        english = prefs.getBoolean("english", false);
+        nodeUrl = prefs.getString("last_node", "");
+
         walletDir = new File(getFilesDir(), "wallets");
         if (!walletDir.exists()) walletDir.mkdirs();
         walletFile = new File(walletDir, "main.wallet");
@@ -147,6 +157,15 @@ public class MainActivity extends Activity {
         super.onPause();
     }
 
+    private String tr(String pl, String en) {
+        return english ? en : pl;
+    }
+
+    private void toggleLanguage() {
+        prefs.edit().putBoolean("english", !english).apply();
+        recreate();
+    }
+
     private View buildUi() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -168,13 +187,22 @@ public class MainActivity extends Activity {
         brand.setOrientation(LinearLayout.VERTICAL);
         brand.setPadding(dp(12), 0, 0, 0);
         TextView name = text("AuronQ", 19, true);
-        topTitle = text("Pulpit", 11, false);
+        topTitle = text(tr("Pulpit", "Dashboard"), 11, false);
         topTitle.setTextColor(MUTED);
         brand.addView(name);
         brand.addView(topTitle);
         top.addView(brand, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
+        Button lang = secondaryButton(english ? "PL" : "EN");
+        lang.setTextSize(11);
+        lang.setMinWidth(0);
+        lang.setMinimumWidth(0);
+        lang.setPadding(dp(10), dp(6), dp(10), dp(6));
+        lang.setOnClickListener(v -> toggleLanguage());
+        top.addView(lang);
+
         topNetworkDot = text("●", 16, true);
+        topNetworkDot.setPadding(dp(10), 0, 0, 0);
         topNetworkDot.setTextColor(Color.rgb(86, 101, 121));
         top.addView(topNetworkDot);
         root.addView(top);
@@ -196,10 +224,10 @@ public class MainActivity extends Activity {
         nav.setPadding(dp(6), dp(6), dp(6), dp(8));
         nav.setBackgroundColor(Color.rgb(9, 14, 22));
 
-        navHome = navButton("⌂\nPulpit", () -> showScreen("home"));
-        navWallet = navButton("◫\nPortfel", () -> showScreen("wallet"));
-        navSend = navButton("↗\nWyślij", () -> showScreen("send"));
-        navNetwork = navButton("◎\nSieć", () -> showScreen("network"));
+        navHome = navButton("⌂\n" + tr("Pulpit", "Home"), () -> showScreen("home"));
+        navWallet = navButton("◫\n" + tr("Portfel", "Wallet"), () -> showScreen("wallet"));
+        navSend = navButton("↗\n" + tr("Wyślij", "Send"), () -> showScreen("send"));
+        navNetwork = navButton("◎\n" + tr("Sieć", "Network"), () -> showScreen("network"));
         nav.addView(navHome, weight());
         nav.addView(navWallet, weight());
         nav.addView(navSend, weight());
@@ -212,42 +240,45 @@ public class MainActivity extends Activity {
     private LinearLayout buildDashboard() {
         LinearLayout root = screenRoot();
 
-        TextView hello = text("Witaj w AuronQ", 26, true);
-        root.addView(hello);
-        TextView sub = text("Mobilny portfel AuronQ Mainnet. Klucze pozostają lokalnie na telefonie.", 13, false);
+        root.addView(text(tr("Witaj w AuronQ", "Welcome to AuronQ"), 26, true));
+        TextView sub = text(tr(
+                "Mobilny portfel AuronQ Mainnet. Klucze pozostają lokalnie na telefonie.",
+                "AuronQ Mainnet mobile wallet. Your keys stay local on the phone."), 13, false);
         sub.setTextColor(MUTED);
         root.addView(sub, mt(5));
 
         LinearLayout stats1 = row();
-        dashBalance = statCard(stats1, "SALDO", "0.00000000", "AURQ");
-        dashHeight = statCard(stats1, "WYSOKOŚĆ", "—", "łańcuch");
+        dashBalance = statCard(stats1, tr("SALDO", "BALANCE"), "0.00000000", "AURQ");
+        dashHeight = statCard(stats1, tr("WYSOKOŚĆ", "HEIGHT"), "—", tr("łańcuch", "chain"));
         root.addView(stats1, mt(20));
 
         LinearLayout stats2 = row();
         dashPeers = statCard(stats2, "PEERS", "0", "node");
-        dashMempool = statCard(stats2, "MEMPOOL", "0", "transakcje");
+        dashMempool = statCard(stats2, "MEMPOOL", "0", tr("transakcje", "transactions"));
         root.addView(stats2, mt(10));
 
         LinearLayout networkCard = card();
-        networkCard.addView(section("STAN SIECI"));
-        dashNode = text("Szukanie AuronQ Mainnet…", 14, true);
+        networkCard.addView(section(tr("STAN SIECI", "NETWORK STATUS")));
+        dashNode = text(tr("Szukanie AuronQ Mainnet…", "Finding AuronQ Mainnet…"), 14, true);
         networkCard.addView(dashNode, mt(10));
         dashTip = text("Tip: —", 11, false);
         dashTip.setTextColor(MUTED);
         dashTip.setTextIsSelectable(true);
         networkCard.addView(dashTip, mt(6));
 
-        Button openNetwork = primaryButton("Szczegóły sieci na żywo");
+        Button openNetwork = primaryButton(tr("Szczegóły sieci na żywo", "Live network details"));
         openNetwork.setOnClickListener(v -> showScreen("network"));
         networkCard.addView(openNetwork, mt(14));
         root.addView(networkCard, mt(16));
 
         LinearLayout walletCard = card();
-        walletCard.addView(section("TWÓJ PORTFEL"));
-        TextView note = text("Adres i saldo są odczytywane z tej samej sieci AuronQ Mainnet, z której korzystają inni użytkownicy.", 13, false);
+        walletCard.addView(section(tr("TWÓJ PORTFEL", "YOUR WALLET")));
+        TextView note = text(tr(
+                "Adres i saldo są odczytywane z tej samej sieci AuronQ Mainnet, z której korzystają inni użytkownicy.",
+                "Your address and balance are read from the same AuronQ Mainnet used by other users."), 13, false);
         note.setTextColor(MUTED);
         walletCard.addView(note, mt(8));
-        Button openWallet = secondaryButton("Otwórz portfel");
+        Button openWallet = secondaryButton(tr("Otwórz portfel", "Open wallet"));
         openWallet.setOnClickListener(v -> showScreen("wallet"));
         walletCard.addView(openWallet, mt(14));
         root.addView(walletCard, mt(16));
@@ -257,33 +288,35 @@ public class MainActivity extends Activity {
 
     private LinearLayout buildWallet() {
         LinearLayout root = screenRoot();
-        root.addView(title("Portfel"));
-        TextView sub = text("Ten sam format zaszyfrowanego pliku .wallet co w AuronQ Desktop.", 13, false);
+        root.addView(title(tr("Portfel", "Wallet")));
+        TextView sub = text(tr(
+                "Ten sam format zaszyfrowanego pliku .wallet co w AuronQ Desktop.",
+                "Uses the same encrypted .wallet file format as AuronQ Desktop."), 13, false);
         sub.setTextColor(MUTED);
         root.addView(sub, mt(5));
 
         LinearLayout balanceCard = card();
-        balanceCard.addView(section("SALDO DOSTĘPNE"));
+        balanceCard.addView(section(tr("SALDO DOSTĘPNE", "SPENDABLE BALANCE")));
         walletBalance = text("0.00000000 AURQ", 29, true);
         balanceCard.addView(walletBalance, mt(8));
         root.addView(balanceCard, mt(18));
 
         LinearLayout addressCard = card();
-        addressCard.addView(section("ADRES"));
-        walletAddressText = text("Brak lokalnego portfela", 12, false);
+        addressCard.addView(section(tr("ADRES", "ADDRESS")));
+        walletAddressText = text(tr("Brak lokalnego portfela", "No local wallet"), 12, false);
         walletAddressText.setTextColor(MUTED);
         walletAddressText.setTextIsSelectable(true);
         addressCard.addView(walletAddressText, mt(9));
         root.addView(addressCard, mt(12));
 
-        passwordInput = input("Hasło portfela (min. 12 znaków)");
+        passwordInput = input(tr("Hasło portfela (min. 12 znaków)", "Wallet password (min. 12 characters)"));
         passwordInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         root.addView(passwordInput, mt(14));
 
         LinearLayout r1 = row();
-        Button createButton = primaryButton("Utwórz");
+        Button createButton = primaryButton(tr("Utwórz", "Create"));
         createButton.setOnClickListener(v -> createWallet());
-        Button importButton = secondaryButton("Import");
+        Button importButton = secondaryButton(tr("Importuj", "Import"));
         importButton.setOnClickListener(v -> importWallet());
         r1.addView(createButton, weight());
         r1.addView(importButton, weight());
@@ -292,21 +325,23 @@ public class MainActivity extends Activity {
         LinearLayout r2 = row();
         backupButton = secondaryButton("Backup");
         backupButton.setOnClickListener(v -> backupWallet());
-        copyButton = secondaryButton("Kopiuj adres");
+        copyButton = secondaryButton(tr("Kopiuj adres", "Copy address"));
         copyButton.setOnClickListener(v -> copyAddress());
         r2.addView(backupButton, weight());
         r2.addView(copyButton, weight());
         root.addView(r2, mt(8));
 
-        sendShortcutButton = primaryButton("Wyślij AURQ");
+        sendShortcutButton = primaryButton(tr("Wyślij AURQ", "Send AURQ"));
         sendShortcutButton.setOnClickListener(v -> showScreen("send"));
         root.addView(sendShortcutButton, mt(12));
 
-        deleteButton = dangerButton("Usuń lokalny portfel");
+        deleteButton = dangerButton(tr("Usuń lokalny portfel", "Delete local wallet"));
         deleteButton.setOnClickListener(v -> deleteWallet());
         root.addView(deleteButton, mt(28));
 
-        TextView warning = text("Zrób backup przed usunięciem. Usunięcie jedynej kopii portfela może oznaczać trwałą utratę dostępu do środków.", 12, false);
+        TextView warning = text(tr(
+                "Zrób backup przed usunięciem. Usunięcie jedynej kopii portfela może oznaczać trwałą utratę dostępu do środków.",
+                "Create a backup before deleting. Deleting the only wallet copy can permanently remove access to funds."), 12, false);
         warning.setTextColor(MUTED);
         root.addView(warning, mt(10));
 
@@ -315,27 +350,29 @@ public class MainActivity extends Activity {
 
     private LinearLayout buildSend() {
         LinearLayout root = screenRoot();
-        root.addView(title("Wyślij AURQ"));
-        TextView sub = text("Transakcja jest podpisywana ML-DSA-87 lokalnie na telefonie i dopiero potem wysyłana do AuronQ Mainnet.", 13, false);
+        root.addView(title(tr("Wyślij AURQ", "Send AURQ")));
+        TextView sub = text(tr(
+                "Transakcja jest podpisywana ML-DSA-87 lokalnie na telefonie i dopiero potem wysyłana do AuronQ Mainnet.",
+                "The transaction is signed locally on the phone with ML-DSA-87 and only then submitted to AuronQ Mainnet."), 13, false);
         sub.setTextColor(MUTED);
         root.addView(sub, mt(5));
 
         LinearLayout card = card();
-        recipientInput = input("Adres odbiorcy aurq1…");
-        card.addView(label("ADRES ODBIORCY"));
+        recipientInput = input(tr("Adres odbiorcy aurq1…", "Recipient address aurq1…"));
+        card.addView(label(tr("ADRES ODBIORCY", "RECIPIENT ADDRESS")));
         card.addView(recipientInput, mt(6));
 
-        amountInput = input("Kwota, np. 1.25000000");
+        amountInput = input(tr("Kwota, np. 1.25000000", "Amount, e.g. 1.25000000"));
         amountInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        card.addView(label("KWOTA AURQ"), mt(14));
+        card.addView(label(tr("KWOTA AURQ", "AURQ AMOUNT")), mt(14));
         card.addView(amountInput, mt(6));
 
-        sendPassword = input("Hasło portfela");
+        sendPassword = input(tr("Hasło portfela", "Wallet password"));
         sendPassword.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-        card.addView(label("HASŁO PORTFELA"), mt(14));
+        card.addView(label(tr("HASŁO PORTFELA", "WALLET PASSWORD")), mt(14));
         card.addView(sendPassword, mt(6));
 
-        Button sendButton = primaryButton("Wyślij transakcję");
+        Button sendButton = primaryButton(tr("Wyślij transakcję", "Send transaction"));
         sendButton.setOnClickListener(v -> sendTransaction());
         card.addView(sendButton, mt(16));
         root.addView(card, mt(18));
@@ -345,7 +382,9 @@ public class MainActivity extends Activity {
         sendResult.setTextIsSelectable(true);
         root.addView(sendResult, mt(14));
 
-        TextView security = text("Przed wysłaniem sprawdź cały adres i kwotę. AuronQ Mobile nie wysyła hasła ani klucza prywatnego do publicznego noda.", 12, false);
+        TextView security = text(tr(
+                "Przed wysłaniem sprawdź cały adres i kwotę. AuronQ Mobile nie wysyła hasła ani klucza prywatnego do publicznego noda.",
+                "Before sending, verify the full address and amount. AuronQ Mobile never sends your password or private key to a public node."), 12, false);
         security.setTextColor(MUTED);
         root.addView(security, mt(16));
 
@@ -354,37 +393,39 @@ public class MainActivity extends Activity {
 
     private LinearLayout buildNetwork() {
         LinearLayout root = screenRoot();
-        root.addView(title("Sieć AuronQ na żywo"));
-        TextView sub = text("Podgląd tej samej sieci AuronQ Mainnet, z którą łączą się inne nody i portfele.", 13, false);
+        root.addView(title(tr("Sieć AuronQ na żywo", "AuronQ Network Live")));
+        TextView sub = text(tr(
+                "Podgląd tej samej sieci AuronQ Mainnet, z którą łączą się inne nody i portfele.",
+                "Live view of the same AuronQ Mainnet used by other nodes and wallets."), 13, false);
         sub.setTextColor(MUTED);
         root.addView(sub, mt(5));
 
-        netStatus = text("● Łączenie…", 14, true);
+        netStatus = text(tr("● Łączenie…", "● Connecting…"), 14, true);
         netStatus.setTextColor(MUTED);
         root.addView(netStatus, mt(16));
 
         LinearLayout stats1 = row();
-        netHeight = statCard(stats1, "WYSOKOŚĆ", "—", "blok");
-        netPeers = statCard(stats1, "PEERS", "0", "połączenia");
+        netHeight = statCard(stats1, tr("WYSOKOŚĆ", "HEIGHT"), "—", tr("blok", "block"));
+        netPeers = statCard(stats1, "PEERS", "0", tr("połączenia", "connections"));
         root.addView(stats1, mt(12));
 
         LinearLayout stats2 = row();
-        netMempool = statCard(stats2, "MEMPOOL", "0", "transakcje");
-        netIssued = statCard(stats2, "WYEMITOWANO", "—", "AURQ");
+        netMempool = statCard(stats2, "MEMPOOL", "0", tr("transakcje", "transactions"));
+        netIssued = statCard(stats2, tr("WYEMITOWANO", "ISSUED"), "—", "AURQ");
         root.addView(stats2, mt(10));
 
         LinearLayout details = card();
-        details.addView(section("SZCZEGÓŁY MAINNETU"));
+        details.addView(section(tr("SZCZEGÓŁY MAINNETU", "MAINNET DETAILS")));
         netNode = kv(details, "Node", "—");
         netNetworkId = kv(details, "Network ID", "—");
         netTip = kv(details, "Tip", "—");
         netWork = kv(details, "Chain work", "—");
-        netObserved = kv(details, "Ostatni odczyt", "—");
+        netObserved = kv(details, tr("Ostatni odczyt", "Last update"), "—");
         root.addView(details, mt(16));
 
         LinearLayout live = card();
-        live.addView(section("OSTATNIE BLOKI"));
-        TextView info = text("Aktualizacja co 5 sekund", 11, false);
+        live.addView(section(tr("OSTATNIE BLOKI", "RECENT BLOCKS")));
+        TextView info = text(tr("Aktualizacja co 5 sekund", "Updates every 5 seconds"), 11, false);
         info.setTextColor(MUTED);
         live.addView(info, mt(4));
         recentBlocks = new LinearLayout(this);
@@ -392,11 +433,13 @@ public class MainActivity extends Activity {
         live.addView(recentBlocks, mt(10));
         root.addView(live, mt(16));
 
-        Button refresh = secondaryButton("Odśwież teraz");
+        Button refresh = secondaryButton(tr("Odśwież teraz", "Refresh now"));
         refresh.setOnClickListener(v -> refreshAll());
         root.addView(refresh, mt(14));
 
-        TextView model = text("AuronQ Mobile jest klientem portfela, nie pełnym nodem. Sprawdza Network ID i odczytuje stan z publicznego noda AuronQ Mainnet. Pełne nody nadal niezależnie walidują blockchain.", 12, false);
+        TextView model = text(tr(
+                "AuronQ Mobile jest klientem portfela, nie pełnym nodem. Sprawdza Network ID i odczytuje stan z publicznego noda AuronQ Mainnet. Zapamiętuje poznane publiczne nody, aby nie zależeć od jednego komputera startowego.",
+                "AuronQ Mobile is a wallet client, not a full node. It verifies the Network ID and reads state from public AuronQ Mainnet nodes. It remembers discovered public nodes so it does not depend on a single startup computer."), 12, false);
         model.setTextColor(MUTED);
         root.addView(model, mt(18));
 
@@ -414,10 +457,68 @@ public class MainActivity extends Activity {
         navStyle(navSend, "send".equals(which));
         navStyle(navNetwork, "network".equals(which));
 
-        if ("home".equals(which)) topTitle.setText("Pulpit");
-        if ("wallet".equals(which)) topTitle.setText("Portfel");
-        if ("send".equals(which)) topTitle.setText("Wyślij");
-        if ("network".equals(which)) topTitle.setText("Sieć na żywo");
+        if ("home".equals(which)) topTitle.setText(tr("Pulpit", "Dashboard"));
+        if ("wallet".equals(which)) topTitle.setText(tr("Portfel", "Wallet"));
+        if ("send".equals(which)) topTitle.setText(tr("Wyślij", "Send"));
+        if ("network".equals(which)) topTitle.setText(tr("Sieć na żywo", "Network Live"));
+    }
+
+    private String discoverResilientNode() throws Exception {
+        Set<String> candidates = new LinkedHashSet<>();
+        if (nodeUrl != null && !nodeUrl.isEmpty()) candidates.add(nodeUrl);
+
+        String cached = prefs.getString("known_nodes", "[]");
+        try {
+            JSONArray a = new JSONArray(cached);
+            for (int i = 0; i < a.length() && i < 32; i++) {
+                String p = a.optString(i, "").trim();
+                if (p.startsWith("https://")) candidates.add(p);
+            }
+        } catch (Exception ignored) {
+        }
+
+        for (String candidate : candidates) {
+            try {
+                Bridge.status(candidate);
+                return candidate;
+            } catch (Exception ignored) {
+            }
+        }
+        return Bridge.discoverNode();
+    }
+
+    private void rememberNetwork(String node) {
+        try {
+            Set<String> nodes = new LinkedHashSet<>();
+            if (node != null && node.startsWith("https://")) nodes.add(node);
+
+            try {
+                String learned = Bridge.peerCandidates(node);
+                JSONArray a = new JSONArray(learned);
+                for (int i = 0; i < a.length() && nodes.size() < 32; i++) {
+                    String p = a.optString(i, "").trim();
+                    if (p.startsWith("https://")) nodes.add(p);
+                }
+            } catch (Exception ignored) {
+            }
+
+            try {
+                JSONArray old = new JSONArray(prefs.getString("known_nodes", "[]"));
+                for (int i = 0; i < old.length() && nodes.size() < 32; i++) {
+                    String p = old.optString(i, "").trim();
+                    if (p.startsWith("https://")) nodes.add(p);
+                }
+            } catch (Exception ignored) {
+            }
+
+            JSONArray out = new JSONArray();
+            for (String p : nodes) out.put(p);
+            prefs.edit()
+                    .putString("last_node", node)
+                    .putString("known_nodes", out.toString())
+                    .apply();
+        } catch (Exception ignored) {
+        }
     }
 
     private void refreshAll() {
@@ -426,15 +527,17 @@ public class MainActivity extends Activity {
         executor.execute(() -> {
             try {
                 String node = nodeUrl;
-                if (node == null || node.isEmpty()) node = Bridge.discoverNode();
-
                 String snapshot;
                 try {
+                    if (node == null || node.isEmpty()) node = discoverResilientNode();
                     snapshot = Bridge.networkSnapshot(node, 6);
                 } catch (Exception first) {
-                    node = Bridge.discoverNode();
+                    nodeUrl = "";
+                    node = discoverResilientNode();
                     snapshot = Bridge.networkSnapshot(node, 6);
                 }
+
+                rememberNetwork(node);
 
                 String balance = null;
                 if (walletFile.exists()) {
@@ -472,11 +575,11 @@ public class MainActivity extends Activity {
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
-            dashNode.setText("● AuronQ Mainnet połączony");
+            dashNode.setText(tr("● AuronQ Mainnet połączony", "● AuronQ Mainnet connected"));
             dashNode.setTextColor(ACCENT);
             dashTip.setText("Tip: " + shortHash(j.optString("tip")));
 
-            netStatus.setText("● Połączono z AuronQ Mainnet");
+            netStatus.setText(tr("● Połączono z AuronQ Mainnet", "● Connected to AuronQ Mainnet"));
             netStatus.setTextColor(ACCENT);
             netHeight.setText(String.valueOf(height));
             netPeers.setText(String.valueOf(peers));
@@ -493,7 +596,7 @@ public class MainActivity extends Activity {
             recentBlocks.removeAllViews();
             JSONArray blocks = j.optJSONArray("blocks");
             if (blocks == null || blocks.length() == 0) {
-                TextView empty = text("Brak danych o blokach", 12, false);
+                TextView empty = text(tr("Brak danych o blokach", "No block data"), 12, false);
                 empty.setTextColor(MUTED);
                 recentBlocks.addView(empty);
             } else {
@@ -508,15 +611,15 @@ public class MainActivity extends Activity {
                 }
             }
         } catch (Exception e) {
-            setNetworkOffline("Nieprawidłowa odpowiedź sieci");
+            setNetworkOffline(tr("Nieprawidłowa odpowiedź sieci", "Invalid network response"));
         }
     }
 
     private void setNetworkOffline(String error) {
         topNetworkDot.setTextColor(DANGER);
-        dashNode.setText("● Brak połączenia");
+        dashNode.setText(tr("● Brak połączenia", "● Offline"));
         dashNode.setTextColor(DANGER);
-        netStatus.setText("● Brak połączenia z AuronQ Mainnet");
+        netStatus.setText(tr("● Brak połączenia z AuronQ Mainnet", "● No connection to AuronQ Mainnet"));
         netStatus.setTextColor(DANGER);
         netObserved.setText(error == null ? "—" : error);
         nodeUrl = "";
@@ -530,7 +633,7 @@ public class MainActivity extends Activity {
 
         LinearLayout top = new LinearLayout(this);
         top.setOrientation(LinearLayout.HORIZONTAL);
-        TextView h = text("Blok #" + height, 14, true);
+        TextView h = text(tr("Blok #", "Block #") + height, 14, true);
         top.addView(h, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         TextView tx = text(txs + " tx", 11, true);
         tx.setTextColor(BLUE);
@@ -566,17 +669,19 @@ public class MainActivity extends Activity {
 
     private void createWallet() {
         if (walletFile.exists()) {
-            toast("Portfel już istnieje. Zrób backup albo usuń go przed utworzeniem nowego.");
+            toast(tr(
+                    "Portfel już istnieje. Zrób backup albo usuń go przed utworzeniem nowego.",
+                    "A wallet already exists. Back it up or delete it before creating a new one."));
             return;
         }
         String password = passwordInput.getText().toString();
-        run("Tworzenie portfela…",
+        run(tr("Tworzenie portfela…", "Creating wallet…"),
                 () -> Bridge.createWallet(walletFile.getAbsolutePath(), password),
                 value -> {
                     walletAddress = value;
                     loadWalletState();
                     refreshAll();
-                    toast("Portfel utworzony");
+                    toast(tr("Portfel utworzony", "Wallet created"));
                 });
     }
 
@@ -589,7 +694,7 @@ public class MainActivity extends Activity {
 
     private void backupWallet() {
         if (!walletFile.exists()) {
-            toast("Brak portfela do backupu");
+            toast(tr("Brak portfela do backupu", "No wallet to back up"));
             return;
         }
         Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT);
@@ -600,21 +705,21 @@ public class MainActivity extends Activity {
 
     private void copyAddress() {
         if (walletAddress.isEmpty()) {
-            toast("Brak adresu");
+            toast(tr("Brak adresu", "No address"));
             return;
         }
         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         cm.setPrimaryClip(ClipData.newPlainText("AuronQ address", walletAddress));
-        toast("Adres skopiowany");
+        toast(tr("Adres skopiowany", "Address copied"));
     }
 
     private void sendTransaction() {
         if (!walletFile.exists() || walletAddress.isEmpty()) {
-            toast("Najpierw utwórz albo zaimportuj portfel");
+            toast(tr("Najpierw utwórz albo zaimportuj portfel", "Create or import a wallet first"));
             return;
         }
         if (nodeUrl.isEmpty()) {
-            toast("Brak połączenia z AuronQ Mainnet");
+            toast(tr("Brak połączenia z AuronQ Mainnet", "No connection to AuronQ Mainnet"));
             return;
         }
         String password = sendPassword.getText().toString();
@@ -622,11 +727,13 @@ public class MainActivity extends Activity {
         String amount = amountInput.getText().toString().trim();
 
         new AlertDialog.Builder(this)
-                .setTitle("Potwierdź wysyłkę")
-                .setMessage("Wyślij " + amount + " AURQ na:\n\n" + to + "\n\nTransakcja po zatwierdzeniu w blockchainie jest nieodwracalna.")
-                .setNegativeButton("Anuluj", null)
-                .setPositiveButton("Wyślij", (d, w) ->
-                        run("Podpisywanie i wysyłanie…",
+                .setTitle(tr("Potwierdź wysyłkę", "Confirm transaction"))
+                .setMessage(tr(
+                        "Wyślij " + amount + " AURQ na:\n\n" + to + "\n\nTransakcja po zatwierdzeniu w blockchainie jest nieodwracalna.",
+                        "Send " + amount + " AURQ to:\n\n" + to + "\n\nA confirmed blockchain transaction is irreversible."))
+                .setNegativeButton(tr("Anuluj", "Cancel"), null)
+                .setPositiveButton(tr("Wyślij", "Send"), (d, w) ->
+                        run(tr("Podpisywanie i wysyłanie…", "Signing and sending…"),
                                 () -> Bridge.send(nodeUrl, walletFile.getAbsolutePath(), password, to, amount),
                                 value -> {
                                     try {
@@ -643,22 +750,24 @@ public class MainActivity extends Activity {
 
     private void deleteWallet() {
         if (!walletFile.exists()) {
-            toast("Brak lokalnego portfela");
+            toast(tr("Brak lokalnego portfela", "No local wallet"));
             return;
         }
         new AlertDialog.Builder(this)
-                .setTitle("Usunąć portfel?")
-                .setMessage("Najpierw upewnij się, że masz backup. Usunięcie pliku bez backupu może oznaczać trwałą utratę dostępu do środków.")
-                .setNegativeButton("Anuluj", null)
-                .setPositiveButton("Usuń", (d, w) -> {
+                .setTitle(tr("Usunąć portfel?", "Delete wallet?"))
+                .setMessage(tr(
+                        "Najpierw upewnij się, że masz backup. Usunięcie pliku bez backupu może oznaczać trwałą utratę dostępu do środków.",
+                        "Make sure you have a backup first. Deleting the wallet file without a backup can permanently remove access to funds."))
+                .setNegativeButton(tr("Anuluj", "Cancel"), null)
+                .setPositiveButton(tr("Usuń", "Delete"), (d, w) -> {
                     if (walletFile.delete()) {
                         walletAddress = "";
                         passwordInput.setText("");
                         loadWalletState();
                         refreshAll();
-                        toast("Lokalny portfel usunięty");
+                        toast(tr("Lokalny portfel usunięty", "Local wallet deleted"));
                     } else {
-                        toast("Nie udało się usunąć pliku");
+                        toast(tr("Nie udało się usunąć pliku", "Could not delete the file"));
                     }
                 })
                 .show();
@@ -667,7 +776,7 @@ public class MainActivity extends Activity {
     private void loadWalletState() {
         if (!walletFile.exists()) {
             walletAddress = "";
-            walletAddressText.setText("Brak lokalnego portfela");
+            walletAddressText.setText(tr("Brak lokalnego portfela", "No local wallet"));
             walletBalance.setText("0.00000000 AURQ");
             dashBalance.setText("0.00000000");
             backupButton.setEnabled(false);
@@ -688,7 +797,7 @@ public class MainActivity extends Activity {
                     deleteButton.setEnabled(true);
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> toast("Błąd portfela: " + e.getMessage()));
+                runOnUiThread(() -> toast(tr("Błąd portfela: ", "Wallet error: ") + e.getMessage()));
             }
         });
     }
@@ -701,7 +810,7 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> success.accept(result));
             } catch (Exception e) {
                 runOnUiThread(() -> {
-                    if (sendResult != null) sendResult.setText("Błąd: " + e.getMessage());
+                    if (sendResult != null) sendResult.setText(tr("Błąd: ", "Error: ") + e.getMessage());
                     toast(e.getMessage());
                 });
             }
@@ -723,47 +832,49 @@ public class MainActivity extends Activity {
                 String addr = Bridge.walletAddress(tmp.getAbsolutePath());
                 Runnable install = () -> {
                     if (walletFile.exists() && !walletFile.delete()) {
-                        toast("Nie udało się zastąpić obecnego portfela");
+                        toast(tr("Nie udało się zastąpić obecnego portfela", "Could not replace the current wallet"));
                         tmp.delete();
                         return;
                     }
                     if (!tmp.renameTo(walletFile)) {
-                        toast("Nie udało się zapisać importowanego portfela");
+                        toast(tr("Nie udało się zapisać importowanego portfela", "Could not save the imported wallet"));
                         tmp.delete();
                         return;
                     }
                     walletAddress = addr;
                     loadWalletState();
                     refreshAll();
-                    toast("Portfel zaimportowany");
+                    toast(tr("Portfel zaimportowany", "Wallet imported"));
                 };
                 if (walletFile.exists()) {
                     new AlertDialog.Builder(this)
-                            .setTitle("Zastąpić portfel?")
-                            .setMessage("Obecny lokalny portfel zostanie zastąpiony. Zrób backup przed kontynuacją.")
-                            .setNegativeButton("Anuluj", (d, w) -> tmp.delete())
-                            .setPositiveButton("Zastąp", (d, w) -> install.run())
+                            .setTitle(tr("Zastąpić portfel?", "Replace wallet?"))
+                            .setMessage(tr(
+                                    "Obecny lokalny portfel zostanie zastąpiony. Zrób backup przed kontynuacją.",
+                                    "The current local wallet will be replaced. Create a backup before continuing."))
+                            .setNegativeButton(tr("Anuluj", "Cancel"), (d, w) -> tmp.delete())
+                            .setPositiveButton(tr("Zastąp", "Replace"), (d, w) -> install.run())
                             .show();
                 } else {
                     install.run();
                 }
             } catch (Exception e) {
                 tmp.delete();
-                toast("Import nieudany: " + e.getMessage());
+                toast(tr("Import nieudany: ", "Import failed: ") + e.getMessage());
             }
         } else if (requestCode == EXPORT_WALLET) {
             try (InputStream in = new java.io.FileInputStream(walletFile);
                  OutputStream out = getContentResolver().openOutputStream(uri, "w")) {
                 copy(in, out);
-                toast("Backup zapisany");
+                toast(tr("Backup zapisany", "Backup saved"));
             } catch (Exception e) {
-                toast("Backup nieudany: " + e.getMessage());
+                toast(tr("Backup nieudany: ", "Backup failed: ") + e.getMessage());
             }
         }
     }
 
     private static void copy(InputStream in, OutputStream out) throws Exception {
-        if (in == null || out == null) throw new Exception("nie można otworzyć pliku");
+        if (in == null || out == null) throw new Exception("cannot open file");
         byte[] buf = new byte[8192];
         int n;
         while ((n = in.read(buf)) >= 0) out.write(buf, 0, n);
@@ -954,7 +1065,7 @@ public class MainActivity extends Activity {
     }
 
     private void toast(String msg) {
-        Toast.makeText(this, msg == null ? "Błąd" : msg, Toast.LENGTH_LONG).show();
+        Toast.makeText(this, msg == null ? tr("Błąd", "Error") : msg, Toast.LENGTH_LONG).show();
     }
 
     @Override
