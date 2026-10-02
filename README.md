@@ -23,13 +23,13 @@ The current Windows binaries are **not Authenticode-signed**, so Windows SmartSc
 
 ## Android alpha
 
-For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.2.0 Alpha**:
+For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.3.0 Alpha**:
 
-- [AuronQ-Mobile-0.2.0-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.2.0-alpha/AuronQ-Mobile-0.2.0-alpha.apk)
-- Release page: [android-v0.2.0-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.2.0-alpha)
-- SHA-256: `248c41273a64439f6033e4d7f6d1327a39b615c2a37a883381a09e0efb4911f4`
+- [AuronQ-Mobile-0.3.0-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.3.0-alpha/AuronQ-Mobile-0.3.0-alpha.apk)
+- Release page: [android-v0.3.0-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.3.0-alpha)
+- SHA-256: `9f92008d5174f831bced33bb11b91c08f11142e0d49610a99a29cfc159e1b9ba`
 
-The Android alpha is a wallet client, not a full node. It keeps/signs with the encrypted AuronQ wallet locally and uses an HTTPS AuronQ Mainnet node for balances, UTXOs and transaction submission. Version 0.2.0 adds live AuronQ Mainnet telemetry, recent blocks, node failover and a mobile interface styled after AuronQ Desktop. It is debug-signed test software; do not use substantial value.
+The Android alpha is a wallet client, not a full node. It keeps/signs with the encrypted AuronQ wallet locally and uses an HTTPS AuronQ Mainnet node for balances, UTXOs and transaction submission. Version 0.3.0 adds PL/EN switching, live AuronQ Mainnet telemetry, recent blocks, remembered public-node discovery, failover and a mobile interface styled after AuronQ Desktop. It is debug-signed test software; do not use substantial value.
 
 ## Mainnet identity
 
