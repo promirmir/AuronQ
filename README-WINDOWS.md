@@ -1,8 +1,8 @@
-# AuronQ 1.7.0 Mainnet — Windows
+# AuronQ 1.7.1 Mainnet — Windows
 
 ## Normalny użytkownik
 
-1. Pobierz `AuronQ-1.7.0-Windows-x64.zip` wyłącznie z GitHub Releases.
+1. Pobierz `AuronQ-1.7.1-Windows-x64.zip` wyłącznie z GitHub Releases.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
@@ -12,11 +12,9 @@ Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręc
 
 Użytkownik za NAT/CGNAT nadal może synchronizować, wysyłać transakcje, kopać i relayować dane przez połączenia wychodzące.
 
-## Suma kontrolna oficjalnego v1.7.0
+## Suma kontrolna oficjalnego v1.7.1
 
-```text
-79f9e75b61ad17f26e6e90e3d8dc07883aa3cb00f1f7882bcf96dd6291a72f37  AuronQ-1.7.0-Windows-x64.zip
-```
+Sprawdź `SHA256SUMS.txt` na stronie wydania GitHub przed uruchomieniem pobranego ZIP-a.
 
 Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen może więc wyświetlić ostrzeżenie przy pierwszym uruchomieniu. Weryfikuj sumę SHA-256 i źródło pobrania.
 
@@ -44,7 +42,7 @@ Genesis:
 
 ## Bezpieczeństwo
 
-AuronQ 1.7.0 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa.
+AuronQ 1.7.1 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa.
 
 ## Usuwanie portfela
 
