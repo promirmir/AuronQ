@@ -14,7 +14,13 @@ Użytkownik za NAT/CGNAT nadal może synchronizować, wysyłać transakcje, kopa
 
 ## Suma kontrolna oficjalnego v1.7.3
 
-Oficjalny SHA-256 jest publikowany w pliku `SHA256SUMS.txt` dołączonym do wydania GitHub.
+Oficjalny SHA-256 pliku Windows:
+
+```text
+a06c62561ab9c8673ac14384e1bba5af51e5e4f9b888cb9f7d1dbe238c0cfb23  AuronQ-1.7.3-Windows-x64.zip
+```
+
+Pełny `SHA256SUMS.txt` jest również dołączony do wydania GitHub.
 
 Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen może więc wyświetlić ostrzeżenie przy pierwszym uruchomieniu. Weryfikuj sumę SHA-256 i źródło pobrania.
 
