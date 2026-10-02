@@ -10,6 +10,13 @@ AuronQ is a public UTXO proof-of-work cryptocurrency with ML-DSA-87 transaction 
 
 Release page: [AuronQ 1.7.1 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.1)
 
+SHA-256:
+
+```text
+50a1b2d321117549d7ceab81aa5dfaa0bb072544915fb5e921eb9b2a24d68d8d  AuronQ-1.7.1-Windows-x64.zip
+6ddd97167f5e587cf7245ba9827d5d8c2219a96581a6ecb21a4a6d76a90270a0  AuronQ-1.7.1-Linux-amd64.tar.gz
+```
+
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
 
 The current Windows binaries are **not Authenticode-signed**, so Windows SmartScreen may warn on first launch. Verify the SHA-256 above and download only from this repository's Releases page.
@@ -59,6 +66,10 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 ## Source and CI
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
+
+The immutable `v1.7.1` release tag points to commit:
+
+`776401065ac454ae4ad2246b9efdf7d5f134efa0`
 
 ## Security status
 
