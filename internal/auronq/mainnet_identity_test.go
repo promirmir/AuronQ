@@ -12,8 +12,16 @@ func TestMainnetIdentityIsFrozen(t *testing.T) {
 	// TestMain intentionally lowers PoW cost/limit for fast consensus tests.
 	// Restore the frozen production PoW limit only for this identity check.
 	testPowLimit := PowLimit
+	testMemory := aqm64MemoryKiB
+	testTime := aqm64TimeCost
 	PowLimit = TargetFromBig(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 502), big.NewInt(1)))
-	defer func() { PowLimit = testPowLimit }()
+	aqm64MemoryKiB = AQM64MemoryKiB
+	aqm64TimeCost = AQM64TimeCost
+	defer func() {
+		PowLimit = testPowLimit
+		aqm64MemoryKiB = testMemory
+		aqm64TimeCost = testTime
+	}()
 
 	n, err := LoadNetwork(filepath.Join("..", "..", "network.json"))
 	if err != nil {
