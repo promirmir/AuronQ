@@ -1,11 +1,10 @@
-# Start here — AuronQ 1.7.0 Mainnet
+# Start here — AuronQ 1.7.1 Mainnet
 
 ## Windows
 
-1. Open the official release: https://github.com/promirmir/AuronQ/releases/tag/v1.7.0
-2. Download `AuronQ-1.7.0-Windows-x64.zip`.
-3. Verify SHA-256:
-   `79f9e75b61ad17f26e6e90e3d8dc07883aa3cb00f1f7882bcf96dd6291a72f37`
+1. Open the official release: https://github.com/promirmir/AuronQ/releases/tag/v1.7.1
+2. Download `AuronQ-1.7.1-Windows-x64.zip`.
+3. Verify the archive SHA-256 against `SHA256SUMS.txt` on the release page.
 4. Extract the complete ZIP.
 5. Run `START-AURONQ.cmd`.
 
@@ -23,4 +22,4 @@ It currently contains one confirmed public rendezvous endpoint, `https://mir.tai
 
 ## Security
 
-AuronQ 1.7.0 is live mainnet software but has not received an independent professional consensus/cryptographic security audit. See `SECURITY.md`.
+AuronQ 1.7.1 is live mainnet software but has not received an independent professional consensus/cryptographic security audit. See `SECURITY.md`.
