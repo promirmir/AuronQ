@@ -1,0 +1,26 @@
+AuronQ 1.7.2
+
+Type: patch release
+Consensus: unchanged
+Network ID: unchanged
+Genesis: unchanged
+
+Changes:
+- safely support verified public HTTPS/DNS peer endpoints in peer discovery and gossip;
+- filter DNS-resolved peer addresses on every connection attempt to reject private, loopback, link-local, CGNAT and documentation-only targets;
+- disable redirects for filtered public-peer requests;
+- allow the autonomous peer crawler to verify public HTTPS/DNS peers;
+- add AURONQ_ADVERTISE support to AuronQ Desktop;
+- update START-SEED-NODE.cmd to detect the local Tailscale DNS name, configure Funnel and advertise the resulting public HTTPS endpoint;
+- add regression tests for HTTPS/DNS peer discovery and private-resolution rejection.
+
+Validation before release:
+- CI passed on Linux and Windows;
+- go test ./... passed;
+- go vet ./... passed;
+- Linux race detector passed;
+- Network hardening workflow passed;
+- public peer registry crawler passed against the current Mainnet bootstrap.
+
+Security:
+AQM64 and the complete consensus/network implementation have not received an independent professional security or cryptographic audit.
