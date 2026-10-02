@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -23,6 +24,9 @@ jobs:
         run: go test ./...
       - name: Vet
         run: go vet ./...
+      - name: Race detector
+        if: runner.os == 'Linux'
+        run: go test -race ./...
       - name: Build CLI
         run: go build -trimpath ./cmd/auronq
       - name: Build Desktop
