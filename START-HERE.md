@@ -4,7 +4,7 @@
 
 1. Open the official release: https://github.com/promirmir/AuronQ/releases/tag/v1.7.1
 2. Download `AuronQ-1.7.1-Windows-x64.zip`.
-3. Verify the archive SHA-256 against `SHA256SUMS.txt` on the release page.
+3. Verify SHA-256: `50a1b2d321117549d7ceab81aa5dfaa0bb072544915fb5e921eb9b2a24d68d8d`.
 4. Extract the complete ZIP.
 5. Run `START-AURONQ.cmd`.
 
