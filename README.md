@@ -1,21 +1,14 @@
-# AuronQ (AURQ) — Mainnet 1.7.0
+# AuronQ (AURQ) — Mainnet 1.7.1
 
 AuronQ is a public UTXO proof-of-work cryptocurrency with ML-DSA-87 transaction signatures and the AuronQ-specific AQM64 proof-of-work construction.
 
 ## Download
 
-**Windows x64:** [AuronQ-1.7.0-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.0/AuronQ-1.7.0-Windows-x64.zip)
+**Windows x64:** [AuronQ-1.7.1-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.1/AuronQ-1.7.1-Windows-x64.zip)
 
-**Linux amd64:** [AuronQ-1.7.0-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.0/AuronQ-1.7.0-Linux-amd64.tar.gz)
+**Linux amd64:** [AuronQ-1.7.1-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.1/AuronQ-1.7.1-Linux-amd64.tar.gz)
 
-Release page: [AuronQ 1.7.0 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.0)
-
-SHA-256:
-
-```text
-79f9e75b61ad17f26e6e90e3d8dc07883aa3cb00f1f7882bcf96dd6291a72f37  AuronQ-1.7.0-Windows-x64.zip
-9b4a022c333eb11c030a91a6325f85c7ade949958b493245a67a00bfe9014fbf  AuronQ-1.7.0-Linux-amd64.tar.gz
-```
+Release page: [AuronQ 1.7.1 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.1)
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
 
@@ -67,12 +60,8 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
 
-The immutable `v1.7.0` release tag points to commit:
-
-`a4f6e1ff4c2afc975831d42c45432b94fa14d5bb`
-
 ## Security status
 
-AuronQ 1.7.0 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
+AuronQ 1.7.1 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
 
 See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
