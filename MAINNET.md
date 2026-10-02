@@ -1,14 +1,30 @@
 # AuronQ Mainnet 1.7.0
 
-This file records the public mainnet identity and launch model.
+This file records the public mainnet identity and current launch model.
 
 - Network ID: `44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c`
 - Genesis: `5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4`
 - Founder address: `aurq1keaacmqgcvostprfhfejx55noyd746frjzv3qusb62lmutxurypahx7yiqq3mbg2lq`
-- Genesis allocation: 210,000 AURQ
+- Genesis founder allocation: 210,000 AURQ
+- Initial block subsidy: 49.5 AURQ
 - Coinbase maturity: 100 blocks
+- Target block interval: 600 seconds
 - Default P2P port: TCP 18444
+- Public release tag: `v1.7.0`
+- Tagged commit: `a4f6e1ff4c2afc975831d42c45432b94fa14d5bb`
 
-Bootstrap metadata is not part of consensus and may change without changing the Network ID. New nodes use persisted peers, fixed seeds, DNS seeds and the official HTTPS manifest, then learn additional public peers from normal P2P gossip.
+Bootstrap metadata is not part of consensus and may change without changing Network ID.
 
-The initial bootstrap endpoints are relay front-ends to ordinary full nodes. They have no consensus privileges. A healthy public network should accumulate multiple independently operated publicly reachable nodes and DNS seeds over time.
+Current official manifest:
+
+`https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
+
+Current confirmed public bootstrap:
+
+`https://mir.taild63f46.ts.net`
+
+A fresh node uses bootstrap only for first contact, then validates the chain locally and learns additional peers. The bootstrap has no authority over transaction validity, block validity or chain selection.
+
+The public network should add multiple independently operated reachable nodes and DNS seeds over time so fresh installations do not depend on one rendezvous path.
+
+AuronQ 1.7.0 has not received an independent professional security or cryptographic audit.
