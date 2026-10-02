@@ -63,9 +63,13 @@ At present the manifest advertises **one confirmed public bootstrap endpoint**:
 
 `https://mir.taild63f46.ts.net`
 
-That endpoint is only a first-contact relay to an ordinary full node. It has no consensus privileges. The node independently validates blocks, transactions, Network ID and cumulative chain work. More independently operated public nodes and DNS seeds should be added as the network grows so fresh installations do not depend on a single rendezvous path.
+That endpoint is only a first-contact relay to an ordinary full node. It has no consensus privileges. Full nodes independently validate blocks, transactions, Network ID and cumulative chain work.
 
-NAT/CGNAT users can participate through outbound connections without port forwarding. Publicly reachable nodes can be learned and gossiped by other peers.
+AuronQ full nodes already persist verified public peers and exchange them through peer gossip. In addition, the repository now has a scheduled public-peer crawler that follows AuronQ gossip, verifies reachable Mainnet peers and can append them to `bootstrap.json` automatically. This means that, as independently operated public nodes appear, the first-contact registry can become multi-peer without relying on the founder's computer being online.
+
+This does **not** create independent peers out of nothing: today there is still only one confirmed public endpoint. Practical independence from the original computer requires at least a few other publicly reachable full nodes. A completely fresh install always needs some discovery route; AuronQ also supports DNS seeds for that purpose.
+
+NAT/CGNAT users can participate through outbound connections without port forwarding. Users who want to contribute a publicly reachable Windows full node can use the opt-in `START-PUBLIC-NODE.cmd` in future release packages (or run the node directly with public TCP/18444 reachability).
 
 ## Network behavior
 
