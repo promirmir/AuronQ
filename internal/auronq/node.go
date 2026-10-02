@@ -997,7 +997,8 @@ func (n *Node) getJSON(peer, path string, out any) error {
 // postPeerJSON sends a bounded P2P POST and requires a successful HTTP status.
 // It is used by catch-up push so an outbound-only node can repair a public
 // bootstrap peer that missed a previously broadcast block.
-func (n *Node) postPeerJSON(peer, path string, v any) error {	b, err := json.Marshal(v)
+func (n *Node) postPeerJSON(peer, path string, v any) error {
+	b, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}

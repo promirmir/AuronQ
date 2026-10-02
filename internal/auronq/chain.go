@@ -997,7 +997,8 @@ func ValidateCandidateEnvelope(b *Block, history []Block, now int64) error {
 	}
 	if b.Header.PrevHash != prev.Hash() {
 		return errors.New("previous hash mismatch")
-	}	if b.Size() > MaxBlockBytes {
+	}
+	if b.Size() > MaxBlockBytes {
 		return fmt.Errorf("block exceeds %d bytes", MaxBlockBytes)
 	}
 	if len(b.Transactions) == 0 || !b.Transactions[0].Coinbase {

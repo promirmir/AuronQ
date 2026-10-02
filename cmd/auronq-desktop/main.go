@@ -997,7 +997,8 @@ func (a *App) handleWalletHistory(w http.ResponseWriter, r *http.Request) {
 	items, err := chain.HistoryForAddress(wf.Address, 250)
 	if err != nil {
 		apiError(w, 400, err)
-		return	}
+		return
+	}
 	writeJSON(w, map[string]any{
 		"ok":      true,
 		"wallet":  name,
