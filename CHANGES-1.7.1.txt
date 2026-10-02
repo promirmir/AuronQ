@@ -1,0 +1,9 @@
+AuronQ 1.7.1 Mainnet
+
+- Adds wallet deletion from AuronQ Desktop.
+- Deletion requires an explicit warning and exact wallet-name confirmation.
+- Backend restricts deletion to a sanitized `.wallet` file inside the local AuronQ wallets directory.
+- Refuses to delete the wallet currently used by the active miner.
+- Deletion removes only the local encrypted wallet file; it does not move or destroy on-chain coins.
+- Users are warned to create a backup first because deleting the last wallet copy can permanently lose access to funds.
+- No consensus, genesis, Network ID, monetary-policy or proof-of-work changes.
