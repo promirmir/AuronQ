@@ -14,7 +14,13 @@ Użytkownik za NAT/CGNAT nadal może synchronizować, wysyłać transakcje, kopa
 
 ## Suma kontrolna oficjalnego v1.7.1
 
-Sprawdź `SHA256SUMS.txt` na stronie wydania GitHub przed uruchomieniem pobranego ZIP-a.
+Oficjalny SHA-256:
+
+```text
+50a1b2d321117549d7ceab81aa5dfaa0bb072544915fb5e921eb9b2a24d68d8d  AuronQ-1.7.1-Windows-x64.zip
+```
+
+Możesz też porównać wynik z `SHA256SUMS.txt` na stronie wydania GitHub.
 
 Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen może więc wyświetlić ostrzeżenie przy pierwszym uruchomieniu. Weryfikuj sumę SHA-256 i źródło pobrania.
 
