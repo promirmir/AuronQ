@@ -1,0 +1,5 @@
+# AuronQ Mobile 0.1.0 Alpha SHA-256
+
+cbcea7c5a43686a5192434b3563703a81b192decf789238a809dfc259f9a5c53  AuronQ-Mobile-0.1.0-alpha.apk
+
+Release tag: android-v0.1.0-alpha
