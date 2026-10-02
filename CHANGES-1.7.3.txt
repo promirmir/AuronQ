@@ -1,0 +1,17 @@
+AuronQ 1.7.3
+
+Type: patch release
+Consensus: unchanged
+Network ID: unchanged
+Genesis: unchanged
+
+Fix:
+- repair START-SEED-NODE.cmd Windows paths for tailscale.exe;
+- discover tailscale.exe through PATH and standard Program Files locations;
+- correctly obtain the device Tailscale DNSName before setting AURONQ_ADVERTISE;
+- show Funnel setup errors instead of suppressing them;
+- configure Funnel with --bg --yes before starting AuronQ Desktop.
+
+This fixes a 1.7.2 packaging-script bug that could prevent a second Windows node from advertising its public Tailscale Funnel endpoint.
+
+No block validation, transaction validation, PoW, chain-selection, Network ID or genesis rules are changed.
