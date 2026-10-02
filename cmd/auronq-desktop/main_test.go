@@ -1,7 +1,12 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	aq "auronq/internal/auronq"
@@ -57,4 +62,54 @@ func TestMergeBootstrapMetadataRejectsDifferentNetwork(t *testing.T) {
 	if len(existing.BootstrapManifests) != 0 {
 		t.Fatalf("different network modified existing config: %#v", existing.BootstrapManifests)
 	}
+}
+
+func TestWalletDeleteRemovesOnlySelectedWallet(t *testing.T) {
+	dir := t.TempDir()
+	wallets := filepath.Join(dir, "wallets")
+	if err := os.MkdirAll(wallets, 0700); err != nil { t.Fatal(err) }
+	target := filepath.Join(wallets, "miner.wallet")
+	other := filepath.Join(wallets, "keep.wallet")
+	if err := os.WriteFile(target, []byte("{}"), 0600); err != nil { t.Fatal(err) }
+	if err := os.WriteFile(other, []byte("{}"), 0600); err != nil { t.Fatal(err) }
+	a := &App{walletsDir: wallets}
+	r := httptest.NewRequest(http.MethodPost, "/api/wallet/delete", strings.NewReader(`{"Name":"miner","Confirm":"miner"}`))
+	w := httptest.NewRecorder()
+	a.handleWalletDelete(w, r)
+	if w.Code != http.StatusOK { t.Fatalf("delete status = %d, body=%s", w.Code, w.Body.String()) }
+	if _, err := os.Stat(target); !os.IsNotExist(err) { t.Fatalf("target wallet still exists or unexpected stat error: %v", err) }
+	if _, err := os.Stat(other); err != nil { t.Fatalf("unrelated wallet was touched: %v", err) }
+}
+
+func TestWalletDeleteRejectsTraversalAndWrongConfirmation(t *testing.T) {
+	dir := t.TempDir()
+	wallets := filepath.Join(dir, "wallets")
+	if err := os.MkdirAll(wallets, 0700); err != nil { t.Fatal(err) }
+	outside := filepath.Join(dir, "victim.wallet")
+	if err := os.WriteFile(outside, []byte("keep"), 0600); err != nil { t.Fatal(err) }
+	a := &App{walletsDir: wallets}
+	for _, body := range []string{
+		`{"Name":"../victim","Confirm":"../victim"}`,
+		`{"Name":"miner","Confirm":"wrong"}`,
+	} {
+		r := httptest.NewRequest(http.MethodPost, "/api/wallet/delete", strings.NewReader(body))
+		w := httptest.NewRecorder()
+		a.handleWalletDelete(w, r)
+		if w.Code == http.StatusOK { t.Fatalf("unsafe delete unexpectedly succeeded for %s", body) }
+	}
+	if _, err := os.Stat(outside); err != nil { t.Fatalf("outside file was touched: %v", err) }
+}
+
+func TestWalletDeleteRejectsActiveMiningWallet(t *testing.T) {
+	dir := t.TempDir()
+	wallets := filepath.Join(dir, "wallets")
+	if err := os.MkdirAll(wallets, 0700); err != nil { t.Fatal(err) }
+	p := filepath.Join(wallets, "miner.wallet")
+	if err := os.WriteFile(p, []byte("{}"), 0600); err != nil { t.Fatal(err) }
+	a := &App{walletsDir: wallets, miner: minerState{Running: true, Wallet: "miner"}}
+	r := httptest.NewRequest(http.MethodPost, "/api/wallet/delete", strings.NewReader(`{"Name":"miner","Confirm":"miner"}`))
+	w := httptest.NewRecorder()
+	a.handleWalletDelete(w, r)
+	if w.Code != http.StatusConflict { t.Fatalf("status = %d, want %d; body=%s", w.Code, http.StatusConflict, w.Body.String()) }
+	if _, err := os.Stat(p); err != nil { t.Fatalf("active mining wallet was removed: %v", err) }
 }
