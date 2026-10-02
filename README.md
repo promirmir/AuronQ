@@ -1,6 +1,50 @@
-# AuronQ (AURQ) — Mainnet 1.7.1
+# AuronQ (AURQ) — Post-Quantum UTXO Proof-of-Work Cryptocurrency
 
-AuronQ is a public UTXO proof-of-work cryptocurrency with ML-DSA-87 transaction signatures and the AuronQ-specific AQM64 proof-of-work construction.
+[![CI](https://github.com/promirmir/AuronQ/actions/workflows/ci.yml/badge.svg)](https://github.com/promirmir/AuronQ/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag)](https://github.com/promirmir/AuronQ/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Go](https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ)](go.mod)
+
+**AuronQ (AURQ)** is an open-source cryptocurrency and blockchain project written in Go. It uses a **UTXO** ledger, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
+
+The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 and Linux amd64, and an Android wallet client is available as an alpha release.
+
+> **Security note:** AuronQ uses a standardized post-quantum signature scheme for transactions, but neither AQM64 nor the complete consensus/network implementation has received an independent professional security or cryptographic audit. “Post-quantum signatures” should not be interpreted as a guarantee that the entire system is immune to all present or future attacks.
+
+## Quick links
+
+| Resource | Link |
+|---|---|
+| Latest releases | [GitHub Releases](https://github.com/promirmir/AuronQ/releases) |
+| Mainnet specification | [MAINNET.md](MAINNET.md) |
+| Protocol | [PROTOCOL.md](PROTOCOL.md) |
+| AQM64 Proof-of-Work | [AQM64.md](AQM64.md) |
+| Network independence | [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md) |
+| Public network | [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md) |
+| Threat model | [THREAT-MODEL.md](THREAT-MODEL.md) |
+| Security policy | [SECURITY.md](SECURITY.md) |
+| FAQ | [FAQ.md](FAQ.md) |
+| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+
+## What makes AuronQ technically distinct?
+
+- **Post-quantum transaction signatures:** ML-DSA-87 is used for transaction signing.
+- **UTXO accounting model:** transactions consume and create unspent transaction outputs.
+- **Proof-of-Work consensus:** mining uses the AuronQ-specific AQM64 construction.
+- **Independent full-node validation:** each full node validates blocks, transactions, Network ID and chain work locally.
+- **Peer-to-peer networking:** nodes discover peers through persisted peers, configured seeds, DNS seeds, an HTTPS bootstrap manifest and peer gossip.
+- **Open-source implementation:** the node, wallet-related code, protocol documentation and build/CI configuration are public in this repository.
+- **Go implementation:** CI tests Linux and Windows builds, vetting, and a race-detector run on Linux.
+
+## Who is this repository for?
+
+AuronQ may be relevant to developers, miners, node operators and researchers looking for an experimental **post-quantum cryptocurrency**, **ML-DSA blockchain implementation**, **UTXO Proof-of-Work network**, **Go cryptocurrency node**, or a public example of integrating post-quantum signatures into a cryptocurrency transaction system.
+
+## Project status
+
+Current stable desktop/full-node release: **AuronQ 1.7.1 Mainnet**.
+
+The network is operational, but decentralization is still developing. At the time documented in this repository, the bootstrap manifest contains one confirmed public bootstrap endpoint. That endpoint has no consensus privileges; independent nodes validate the canonical chain themselves. Additional independently operated public nodes and independent discovery routes are needed to reduce first-contact dependency.
 
 ## Download
 
