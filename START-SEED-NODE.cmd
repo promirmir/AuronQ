@@ -2,11 +2,11 @@
 setlocal
 cd /d "%~dp0"
 
-REM Operator launcher for the two official bootstrap nodes.
-REM It starts the full AuronQ node and, when Tailscale is installed and Funnel is
-REM authorized for this tailnet, exposes localhost:18444 at the machine's stable
-REM public *.ts.net HTTPS hostname. Funnel is backgrounded by the Tailscale service;
-REM no PowerShell/console window has to remain open.
+REM Bootstrap-operator launcher.
+REM Normal users should run START-AURONQ.cmd instead.
+REM When Tailscale is installed and Funnel is authorized, this exposes the local
+REM AuronQ full node at the machine's stable public *.ts.net HTTPS hostname.
+REM Funnel runs through the Tailscale service, so no console must stay open.
 call "%~dp0START-AURONQ.cmd"
 timeout /t 8 /nobreak >nul
 
