@@ -1,0 +1,7 @@
+# AuronQ 1.7.1 release archive SHA-256
+
+50a1b2d321117549d7ceab81aa5dfaa0bb072544915fb5e921eb9b2a24d68d8d  AuronQ-1.7.1-Windows-x64.zip
+6ddd97167f5e587cf7245ba9827d5d8c2219a96581a6ecb21a4a6d76a90270a0  AuronQ-1.7.1-Linux-amd64.tar.gz
+
+Release tag: v1.7.1
+Tagged commit: 776401065ac454ae4ad2246b9efdf7d5f134efa0
