@@ -140,7 +140,7 @@ AuronQ full nodes already persist verified public peers and exchange them throug
 
 This does **not** create independent peers out of nothing: the network currently has two crawler-verified public bootstrap endpoints. More independently operated public full nodes are still desirable for stronger practical resilience. A completely fresh install always needs some discovery route; AuronQ also supports DNS seeds for that purpose.
 
-NAT/CGNAT users can participate through outbound connections without port forwarding. Users who want to contribute a publicly reachable Windows full node can use the opt-in `START-PUBLIC-NODE.cmd` in future release packages (or run the node directly with public TCP/18444 reachability).
+NAT/CGNAT users can participate through outbound connections without port forwarding. Operators who intentionally want to expose a publicly reachable Windows node can use the opt-in `START-SEED-NODE.cmd` with Tailscale Funnel; normal users should continue to use `START-AURONQ.cmd`.
 
 ## Network behavior
 
