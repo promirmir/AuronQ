@@ -1,8 +1,8 @@
-# AuronQ 1.7.1 Mainnet — Windows
+# AuronQ 1.7.3 Mainnet — Windows
 
 ## Normalny użytkownik
 
-1. Pobierz `AuronQ-1.7.1-Windows-x64.zip` wyłącznie z GitHub Releases.
+1. Pobierz `AuronQ-1.7.3-Windows-x64.zip` wyłącznie z GitHub Releases.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
@@ -12,15 +12,9 @@ Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręc
 
 Użytkownik za NAT/CGNAT nadal może synchronizować, wysyłać transakcje, kopać i relayować dane przez połączenia wychodzące.
 
-## Suma kontrolna oficjalnego v1.7.1
+## Suma kontrolna oficjalnego v1.7.3
 
-Oficjalny SHA-256:
-
-```text
-50a1b2d321117549d7ceab81aa5dfaa0bb072544915fb5e921eb9b2a24d68d8d  AuronQ-1.7.1-Windows-x64.zip
-```
-
-Możesz też porównać wynik z `SHA256SUMS.txt` na stronie wydania GitHub.
+Oficjalny SHA-256 jest publikowany w pliku `SHA256SUMS.txt` dołączonym do wydania GitHub.
 
 Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen może więc wyświetlić ostrzeżenie przy pierwszym uruchomieniu. Weryfikuj sumę SHA-256 i źródło pobrania.
 
@@ -56,10 +50,10 @@ Genesis:
 
 ## Bezpieczeństwo
 
-AuronQ 1.7.1 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa.
+AuronQ 1.7.3 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa.
 
 ## Usuwanie portfela
 
-W wersji 1.7.1 zakładka **Portfele** ma przycisk **Usuń**. Usuwanie dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; nie przenosi ani nie niszczy monet zapisanych w blockchainie.
+W wersji 1.7.3 zakładka **Portfele** ma przycisk **Usuń**. Usuwanie dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; nie przenosi ani nie niszczy monet zapisanych w blockchainie.
 
 Aplikacja wyświetla ostrzeżenie i wymaga ręcznego wpisania dokładnej nazwy portfela. Portfela używanego aktualnie przez koparkę nie można usunąć, dopóki mining nie zostanie zatrzymany. Przed usunięciem ważnego portfela wykonaj **Backup** — usunięcie ostatniej kopii pliku może oznaczać trwałą utratę dostępu do środków.
