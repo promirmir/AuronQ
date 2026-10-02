@@ -2,14 +2,15 @@ package main
 
 import "testing"
 
-func TestPublicLiteralPeer(t *testing.T) {
+func TestPublicGossipPeer(t *testing.T) {
 	good := []string{
 		"http://8.8.8.8:18444",
 		"https://1.1.1.1:18444",
 		"http://[2606:4700:4700::1111]:18444",
+		"https://node.example.com",
 	}
 	for _, p := range good {
-		if !publicLiteralPeer(p) {
+		if !publicGossipPeer(p) {
 			t.Fatalf("expected public peer: %s", p)
 		}
 	}
@@ -22,10 +23,12 @@ func TestPublicLiteralPeer(t *testing.T) {
 		"http://198.51.100.2:18444",
 		"http://203.0.113.3:18444",
 		"http://[2001:db8::1]:18444",
-		"https://example.com",
+	}
+	if !publicGossipPeer("https://node.example.com") {
+		t.Fatal("expected HTTPS DNS peer to be accepted")
 	}
 	for _, p := range bad {
-		if publicLiteralPeer(p) {
+		if publicGossipPeer(p) {
 			t.Fatalf("unexpected public peer: %s", p)
 		}
 	}

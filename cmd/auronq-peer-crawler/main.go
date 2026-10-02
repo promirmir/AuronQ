@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -76,17 +77,81 @@ func nonPublicIP(ip net.IP) bool {
 	return false
 }
 
-func publicLiteralPeer(raw string) bool {
+func safeDNSHost(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	if host == "" || net.ParseIP(strings.Trim(host, "[]")) != nil || !strings.Contains(host, ".") {
+		return false
+	}
+	return host != "localhost" &&
+		!strings.HasSuffix(host, ".localhost") &&
+		!strings.HasSuffix(host, ".local") &&
+		!strings.HasSuffix(host, ".internal") &&
+		!strings.HasSuffix(host, ".home.arpa")
+}
+
+func publicGossipPeer(raw string) bool {
 	p := normalizePeer(raw)
 	if p == "" {
 		return false
 	}
 	u, err := url.Parse(p)
-	if err != nil {
+	if err != nil || u.User != nil || u.Fragment != "" || u.RawQuery != "" || (u.Path != "" && u.Path != "/") {
 		return false
 	}
-	ip := net.ParseIP(strings.Trim(u.Hostname(), "[]"))
-	return ip != nil && !nonPublicIP(ip)
+	host := strings.Trim(u.Hostname(), "[]")
+	if ip := net.ParseIP(host); ip != nil {
+		return !nonPublicIP(ip)
+	}
+	return u.Scheme == "https" && safeDNSHost(host)
+}
+
+func safeHTTPClient() *http.Client {
+	dialer := &net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+		host = strings.Trim(host, "[]")
+		if ip := net.ParseIP(host); ip != nil {
+			if nonPublicIP(ip) {
+				return nil, fmt.Errorf("refusing non-public peer address %s", ip)
+			}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		}
+		if !safeDNSHost(host) {
+			return nil, fmt.Errorf("refusing unsafe peer hostname %q", host)
+		}
+		ips, err := net.DefaultResolver.LookupHost(ctx, host)
+		if err != nil {
+			return nil, err
+		}
+		var lastErr error
+		for _, rawIP := range ips {
+			ip := net.ParseIP(strings.TrimSpace(rawIP))
+			if nonPublicIP(ip) {
+				continue
+			}
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+			if err == nil {
+				return conn, nil
+			}
+			lastErr = err
+		}
+		if lastErr == nil {
+			lastErr = fmt.Errorf("peer hostname %q resolved to no public addresses", host)
+		}
+		return nil, lastErr
+	}
+	return &http.Client{
+		Timeout:   8 * time.Second,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 }
 
 func safeConfiguredPeer(raw string) bool {
@@ -208,7 +273,7 @@ func main() {
 	}
 
 	c := &crawler{
-		client: &http.Client{Timeout: 8 * time.Second},
+		client: safeHTTPClient(),
 		seen: map[string]bool{},
 		verified: map[string]aq.Hello{},
 	}
@@ -237,7 +302,7 @@ func main() {
 			learned = append(learned, h.Advertise)
 		}
 		for _, q := range learned {
-			if publicLiteralPeer(q) {
+			if publicGossipPeer(q) {
 				c.enqueue(q)
 			}
 		}
@@ -272,7 +337,7 @@ func main() {
 
 	verified := make([]string, 0, len(c.verified))
 	for p := range c.verified {
-		if publicLiteralPeer(p) {
+		if publicGossipPeer(p) {
 			verified = append(verified, p)
 		}
 	}

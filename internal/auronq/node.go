@@ -33,8 +33,9 @@ type Node struct {
 	Chain      *Chain
 	cfg        NodeConfig
 	server     *http.Server
-	client     *http.Client
-	pmu        sync.RWMutex
+	client       *http.Client
+	publicClient *http.Client
+	pmu          sync.RWMutex
 	peers      map[string]struct{}
 	announced  map[string]struct{}
 	bootstrap  map[string]struct{}
@@ -126,7 +127,18 @@ func NewNode(chain *Chain, cfg NodeConfig) *Node {
 	if cfg.LookupHost == nil {
 		cfg.LookupHost = net.DefaultResolver.LookupHost
 	}
-	n := &Node{Chain: chain, cfg: cfg, client: &http.Client{Timeout: 8 * time.Second}, peers: map[string]struct{}{}, announced: map[string]struct{}{}, bootstrap: map[string]struct{}{}, failures: map[string]int{}, blockSem: make(chan struct{}, maxConcurrentBlockValidation), rate: map[string]requestRateWindow{}}
+	n := &Node{
+		Chain:        chain,
+		cfg:          cfg,
+		client:       &http.Client{Timeout: 8 * time.Second},
+		publicClient: newPublicPeerHTTPClient(cfg.LookupHost),
+		peers:        map[string]struct{}{},
+		announced:    map[string]struct{}{},
+		bootstrap:    map[string]struct{}{},
+		failures:     map[string]int{},
+		blockSem:     make(chan struct{}, maxConcurrentBlockValidation),
+		rate:         map[string]requestRateWindow{},
+	}
 	configured := append([]string(nil), chain.network.SeedPeers...)
 	configured = append(configured, cfg.Peers...)
 	for _, p := range configured {
@@ -171,21 +183,96 @@ func isNonPublicIP(ip net.IP) bool {
 	return false
 }
 
-// Public peer gossip deliberately accepts only literal globally-routable IPs.
-// DNS names are allowed as configured seed peers, but are not learned from an
-// untrusted remote node. This prevents peer gossip from turning the node into
-// an SSRF client for localhost/private networks or DNS-rebinding targets.
-func isPublicAdvertisedPeer(p string) bool {
-	p = normalizePeer(p)
-	if p == "" {
+func safePublicDNSHost(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	if host == "" || net.ParseIP(strings.Trim(host, "[]")) != nil || !strings.Contains(host, ".") {
 		return false
 	}
-	u, err := url.Parse(p)
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+	if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") || strings.HasSuffix(host, ".internal") || strings.HasSuffix(host, ".home.arpa") {
 		return false
 	}
-	ip := net.ParseIP(strings.Trim(u.Hostname(), "[]"))
-	return ip != nil && !isNonPublicIP(ip)
+	return true
+}
+
+// Public gossip accepts globally-routable literal IP endpoints and HTTPS DNS
+// endpoints. DNS peers are dialed through a resolver-filtering transport that
+// rejects private, loopback, link-local, CGNAT and documentation-only targets.
+func isPublicAdvertisedPeer(raw string) bool {
+	raw = strings.TrimSpace(strings.TrimRight(raw, "/"))
+	if raw == "" {
+		return false
+	}
+	if !strings.HasPrefix(raw, "http://") && !strings.HasPrefix(raw, "https://") {
+		raw = "http://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" ||
+		(u.Path != "" && u.Path != "/") || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	host := strings.Trim(u.Hostname(), "[]")
+	if ip := net.ParseIP(host); ip != nil {
+		return !isNonPublicIP(ip)
+	}
+	return u.Scheme == "https" && safePublicDNSHost(host)
+}
+
+func newPublicPeerHTTPClient(lookup func(context.Context, string) ([]string, error)) *http.Client {
+	dialer := &net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+	transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+		host = strings.Trim(host, "[]")
+		if ip := net.ParseIP(host); ip != nil {
+			if isNonPublicIP(ip) {
+				return nil, fmt.Errorf("refusing non-public peer address %s", ip)
+			}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+		}
+		if !safePublicDNSHost(host) {
+			return nil, fmt.Errorf("refusing unsafe peer hostname %q", host)
+		}
+		resolved, err := lookup(ctx, host)
+		if err != nil {
+			return nil, err
+		}
+		publicCount := 0
+		var lastErr error
+		for _, rawIP := range resolved {
+			ip := net.ParseIP(strings.TrimSpace(rawIP))
+			if isNonPublicIP(ip) {
+				continue
+			}
+			publicCount++
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+			if err == nil {
+				return conn, nil
+			}
+			lastErr = err
+		}
+		if publicCount == 0 {
+			return nil, fmt.Errorf("peer hostname %q resolved to no public addresses", host)
+		}
+		return nil, lastErr
+	}
+	return &http.Client{
+		Timeout:   8 * time.Second,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+}
+
+func (n *Node) clientForPeer(peer string) *http.Client {
+	if isPublicAdvertisedPeer(peer) {
+		return n.publicClient
+	}
+	return n.client
 }
 
 func peerNetgroup(p string) string {
@@ -194,8 +281,12 @@ func peerNetgroup(p string) string {
 	if err != nil {
 		return ""
 	}
-	ip := net.ParseIP(strings.Trim(u.Hostname(), "[]"))
+	host := strings.Trim(u.Hostname(), "[]")
+	ip := net.ParseIP(host)
 	if ip == nil {
+		if u.Scheme == "https" && safePublicDNSHost(host) {
+			return "dns:" + strings.ToLower(strings.TrimSuffix(host, "."))
+		}
 		return ""
 	}
 	if v4 := ip.To4(); v4 != nil {
@@ -346,28 +437,7 @@ func validBootstrapManifestURL(raw string) (string, bool) {
 }
 
 func isSafeManifestPeer(raw string) bool {
-	p := normalizePeer(raw)
-	if p == "" {
-		return false
-	}
-	u, err := url.Parse(p)
-	if err != nil || u.User != nil || u.Hostname() == "" {
-		return false
-	}
-	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
-	if ip := net.ParseIP(strings.Trim(host, "[]")); ip != nil {
-		return !isNonPublicIP(ip)
-	}
-	// DNS-based peers from a remotely hosted manifest are only accepted over
-	// HTTPS. TLS hostname verification prevents a manifest from becoming a
-	// general-purpose HTTP SSRF primitive even if its DNS is later changed.
-	if u.Scheme != "https" {
-		return false
-	}
-	if host == "localhost" || strings.HasSuffix(host, ".localhost") || strings.HasSuffix(host, ".local") || strings.HasSuffix(host, ".internal") || strings.HasSuffix(host, ".home.arpa") {
-		return false
-	}
-	return strings.Contains(host, ".")
+	return isPublicAdvertisedPeer(raw)
 }
 
 func (n *Node) addManifestPeer(raw string) bool {
@@ -918,7 +988,7 @@ func (n *Node) broadcast(path string, v any, skip string) {
 		go func(peer string) {
 			req, _ := http.NewRequest("POST", peer+path, bytes.NewReader(b))
 			req.Header.Set("Content-Type", "application/json")
-			resp, err := n.client.Do(req)
+			resp, err := n.clientForPeer(peer).Do(req)
 			if err == nil {
 				io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
 				resp.Body.Close()
@@ -974,7 +1044,8 @@ func (n *Node) syncAll() {
 	}
 }
 func (n *Node) getJSONLimit(peer, path string, maxBytes int64, out any) error {
-	resp, err := n.client.Get(peer + path)
+	client := n.clientForPeer(peer)
+	resp, err := client.Get(peer + path)
 	if err != nil {
 		return err
 	}
@@ -1007,7 +1078,7 @@ func (n *Node) postPeerJSON(peer, path string, v any) error {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := n.client.Do(req)
+	resp, err := n.clientForPeer(peer).Do(req)
 	if err != nil {
 		return err
 	}
@@ -1068,7 +1139,7 @@ func (n *Node) announceSelf(peer string) {
 	b, _ := json.Marshal(a)
 	req, _ := http.NewRequest("POST", peer+"/p2p/announce", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := n.client.Do(req)
+	resp, err := n.clientForPeer(peer).Do(req)
 	if err != nil {
 		return
 	}

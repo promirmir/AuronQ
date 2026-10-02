@@ -857,7 +857,11 @@ func (a *App) startNode() error {
 	peers := append([]string(nil), a.peerBook[n.NetworkID().String()]...)
 	a.mu.RUnlock()
 	peerStore := filepath.Join(networkNodeDir, "public-peers.json")
-	node := aq.NewNode(chain, aq.NodeConfig{Listen: "[::]:18444", Peers: peers, PeerStorePath: peerStore})
+	advertise := strings.TrimSpace(os.Getenv("AURONQ_ADVERTISE"))
+	node := aq.NewNode(chain, aq.NodeConfig{Listen: "[::]:18444", Advertise: advertise, Peers: peers, PeerStorePath: peerStore})
+	if advertise != "" {
+		a.addLog("Public advertise: " + advertise)
+	}
 	a.mu.Lock()
 	a.node = node
 	a.chain = chain
