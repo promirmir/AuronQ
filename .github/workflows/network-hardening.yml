@@ -1,0 +1,40 @@
+name: Network hardening
+
+on:
+  schedule:
+    - cron: '41 2 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'internal/auronq/**'
+      - '.github/workflows/network-hardening.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: network-hardening-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  resilience:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+
+      - name: Repeat distributed partition/reorg/restart test
+        run: go test ./internal/auronq -run 'TestFiveNodePartitionReorgAndRestartConvergence|TestRestartWithoutBootstrapKeepsPersistedPublicPeers|TestMalformedPeerHelloCannotChangeChain' -count=10 -timeout=8m
+
+      - name: Race detector on network package
+        run: go test -race ./internal/auronq -count=1 -timeout=12m
+
+      - name: Fuzz address parser
+        run: go test ./internal/auronq -run='^$' -fuzz=FuzzDecodeAddressNeverPanics -fuzztime=20s -timeout=2m
+
+      - name: Fuzz amount parser
+        run: go test ./internal/auronq -run='^$' -fuzz=FuzzParseAmountNeverPanics -fuzztime=20s -timeout=2m
