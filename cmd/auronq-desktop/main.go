@@ -25,7 +25,7 @@ import (
 	aq "auronq/internal/auronq"
 )
 
-const desktopVersion = "1.7.0"
+const desktopVersion = "1.7.1"
 
 //go:embed web/*
 var webFS embed.FS
@@ -338,6 +338,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/node/stop", a.guard(a.handleNodeStop))
 	mux.HandleFunc("/api/wallet/create", a.guard(a.handleWalletCreate))
 	mux.HandleFunc("/api/wallet/import", a.guard(a.handleWalletImport))
+	mux.HandleFunc("/api/wallet/delete", a.guard(a.handleWalletDelete))
 	mux.HandleFunc("/api/wallet/export", a.handleWalletExport)
 	mux.HandleFunc("/api/wallet/history", a.handleWalletHistory)
 	mux.HandleFunc("/api/send", a.guard(a.handleSend))
@@ -506,6 +507,72 @@ func (a *App) walletPath(name string) (string, error) {
 	return filepath.Join(a.walletsDir, name+".wallet"), nil
 }
 
+func (a *App) exactWalletPath(name string) (string, string, error) {
+	raw := strings.TrimSpace(name)
+	if raw == "" || safeName(raw) != raw {
+		return "", "", errors.New("nieprawidłowa nazwa portfela")
+	}
+	p := filepath.Join(a.walletsDir, raw+".wallet")
+	baseAbs, err := filepath.Abs(a.walletsDir)
+	if err != nil {
+		return "", "", err
+	}
+	pathAbs, err := filepath.Abs(p)
+	if err != nil {
+		return "", "", err
+	}
+	rel, err := filepath.Rel(baseAbs, pathAbs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || filepath.IsAbs(rel) {
+		return "", "", errors.New("nieprawidłowa ścieżka portfela")
+	}
+	return raw, pathAbs, nil
+}
+
+func (a *App) handleWalletDelete(w http.ResponseWriter, r *http.Request) {
+	var q struct {
+		Name    string `json:"Name"`
+		Confirm string `json:"Confirm"`
+	}
+	if err := readBody(r, &q); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	name, p, err := a.exactWalletPath(q.Name)
+	if err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	if q.Confirm != name {
+		apiError(w, 400, errors.New("potwierdzenie nazwy portfela nie pasuje"))
+		return
+	}
+	a.mu.RLock()
+	miningThisWallet := a.miner.Running && a.miner.Wallet == name
+	a.mu.RUnlock()
+	if miningThisWallet {
+		apiError(w, 409, errors.New("najpierw zatrzymaj kopanie na tym portfelu"))
+		return
+	}
+	st, err := os.Lstat(p)
+	if err != nil {
+		if os.IsNotExist(err) {
+			apiError(w, 404, errors.New("portfel nie istnieje"))
+			return
+		}
+		apiError(w, 500, err)
+		return
+	}
+	if !st.Mode().IsRegular() {
+		apiError(w, 400, errors.New("odmowa usunięcia: plik portfela nie jest zwykłym plikiem"))
+		return
+	}
+	if err := os.Remove(p); err != nil {
+		apiError(w, 500, err)
+		return
+	}
+	a.addLog("Usunięto lokalny plik portfela: " + name)
+	writeJSON(w, map[string]any{"ok": true, "name": name})
+}
 func (a *App) handleNetworkImport(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
 		apiError(w, 400, err)
