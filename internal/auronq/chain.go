@@ -997,4 +997,71 @@ func ValidateCandidateEnvelope(b *Block, history []Block, now int64) error {
 	}
 	if b.Header.PrevHash != prev.Hash() {
 		return errors.New("previous hash mismatch")
+	}	if b.Size() > MaxBlockBytes {
+		return fmt.Errorf("block exceeds %d bytes", MaxBlockBytes)
 	}
+	if len(b.Transactions) == 0 || !b.Transactions[0].Coinbase {
+		return errors.New("first transaction must be coinbase")
+	}
+	for i := 1; i < len(b.Transactions); i++ {
+		if b.Transactions[i].Coinbase {
+			return errors.New("multiple coinbase transactions")
+		}
+	}
+	if b.Header.MerkleRoot != MerkleRoot(b.Transactions) {
+		return errors.New("merkle root mismatch")
+	}
+	target, err := expectedTarget(history, b.Header.Height)
+	if err != nil {
+		return err
+	}
+	if b.Header.Target != target {
+		return errors.New("incorrect target")
+	}
+	pow, err := PowHash(b.Header)
+	if err != nil || pow.Big().Cmp(b.Header.Target.Big()) > 0 {
+		return errors.New("insufficient proof of work")
+	}
+	if b.Header.Timestamp <= medianTimePast(history) {
+		return errors.New("timestamp not greater than median time past")
+	}
+	if b.Header.Timestamp > now+MaxFutureSeconds {
+		return errors.New("timestamp too far in future")
+	}
+	return nil
+}
+
+func (c *Chain) MempoolSize() int { c.mu.RLock(); defer c.mu.RUnlock(); return len(c.mempool) }
+
+// MempoolTransactions returns a deterministic snapshot of pending transactions
+// capped by their consensus-encoded base size. It is used for peer catch-up so
+// a node that joins after a transaction was first broadcast can still learn it.
+func (c *Chain) MempoolTransactions(maxBytes int) []Transaction {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	type item struct {
+		id string
+		e  MempoolEntry
+	}
+	items := make([]item, 0, len(c.mempool))
+	for id, e := range c.mempool {
+		items = append(items, item{id: id, e: e})
+	}
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].e.Added != items[j].e.Added {
+			return items[i].e.Added < items[j].e.Added
+		}
+		return items[i].id < items[j].id
+	})
+	out := make([]Transaction, 0, len(items))
+	used := 0
+	for _, it := range items {
+		sz := it.e.Tx.BaseSize()
+		if maxBytes > 0 && used+sz > maxBytes {
+			break
+		}
+		used += sz
+		out = append(out, it.e.Tx)
+	}
+	return out
+}
