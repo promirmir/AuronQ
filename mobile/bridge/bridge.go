@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	mobileVersion       = "0.1.0-alpha"
+	mobileVersion       = "0.2.0-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 	fallbackBootstrap    = "https://mir.taild63f46.ts.net"
@@ -233,6 +233,78 @@ func Send(nodeURL, walletPath, password, to, amount string) (string, error) {
 		"txid": res.TXID.String(),
 		"fee_atoms": fee,
 		"fee": aq.FormatAmount(fee),
+	}
+	b, _ := json.Marshal(out)
+	return string(b), nil
+}
+
+
+func NetworkSnapshot(nodeURL string, recent int) (string, error) {
+	nodeURL = strings.TrimRight(strings.TrimSpace(nodeURL), "/")
+	if recent < 1 {
+		recent = 1
+	}
+	if recent > 12 {
+		recent = 12
+	}
+	if err := checkNode(nodeURL); err != nil {
+		return "", err
+	}
+	st, err := aq.NewClient(nodeURL).Status()
+	if err != nil {
+		return "", err
+	}
+	type recentBlock struct {
+		Height       uint64 `json:"height"`
+		Hash         string `json:"hash"`
+		Timestamp    int64  `json:"timestamp"`
+		TimeISO      string `json:"time_iso"`
+		Transactions int    `json:"transactions"`
+	}
+	blocks := make([]recentBlock, 0, recent)
+	client := &http.Client{Timeout: 8 * time.Second}
+	for i := 0; i < recent; i++ {
+		if st.Height < uint64(i) {
+			break
+		}
+		h := st.Height - uint64(i)
+		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/p2p/getblock?height=%d", nodeURL, h), nil)
+		req.Header.Set("User-Agent", "AuronQ-Mobile/"+mobileVersion)
+		resp, err := client.Do(req)
+		if err != nil {
+			break
+		}
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			break
+		}
+		var b aq.Block
+		err = json.NewDecoder(io.LimitReader(resp.Body, int64(aq.MaxBlockBytes)+64*1024)).Decode(&b)
+		resp.Body.Close()
+		if err != nil {
+			break
+		}
+		blocks = append(blocks, recentBlock{
+			Height:       b.Header.Height,
+			Hash:         b.Hash().String(),
+			Timestamp:    b.Header.Timestamp,
+			TimeISO:      time.Unix(b.Header.Timestamp, 0).UTC().Format(time.RFC3339),
+			Transactions: len(b.Transactions),
+		})
+	}
+	out := map[string]any{
+		"network":      st.Network,
+		"network_id":   st.NetworkID.String(),
+		"height":       st.Height,
+		"tip":          st.Tip.String(),
+		"chain_work":   st.ChainWork,
+		"issued_atoms": st.Issued,
+		"issued_coins": st.IssuedCoins,
+		"mempool":      st.Mempool,
+		"peers":        st.Peers,
+		"node":         nodeURL,
+		"blocks":       blocks,
+		"observed_at":  time.Now().UTC().Format(time.RFC3339),
 	}
 	b, _ := json.Marshal(out)
 	return string(b), nil
