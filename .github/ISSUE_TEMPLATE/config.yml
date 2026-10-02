@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/promirmir/AuronQ/blob/main/SECURITY.md
+    about: Please follow the private security-reporting guidance instead of opening a public issue.
