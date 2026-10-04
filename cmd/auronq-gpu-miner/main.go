@@ -30,6 +30,8 @@ func main() {
 	batchFlag := flag.Int("batch", 0, "nonces per GPU batch (0 = automatic)")
 	dllPath := flag.String("cuda-dll", defaultDLLPath(), "path to auronq-aqm64-cuda.dll")
 	selfTest := flag.Bool("self-test", false, "compare one full AQM64 GPU result with the CPU reference")
+	benchmark := flag.Bool("benchmark", false, "run an offline end-to-end AQM64 throughput benchmark")
+	benchmarkSeconds := flag.Int("benchmark-seconds", 20, "approximate benchmark duration in seconds")
 	flag.Parse()
 
 	if runtime.GOOS != "windows" {
@@ -66,9 +68,21 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("SELF-TEST OK")
-		if *address == "" {
+		if !*benchmark && *address == "" {
 			return
 		}
+	}
+
+	if *benchmark {
+		if *benchmarkSeconds < 1 {
+			fmt.Fprintln(os.Stderr, "--benchmark-seconds must be at least 1")
+			os.Exit(2)
+		}
+		if err := runBenchmark(backend, batch, time.Duration(*benchmarkSeconds)*time.Second); err != nil {
+			fmt.Fprintln(os.Stderr, "BENCHMARK FAILED:", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	if *address == "" {
@@ -166,6 +180,56 @@ func runSelfTest(backend gpuBackend) error {
 	if gpuHash != cpuHash {
 		return fmt.Errorf("full AQM64 GPU result does not match canonical CPU PowHash")
 	}
+	return nil
+}
+
+func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
+	var template aq.Block
+	template.Header = aq.BlockHeader{
+		Version:   aq.BlockVersion,
+		PowAlgo:   aq.PowAlgorithmAQM64,
+		Height:    54321,
+		Timestamp: 1790951480,
+		Target:    aq.PowLimit,
+	}
+	for i := range template.Header.PrevHash {
+		template.Header.PrevHash[i] = byte(i*13 + 9)
+	}
+	for i := range template.Header.MerkleRoot {
+		template.Header.MerkleRoot[i] = byte(i*17 + 11)
+	}
+
+	fmt.Printf("Running offline AQM64 benchmark for about %s...\n", duration.Round(time.Second))
+	start := time.Now()
+	deadline := start.Add(duration)
+	var total uint64
+	var nonce uint64
+
+	for {
+		prepared, initial, err := buildBatch(template, nonce, batch)
+		if err != nil {
+			return err
+		}
+		finals, err := backend.Run(initial, batch)
+		if err != nil {
+			return err
+		}
+		for i := 0; i < batch; i++ {
+			if _, err := finishCandidate(prepared[i].pre, finals[i*128:(i+1)*128]); err != nil {
+				return err
+			}
+		}
+		total += uint64(batch)
+		nonce += uint64(batch)
+		if time.Now().After(deadline) && total > 0 {
+			break
+		}
+	}
+
+	elapsed := time.Since(start)
+	rate := float64(total) / elapsed.Seconds()
+	fmt.Printf("BENCHMARK OK hashes=%d elapsed=%s avg=%.3f H/s batch=%d\n",
+		total, elapsed.Round(time.Millisecond), rate, batch)
 	return nil
 }
 
