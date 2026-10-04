@@ -56,6 +56,17 @@ Copy-Item (Join-Path $root "gpu\cuda\README.md") (Join-Path $dist "README-GPU-MI
 Copy-Item (Join-Path $root "network.json") (Join-Path $dist "network.json") -Force
 Copy-Item (Join-Path $root "bootstrap.json") (Join-Path $dist "bootstrap.json") -Force
 
+$guiExe = Join-Path $dist "AuronQ-GPU-Miner.exe"
+$workerExe = Join-Path $dist "auronq-gpu-worker.exe"
+if (-not (Test-Path $guiExe)) { throw "Windows GUI executable missing: $guiExe" }
+if (-not (Test-Path $workerExe)) { throw "GPU worker executable missing: $workerExe" }
+
+$guiHash = (Get-FileHash $guiExe -Algorithm SHA256).Hash
+$workerHash = (Get-FileHash $workerExe -Algorithm SHA256).Hash
+if ($guiHash -eq $workerHash) {
+    throw "Invalid Windows package: GUI and GPU worker are identical files."
+}
+
 Write-Host ""
 Write-Host "[4/4] Running mandatory GPU/CPU AQM64 equivalence self-test..."
 Push-Location $dist
@@ -74,7 +85,11 @@ Write-Host "Built and self-tested:"
 Write-Host "  $dist"
 Write-Host ""
 Write-Host "Windows app:"
-Write-Host "  $(Join-Path $dist "AuronQ-GPU-Miner.exe")"
+Write-Host "  $guiExe"
+Write-Host "GPU worker:"
+Write-Host "  $workerExe"
+Write-Host "GUI SHA256:    $guiHash"
+Write-Host "Worker SHA256: $workerHash"
 Write-Host ""
 $zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.2.0-alpha-Windows-x64.zip"
 if (Test-Path $zipOut) { Remove-Item $zipOut -Force }
