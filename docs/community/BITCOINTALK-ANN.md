@@ -18,7 +18,11 @@ I have been working on a new cryptocurrency project called [b]AuronQ[/b], ticker
 
 I did not want to make another token that exists only as a contract on someone else's chain. The idea was to build an actual network from the ground up: its own blockchain, its own full node, wallet, mining, peer-to-peer networking, Explorer and mobile wallet.
 
+Bitcoin was a major inspiration for me, especially because of how resilient and difficult to break its basic architecture has proven to be over many years of real-world operation. I did not want to copy Bitcoin, but its decentralization, independent validation and overall robustness strongly influenced the direction I wanted AuronQ to take.
+
 AuronQ is still young and experimental, but it is already running as a real Mainnet and the source code is public.
+
+The things that matter most to me are decentralization, security and preparing the project for future threats created by increasingly powerful computers and new computing technologies.
 
 The project uses a UTXO model, Proof-of-Work, ML-DSA-87 transaction signatures and an AuronQ-specific mining construction called AQM64.
 
@@ -214,6 +218,10 @@ It does not rebuild the complete UTXO set from every full block locally, so I do
 
 The next stage is not about pretending AuronQ is already a huge network.
 
+I have high hopes for AuronQ. I think it has the potential to become a genuinely interesting project, and perhaps one day something much bigger, but only time, independent testing and real network growth can prove that.
+
+I also wanted to build something that could outlive the initial development phase and perhaps one day be genuinely useful to someone. A strong decentralized network cannot be created by one person alone. It becomes stronger when independent people run nodes, mine, test, report problems and help expose weak points.
+
 What the project needs most right now is independent people.
 
 I would like to see:
@@ -267,5 +275,7 @@ If you run it, I would genuinely like to know:
 [/list]
 
 Technical criticism is welcome. I would rather have someone point out a real problem now than hide weaknesses behind marketing.
+
+Bitcoin showed me how important it is for a network to remain useful without depending on a single operator. That kind of robustness is one of the strongest ideas behind AuronQ as well. The more independent people who run, mine and test the network, the stronger it can become against failures and attacks.
 
 Thanks for taking a look at the project.
