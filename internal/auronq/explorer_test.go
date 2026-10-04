@@ -110,3 +110,19 @@ func TestExplorerHTMLWiresLiveHeight(t *testing.T) {
 		t.Fatal("explorer block API binding missing")
 	}
 }
+
+
+func TestExplorerHTMLSurfacesPeerExplorerNetwork(t *testing.T) {
+	if !strings.Contains(explorerIndexHTML, `id="explorer-peers"`) {
+		t.Fatal("peer explorer directory element missing")
+	}
+	if !strings.Contains(explorerIndexHTML, "/p2p/hello") {
+		t.Fatal("peer explorer directory does not use native P2P hello")
+	}
+	if !strings.Contains(explorerIndexHTML, "Other public full-node explorers") {
+		t.Fatal("peer explorer directory heading missing")
+	}
+	if !strings.Contains(explorerIndexHTML, "not trusted authorities") {
+		t.Fatal("peer explorer trust model is not explicit")
+	}
+}
