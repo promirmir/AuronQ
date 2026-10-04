@@ -4,298 +4,643 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"context"
+	"crypto/rand"
+	"embed"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
-	"unsafe"
+	"time"
+
+	aq "auronq/internal/auronq"
 )
 
 const (
-	className = "AuronQGPUMinerGUI"
-
-	WM_DESTROY = 0x0002
-	WM_COMMAND = 0x0111
-	WM_TIMER   = 0x0113
-	WM_CLOSE   = 0x0010
-	WM_SETFONT = 0x0030
-
-	WM_USER = 0x0400
-
-	WS_OVERLAPPED   = 0x00000000
-	WS_CAPTION      = 0x00C00000
-	WS_SYSMENU      = 0x00080000
-	WS_MINIMIZEBOX  = 0x00020000
-	WS_CHILD        = 0x40000000
-	WS_VISIBLE      = 0x10000000
-	WS_BORDER       = 0x00800000
-	WS_VSCROLL      = 0x00200000
-	WS_TABSTOP      = 0x00010000
-
-	ES_LEFT        = 0x0000
-	ES_MULTILINE   = 0x0004
-	ES_AUTOVSCROLL = 0x0040
-	ES_READONLY    = 0x0800
-	ES_NUMBER      = 0x2000
-
-	BS_PUSHBUTTON    = 0x00000000
-	BS_DEFPUSHBUTTON = 0x00000001
-	BS_AUTOCHECKBOX  = 0x00000003
-
-	BM_GETCHECK = 0x00F0
-	BM_SETCHECK = 0x00F1
-	BST_CHECKED = 1
-
-	EM_SETSEL     = 0x00B1
-	EM_REPLACESEL = 0x00C2
-
-	SW_SHOW = 5
-
-	COLOR_WINDOW = 5
-	IDC_ARROW     = 32512
-
-	ID_NODE      = 1001
-	ID_ADDRESS   = 1002
-	ID_DEVICE    = 1003
-	ID_BATCH     = 1004
-	ID_SELFTEST  = 1005
-	ID_START     = 1010
-	ID_STOP      = 1011
-	ID_TEST      = 1012
-	ID_BENCH     = 1013
-	ID_STATUS    = 1020
-	ID_LOG       = 1021
-	timerID      = 1
+	guiVersion       = "0.2.0-alpha"
+	guiListen        = "127.0.0.1:18446"
+	localNodeURL     = "http://127.0.0.1:18444"
+	mainnetNetworkID = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 )
 
-var (
-	user32                  = syscall.NewLazyDLL("user32.dll")
-	kernel32                = syscall.NewLazyDLL("kernel32.dll")
-	gdi32                   = syscall.NewLazyDLL("gdi32.dll")
-	procRegisterClassExW    = user32.NewProc("RegisterClassExW")
-	procCreateWindowExW     = user32.NewProc("CreateWindowExW")
-	procDefWindowProcW      = user32.NewProc("DefWindowProcW")
-	procGetMessageW         = user32.NewProc("GetMessageW")
-	procTranslateMessage    = user32.NewProc("TranslateMessage")
-	procDispatchMessageW    = user32.NewProc("DispatchMessageW")
-	procPostQuitMessage     = user32.NewProc("PostQuitMessage")
-	procShowWindow          = user32.NewProc("ShowWindow")
-	procUpdateWindow        = user32.NewProc("UpdateWindow")
-	procSetWindowTextW      = user32.NewProc("SetWindowTextW")
-	procGetWindowTextW      = user32.NewProc("GetWindowTextW")
-	procGetWindowTextLength = user32.NewProc("GetWindowTextLengthW")
-	procSendMessageW        = user32.NewProc("SendMessageW")
-	procEnableWindow        = user32.NewProc("EnableWindow")
-	procLoadCursorW         = user32.NewProc("LoadCursorW")
-	procSetTimer            = user32.NewProc("SetTimer")
-	procKillTimer           = user32.NewProc("KillTimer")
-	procMessageBoxW         = user32.NewProc("MessageBoxW")
-	procSetProcessDPIAware  = user32.NewProc("SetProcessDPIAware")
-	procGetModuleHandleW    = kernel32.NewProc("GetModuleHandleW")
-	procGetStockObject      = gdi32.NewProc("GetStockObject")
-)
-
-type wndClassEx struct {
-	CbSize        uint32
-	Style         uint32
-	LpfnWndProc   uintptr
-	CbClsExtra    int32
-	CbWndExtra    int32
-	HInstance     uintptr
-	HIcon         uintptr
-	HCursor       uintptr
-	HbrBackground uintptr
-	LpszMenuName  *uint16
-	LpszClassName *uint16
-	HIconSm       uintptr
-}
-
-type point struct {
-	X int32
-	Y int32
-}
-
-type msg struct {
-	Hwnd    uintptr
-	Message uint32
-	WParam  uintptr
-	LParam  uintptr
-	Time    uint32
-	Pt      point
-}
+//go:embed web/*
+var webFS embed.FS
 
 type settings struct {
-	Node     string `json:"node"`
-	Address  string `json:"address"`
-	Device   int    `json:"device"`
-	Batch    int    `json:"batch"`
-	SelfTest bool   `json:"self_test"`
+	Address    string `json:"address"`
+	Device     int    `json:"device"`
+	Batch      int    `json:"batch"`
+	AutoPublic bool   `json:"auto_public"`
+	SelfTest   bool   `json:"self_test"`
+	Language   string `json:"language"`
+}
+
+type minerState struct {
+	Running     bool    `json:"running"`
+	Mode        string  `json:"mode,omitempty"`
+	Hashrate    float64 `json:"hashrate"`
+	Height      uint64  `json:"height"`
+	BlocksFound uint64  `json:"blocks_found"`
+	LastBlock   string  `json:"last_block,omitempty"`
+	LastError   string  `json:"last_error,omitempty"`
+	StartedAt   int64   `json:"started_at,omitempty"`
 }
 
 type appState struct {
-	hwnd     uintptr
-	node     uintptr
-	address  uintptr
-	device   uintptr
-	batch    uintptr
-	selftest uintptr
-	start    uintptr
-	stop     uintptr
-	test     uintptr
-	bench    uintptr
-	status   uintptr
-	log      uintptr
-
-	mu          sync.Mutex
-	pendingLogs []string
-	nextStatus  string
-	running     bool
-	cmd         *exec.Cmd
+	Version         string     `json:"version"`
+	NetworkName     string     `json:"network_name"`
+	NetworkID       string     `json:"network_id"`
+	NodeRunning     bool       `json:"node_running"`
+	NodeOwned       bool       `json:"node_owned"`
+	NodeError       string     `json:"node_error,omitempty"`
+	Height          uint64     `json:"height"`
+	Tip             string     `json:"tip,omitempty"`
+	Peers           int        `json:"peers"`
+	NetworkHashrate float64    `json:"network_hashrate"`
+	PublicEndpoint  string     `json:"public_endpoint,omitempty"`
+	SyncTarget      uint64     `json:"sync_target"`
+	Synchronized    bool       `json:"synchronized"`
+	GPUName         string     `json:"gpu_name,omitempty"`
+	Miner           minerState `json:"miner"`
+	Settings        settings   `json:"settings"`
+	Logs            []string   `json:"logs"`
 }
 
-var app appState
+type App struct {
+	mu sync.RWMutex
 
-func utf16Ptr(s string) *uint16 {
-	p, _ := syscall.UTF16PtrFromString(s)
-	return p
+	baseDir     string
+	nodeDir     string
+	settingsPath string
+	network     *aq.NetworkConfig
+	bootstrap   []string
+
+	node       *aq.Node
+	chain      *aq.Chain
+	nodeCancel context.CancelFunc
+	nodeRun    bool
+	nodeOwned  bool
+	nodeErr    string
+
+	portMapping *aq.PortMapping
+	publicCancel context.CancelFunc
+
+	minerCmd           *exec.Cmd
+	miner              minerState
+	minerStopRequested bool
+	gpuName            string
+
+	cfg        settings
+	syncTarget uint64
+	logs       []string
+	token      string
+	exit       chan struct{}
 }
 
-func loword(v uintptr) uint16 { return uint16(v & 0xffff) }
+func main() {
+	log.SetFlags(log.LstdFlags | log.LUTC)
+	app, err := newApp()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer app.shutdown()
 
-func setText(hwnd uintptr, s string) {
-	procSetWindowTextW.Call(hwnd, uintptr(unsafe.Pointer(utf16Ptr(s))))
+	mux := http.NewServeMux()
+	app.routes(mux)
+	ln, err := net.Listen("tcp", guiListen)
+	if err != nil {
+		if reopenExisting("http://" + guiListen) {
+			return
+		}
+		log.Fatal(err)
+	}
+
+	srv := &http.Server{
+		Handler:           securityHeaders(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	go func() {
+		if err := srv.Serve(ln); err != nil && err != http.ErrServerClosed {
+			app.addLog("GUI HTTP: " + err.Error())
+		}
+	}()
+
+	go func() {
+		if err := app.ensureNode(); err != nil {
+			app.addLog("Node: " + err.Error())
+		}
+		app.monitorNetwork()
+	}()
+
+	if err := openDesktopWindow("http://" + guiListen + "/"); err != nil {
+		app.addLog("UI: " + err.Error())
+	}
+
+	<-app.exit
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_ = srv.Shutdown(ctx)
 }
 
-func getText(hwnd uintptr) string {
-	n, _, _ := procGetWindowTextLength.Call(hwnd)
-	buf := make([]uint16, int(n)+1)
-	procGetWindowTextW.Call(hwnd, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
-	return syscall.UTF16ToString(buf)
+func newApp() (*App, error) {
+	cfgRoot, err := os.UserConfigDir()
+	if err != nil {
+		return nil, err
+	}
+	base := filepath.Join(cfgRoot, "AuronQ", "gpu-miner")
+	if err := os.MkdirAll(base, 0700); err != nil {
+		return nil, err
+	}
+
+	a := &App{
+		baseDir:      base,
+		nodeDir:      filepath.Join(base, "node"),
+		settingsPath: filepath.Join(base, "settings.json"),
+		exit:         make(chan struct{}, 1),
+	}
+	if err := os.MkdirAll(a.nodeDir, 0700); err != nil {
+		return nil, err
+	}
+	a.cfg = settings{Device: 0, Batch: 60, AutoPublic: true, SelfTest: true, Language: "pl"}
+	a.loadSettings()
+
+	exeDir, err := executableDir()
+	if err != nil {
+		return nil, err
+	}
+	networkPath := filepath.Join(exeDir, "network.json")
+	n, err := aq.LoadNetwork(networkPath)
+	if err != nil {
+		return nil, fmt.Errorf("network.json: %w", err)
+	}
+	if n.NetworkID().String() != mainnetNetworkID {
+		return nil, errors.New("bundled network.json is not AuronQ Mainnet")
+	}
+	a.network = n
+	a.bootstrap = loadBootstrap(filepath.Join(exeDir, "bootstrap.json"), n)
+	a.bootstrap = mergePeers(a.bootstrap, n.SeedPeers)
+
+	var tokenBytes [32]byte
+	if _, err := rand.Read(tokenBytes[:]); err != nil {
+		return nil, err
+	}
+	a.token = hex.EncodeToString(tokenBytes[:])
+	a.addLog("AuronQ GPU Miner " + guiVersion)
+	a.addLog(fmt.Sprintf("Mainnet loaded: %s", n.NetworkID().String()))
+	a.addLog(fmt.Sprintf("Bootstrap peers: %d", len(a.bootstrap)))
+	return a, nil
 }
 
-func send(hwnd uintptr, msg uint32, wp, lp uintptr) uintptr {
-	r, _, _ := procSendMessageW.Call(hwnd, uintptr(msg), wp, lp)
-	return r
+func executableDir() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(exe), nil
 }
 
-func appendLogText(hwnd uintptr, s string) {
-	if s == "" {
+func mergePeers(a, b []string) []string {
+	seen := map[string]bool{}
+	out := make([]string, 0, len(a)+len(b))
+	for _, list := range [][]string{a, b} {
+		for _, raw := range list {
+			p := strings.TrimSpace(strings.TrimRight(raw, "/"))
+			if p == "" || seen[p] {
+				continue
+			}
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func loadBootstrap(path string, n *aq.NetworkConfig) []string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var m aq.BootstrapManifest
+	if json.Unmarshal(b, &m) != nil || m.NetworkID != n.NetworkID() {
+		return nil
+	}
+	if m.ExpiresAt != 0 && time.Now().Unix() > m.ExpiresAt {
+		return nil
+	}
+	return mergePeers(nil, m.Peers)
+}
+
+func (a *App) loadSettings() {
+	b, err := os.ReadFile(a.settingsPath)
+	if err != nil {
 		return
 	}
-	s = strings.ReplaceAll(s, "\n", "\r\n")
-	send(hwnd, EM_SETSEL, ^uintptr(0), ^uintptr(0))
-	send(hwnd, EM_REPLACESEL, 0, uintptr(unsafe.Pointer(utf16Ptr(s))))
-}
-
-func createControl(class, text string, style uint32, x, y, w, h int32, parent uintptr, id int) uintptr {
-	hwnd, _, _ := procCreateWindowExW.Call(
-		0,
-		uintptr(unsafe.Pointer(utf16Ptr(class))),
-		uintptr(unsafe.Pointer(utf16Ptr(text))),
-		uintptr(style),
-		uintptr(x), uintptr(y), uintptr(w), uintptr(h),
-		parent, uintptr(id), 0, 0,
-	)
-	font, _, _ := procGetStockObject.Call(17) // DEFAULT_GUI_FONT
-	send(hwnd, WM_SETFONT, font, 1)
-	return hwnd
-}
-
-func configPath() string {
-	base, err := os.UserConfigDir()
-	if err != nil {
-		return ""
+	var s settings
+	if json.Unmarshal(b, &s) != nil {
+		return
 	}
-	return filepath.Join(base, "AuronQ", "gpu-miner.json")
-}
-
-func loadSettings() settings {
-	s := settings{Node: "http://127.0.0.1:18444", Device: 0, Batch: 60, SelfTest: true}
-	p := configPath()
-	if p == "" {
-		return s
-	}
-	b, err := os.ReadFile(p)
-	if err == nil {
-		_ = json.Unmarshal(b, &s)
-	}
-	if s.Node == "" {
-		s.Node = "http://127.0.0.1:18444"
+	if s.Device < 0 {
+		s.Device = 0
 	}
 	if s.Batch < 1 || s.Batch > 64 {
 		s.Batch = 60
 	}
-	return s
+	if s.Language != "en" {
+		s.Language = "pl"
+	}
+	a.cfg = s
 }
 
-func saveSettings(s settings) {
-	p := configPath()
-	if p == "" {
+func (a *App) saveSettings(s settings) error {
+	if s.Device < 0 {
+		return errors.New("CUDA device must be 0 or greater")
+	}
+	if s.Batch < 1 || s.Batch > 64 {
+		return errors.New("batch must be between 1 and 64")
+	}
+	if s.Language != "en" {
+		s.Language = "pl"
+	}
+	b, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := a.settingsPath + ".tmp"
+	if err := os.WriteFile(tmp, b, 0600); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, a.settingsPath); err != nil {
+		return err
+	}
+	a.mu.Lock()
+	a.cfg = s
+	a.mu.Unlock()
+	return nil
+}
+
+func (a *App) addLog(s string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.logs = append(a.logs, time.Now().Format("15:04:05")+"  "+s)
+	if len(a.logs) > 400 {
+		a.logs = append([]string(nil), a.logs[len(a.logs)-400:]...)
+	}
+}
+
+func (a *App) routes(mux *http.ServeMux) {
+	mux.HandleFunc("/", a.handleIndex)
+	mux.HandleFunc("/api/state", a.handleState)
+	mux.HandleFunc("/api/settings", a.guard(a.handleSettings))
+	mux.HandleFunc("/api/miner/start", a.guard(a.handleMinerStart))
+	mux.HandleFunc("/api/miner/stop", a.guard(a.handleMinerStop))
+	mux.HandleFunc("/api/self-test", a.guard(a.handleSelfTest))
+	mux.HandleFunc("/api/benchmark", a.guard(a.handleBenchmark))
+	mux.HandleFunc("/api/node/reconnect", a.guard(a.handleReconnect))
+	mux.HandleFunc("/api/exit", a.guard(a.handleExit))
+}
+
+func (a *App) guard(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method", http.StatusMethodNotAllowed)
+			return
+		}
+		if r.Header.Get("X-AuronQ-Token") != a.token {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+		next(w, r)
+	}
+}
+
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (a *App) handleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
 		return
 	}
-	_ = os.MkdirAll(filepath.Dir(p), 0o755)
-	b, err := json.MarshalIndent(s, "", "  ")
+	b, err := webFS.ReadFile("web/index.html")
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	s := strings.ReplaceAll(string(b), "__AURONQ_TOKEN__", a.token)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = io.WriteString(w, s)
+}
+
+func writeJSON(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func apiError(w http.ResponseWriter, code int, err error) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": err.Error()})
+}
+
+func readBody(r *http.Request, v any) error {
+	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(v); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (a *App) handleState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method", http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, a.state())
+}
+
+func (a *App) state() appState {
+	a.mu.RLock()
+	cfg := a.cfg
+	miner := a.miner
+	nodeRun := a.nodeRun
+	nodeOwned := a.nodeOwned
+	nodeErr := a.nodeErr
+	syncTarget := a.syncTarget
+	gpu := a.gpuName
+	logs := append([]string(nil), a.logs...)
+	mapping := a.portMapping
+	a.mu.RUnlock()
+
+	st := appState{
+		Version:     guiVersion,
+		NetworkName: a.network.Name,
+		NetworkID:   a.network.NetworkID().String(),
+		NodeRunning: nodeRun,
+		NodeOwned:   nodeOwned,
+		NodeError:   nodeErr,
+		SyncTarget:  syncTarget,
+		GPUName:     gpu,
+		Miner:       miner,
+		Settings:    cfg,
+		Logs:        logs,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
+	defer cancel()
+	if ns, err := aq.NewClient(localNodeURL).StatusContext(ctx); err == nil && ns.NetworkID == a.network.NetworkID() {
+		st.NodeRunning = true
+		st.Height = ns.Height
+		st.Tip = ns.Tip.String()
+		st.Peers = ns.Peers
+		st.NetworkHashrate = ns.NetworkHashrate
+		st.PublicEndpoint = ns.PublicAdvertise
+		if st.SyncTarget < ns.Height {
+			st.SyncTarget = ns.Height
+		}
+	}
+	if st.PublicEndpoint == "" && mapping != nil {
+		st.PublicEndpoint = mapping.Advertise
+	}
+	if st.SyncTarget == 0 {
+		st.SyncTarget = st.Height
+	}
+	st.Synchronized = st.NodeRunning && st.Height >= st.SyncTarget
+	return st
+}
+
+func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
+	var s settings
+	if err := readBody(r, &s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	if err := a.saveSettings(s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) ensureNode() error {
+	a.mu.RLock()
+	if a.nodeRun {
+		a.mu.RUnlock()
+		return nil
+	}
+	a.mu.RUnlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
+	st, err := aq.NewClient(localNodeURL).StatusContext(ctx)
+	cancel()
 	if err == nil {
-		_ = os.WriteFile(p, b, 0o600)
+		if st.NetworkID != a.network.NetworkID() {
+			return errors.New("port 18444 is used by a different network")
+		}
+		a.mu.Lock()
+		a.nodeRun = true
+		a.nodeOwned = false
+		a.nodeErr = ""
+		a.mu.Unlock()
+		a.addLog(fmt.Sprintf("Using existing local AuronQ full node at height %d", st.Height))
+		return nil
 	}
-}
 
-func currentSettings() (settings, error) {
-	device, err := strconv.Atoi(strings.TrimSpace(getText(app.device)))
-	if err != nil || device < 0 {
-		return settings{}, fmt.Errorf("Device must be 0 or a positive integer")
+	networkNodeDir := filepath.Join(a.nodeDir, a.network.NetworkID().String())
+	if err := os.MkdirAll(networkNodeDir, 0700); err != nil {
+		return err
 	}
-	batch, err := strconv.Atoi(strings.TrimSpace(getText(app.batch)))
-	if err != nil || batch < 1 || batch > 64 {
-		return settings{}, fmt.Errorf("Batch must be between 1 and 64")
+	chain, err := aq.OpenChain(networkNodeDir, a.network)
+	if err != nil {
+		return err
 	}
-	s := settings{
-		Node:     strings.TrimSpace(getText(app.node)),
-		Address:  strings.TrimSpace(getText(app.address)),
-		Device:   device,
-		Batch:    batch,
-		SelfTest: send(app.selftest, BM_GETCHECK, 0, 0) == BST_CHECKED,
-	}
-	if s.Node == "" {
-		return settings{}, fmt.Errorf("Node URL is required")
-	}
-	return s, nil
-}
+	node := aq.NewNode(chain, aq.NodeConfig{
+		Listen:        "0.0.0.0:18444",
+		Peers:         append([]string(nil), a.bootstrap...),
+		PeerStorePath: filepath.Join(networkNodeDir, "public-peers.json"),
+	})
+	nodeCtx, nodeCancel := context.WithCancel(context.Background())
 
-func (a *appState) queueLog(s string) {
 	a.mu.Lock()
-	a.pendingLogs = append(a.pendingLogs, s)
+	a.node = node
+	a.chain = chain
+	a.nodeCancel = nodeCancel
+	a.nodeRun = true
+	a.nodeOwned = true
+	a.nodeErr = ""
+	a.mu.Unlock()
+	a.addLog("Starting embedded full node on TCP/18444")
+
+	go func() {
+		err := node.Run(nodeCtx)
+		a.mu.Lock()
+		if a.node == node {
+			a.node = nil
+			a.chain = nil
+			a.nodeCancel = nil
+			a.nodeRun = false
+			a.nodeOwned = false
+			if err != nil && nodeCtx.Err() == nil {
+				a.nodeErr = err.Error()
+			}
+		}
+		a.mu.Unlock()
+		if err != nil && nodeCtx.Err() == nil {
+			a.addLog("Embedded node stopped: " + err.Error())
+		}
+	}()
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(120 * time.Millisecond)
+		cctx, ccancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		ns, e := aq.NewClient(localNodeURL).StatusContext(cctx)
+		ccancel()
+		if e == nil && ns.NetworkID == a.network.NetworkID() {
+			a.addLog(fmt.Sprintf("Embedded full node ready at height %d", ns.Height))
+			return nil
+		}
+		a.mu.RLock()
+		nodeErr := a.nodeErr
+		running := a.nodeRun
+		a.mu.RUnlock()
+		if !running && nodeErr != "" {
+			return errors.New(nodeErr)
+		}
+	}
+	return errors.New("full node did not become ready on TCP/18444")
+}
+
+func (a *App) stopOwnedNode() {
+	a.mu.Lock()
+	cancel := a.nodeCancel
+	owned := a.nodeOwned
+	a.nodeCancel = nil
+	if owned {
+		a.nodeRun = false
+		a.nodeOwned = false
+	}
+	a.mu.Unlock()
+	if owned && cancel != nil {
+		cancel()
+	}
+}
+
+func (a *App) handleReconnect(w http.ResponseWriter, r *http.Request) {
+	if a.isWorkerRunning() {
+		apiError(w, 409, errors.New("stop mining/benchmark/self-test before reconnecting the node"))
+		return
+	}
+	a.closePublicMapping()
+	a.stopOwnedNode()
+	time.Sleep(200 * time.Millisecond)
+	a.mu.Lock()
+	a.nodeErr = ""
+	a.mu.Unlock()
+	if err := a.ensureNode(); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	a.refreshSyncTarget()
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) monitorNetwork() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		a.refreshSyncTarget()
+		select {
+		case <-a.exit:
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func (a *App) refreshSyncTarget() {
+	localHeight := uint64(0)
+	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
+	if st, err := aq.NewClient(localNodeURL).StatusContext(ctx); err == nil && st.NetworkID == a.network.NetworkID() {
+		localHeight = st.Height
+	}
+	cancel()
+
+	type result struct {
+		height uint64
+	}
+	ch := make(chan result, len(a.bootstrap))
+	for _, peer := range a.bootstrap {
+		peer := peer
+		go func() {
+			c := &http.Client{Timeout: 1800 * time.Millisecond}
+			resp, err := c.Get(strings.TrimRight(peer, "/") + "/p2p/hello")
+			if err != nil {
+				ch <- result{}
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				ch <- result{}
+				return
+			}
+			var h aq.Hello
+			if json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&h) != nil ||
+				h.ProtocolVersion != 1 || h.NetworkID != a.network.NetworkID() {
+				ch <- result{}
+				return
+			}
+			ch <- result{height: h.Height}
+		}()
+	}
+	target := localHeight
+	for range a.bootstrap {
+		r := <-ch
+		if r.height > target {
+			target = r.height
+		}
+	}
+	a.mu.Lock()
+	a.syncTarget = target
 	a.mu.Unlock()
 }
 
-func (a *appState) queueStatus(s string) {
-	a.mu.Lock()
-	a.nextStatus = s
-	a.mu.Unlock()
+func (a *App) validateRewardAddress(addr string) error {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return errors.New("reward address is required")
+	}
+	netByte, _, _, err := aq.DecodeAddress(addr)
+	if err != nil || netByte != aq.MainnetNetworkByte {
+		return errors.New("reward address must be a valid AuronQ Mainnet address")
+	}
+	return nil
 }
 
-func (a *appState) drainUI() {
-	a.mu.Lock()
-	logs := append([]string(nil), a.pendingLogs...)
-	a.pendingLogs = a.pendingLogs[:0]
-	status := a.nextStatus
-	a.nextStatus = ""
-	a.mu.Unlock()
-
-	for _, line := range logs {
-		appendLogText(a.log, line+"\n")
-	}
-	if status != "" {
-		setText(a.status, status)
-	}
-}
-
-func minerExe() string {
+func workerPath() string {
 	exe, err := os.Executable()
 	if err != nil {
 		return "auronq-gpu-miner.exe"
@@ -303,43 +648,39 @@ func minerExe() string {
 	return filepath.Join(filepath.Dir(exe), "auronq-gpu-miner.exe")
 }
 
-func (a *appState) setRunning(running bool) {
+func (a *App) isWorkerRunning() bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.miner.Running
+}
+
+func (a *App) startWorker(mode string, s settings) error {
 	a.mu.Lock()
-	a.running = running
+	if a.miner.Running {
+		a.mu.Unlock()
+		return errors.New("a miner job is already running")
+	}
 	a.mu.Unlock()
-	if running {
-		procEnableWindow.Call(a.start, 0)
-		procEnableWindow.Call(a.test, 0)
-		procEnableWindow.Call(a.bench, 0)
-		procEnableWindow.Call(a.stop, 1)
-	} else {
-		procEnableWindow.Call(a.start, 1)
-		procEnableWindow.Call(a.test, 1)
-		procEnableWindow.Call(a.bench, 1)
-		procEnableWindow.Call(a.stop, 0)
-	}
-}
 
-func (a *appState) isRunning() bool {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	return a.running
-}
-
-func (a *appState) run(mode string) {
-	if a.isRunning() {
-		return
+	if s.Device < 0 || s.Batch < 1 || s.Batch > 64 {
+		return errors.New("invalid CUDA device or batch")
 	}
-	s, err := currentSettings()
-	if err != nil {
-		messageBox("AuronQ GPU Miner", err.Error())
-		return
+	if mode == "mining" {
+		if err := a.validateRewardAddress(s.Address); err != nil {
+			return err
+		}
+		if err := a.ensureNode(); err != nil {
+			return fmt.Errorf("full node: %w", err)
+		}
+		a.refreshSyncTarget()
+		state := a.state()
+		if state.SyncTarget > 0 && state.Height < state.SyncTarget {
+			return fmt.Errorf("full node is synchronizing: local height %d, peer height %d", state.Height, state.SyncTarget)
+		}
 	}
-	if mode == "mine" && s.Address == "" {
-		messageBox("AuronQ GPU Miner", "Enter the AURQ reward address before starting mining.")
-		return
+	if err := a.saveSettings(s); err != nil {
+		return err
 	}
-	saveSettings(s)
 
 	args := []string{"--device", strconv.Itoa(s.Device), "--batch", strconv.Itoa(s.Batch)}
 	switch mode {
@@ -347,214 +688,384 @@ func (a *appState) run(mode string) {
 		args = append(args, "--self-test")
 	case "benchmark":
 		args = append(args, "--benchmark", "--benchmark-seconds", "15")
-	case "mine":
-		args = append(args, "--node", s.Node, "--address", s.Address)
+	case "mining":
+		args = append(args, "--node", localNodeURL, "--address", strings.TrimSpace(s.Address))
 		if s.SelfTest {
 			args = append(args, "--self-test")
 		}
+	default:
+		return errors.New("unknown worker mode")
 	}
 
-	exe := minerExe()
-	cmd := exec.Command(exe, args...)
-	cmd.Dir = filepath.Dir(exe)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-
+	cmd := exec.Command(workerPath(), args...)
+	cmd.Dir = filepath.Dir(workerPath())
+	cmd.SysProcAttr = &syscallSysProcAttr
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		messageBox("AuronQ GPU Miner", err.Error())
-		return
+		return err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		messageBox("AuronQ GPU Miner", err.Error())
-		return
+		return err
 	}
 	if err := cmd.Start(); err != nil {
-		messageBox("AuronQ GPU Miner", "Cannot start miner:\n"+err.Error())
+		return err
+	}
+
+	a.mu.Lock()
+	a.minerCmd = cmd
+	a.minerStopRequested = false
+	a.miner = minerState{
+		Running:     true,
+		Mode:        mode,
+		BlocksFound: a.miner.BlocksFound,
+		LastBlock:   a.miner.LastBlock,
+		StartedAt:   time.Now().Unix(),
+	}
+	a.mu.Unlock()
+	a.addLog(strings.ToUpper(mode) + " started")
+
+	if mode == "mining" && s.AutoPublic {
+		go a.ensurePublicPeer()
+	}
+
+	go a.scanWorker(stdout, "")
+	go a.scanWorker(stderr, "ERROR: ")
+	go func() {
+		err := cmd.Wait()
+		a.mu.Lock()
+		stopped := a.minerStopRequested
+		if a.minerCmd == cmd {
+			a.minerCmd = nil
+		}
+		a.miner.Running = false
+		a.miner.Mode = ""
+		a.miner.Hashrate = 0
+		if err != nil && !stopped {
+			a.miner.LastError = err.Error()
+		}
+		a.mu.Unlock()
+		if err != nil && !stopped {
+			a.addLog("Worker stopped: " + err.Error())
+		} else {
+			a.addLog("Worker stopped")
+		}
+	}()
+	return nil
+}
+
+var syscallSysProcAttr = syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+
+func (a *App) scanWorker(r io.Reader, prefix string) {
+	sc := bufio.NewScanner(r)
+	sc.Buffer(make([]byte, 4096), 1024*1024)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" {
+			continue
+		}
+		a.addLog(prefix + line)
+		a.parseWorkerLine(line)
+	}
+}
+
+func (a *App) parseWorkerLine(line string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if strings.HasPrefix(line, "GPU: ") {
+		a.gpuName = strings.TrimSpace(strings.TrimPrefix(line, "GPU: "))
+	}
+	if strings.HasPrefix(line, "Mining height ") {
+		fields := strings.Fields(line)
+		if len(fields) >= 3 {
+			if h, err := strconv.ParseUint(fields[2], 10, 64); err == nil {
+				a.miner.Height = h
+			}
+		}
+	}
+	if strings.HasPrefix(line, "hashes=") {
+		if v, ok := numberAfter(line, "avg="); ok {
+			a.miner.Hashrate = v
+		}
+		if v, ok := uintAfter(line, "current_height="); ok {
+			a.miner.Height = v
+		}
+	}
+	if strings.HasPrefix(line, "BENCHMARK OK") {
+		if v, ok := numberAfter(line, "avg="); ok {
+			a.miner.Hashrate = v
+		}
+	}
+	if strings.HasPrefix(line, "BLOCK FOUND ") {
+		a.miner.BlocksFound++
+		if v, ok := uintAfter(line, "height="); ok {
+			a.miner.Height = v
+		}
+		if h, ok := wordAfter(line, "hash="); ok {
+			a.miner.LastBlock = h
+		}
+	}
+	if strings.Contains(line, "SELF-TEST FAILED") || strings.Contains(line, "BENCHMARK FAILED") {
+		a.miner.LastError = line
+	}
+}
+
+func numberAfter(line, key string) (float64, bool) {
+	i := strings.Index(line, key)
+	if i < 0 {
+		return 0, false
+	}
+	s := line[i+len(key):]
+	if j := strings.IndexAny(s, " 	"); j >= 0 {
+		s = s[:j]
+	}
+	v, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	return v, err == nil
+}
+
+func uintAfter(line, key string) (uint64, bool) {
+	i := strings.Index(line, key)
+	if i < 0 {
+		return 0, false
+	}
+	s := line[i+len(key):]
+	if j := strings.IndexAny(s, " 	"); j >= 0 {
+		s = s[:j]
+	}
+	v, err := strconv.ParseUint(strings.TrimSpace(s), 10, 64)
+	return v, err == nil
+}
+
+func wordAfter(line, key string) (string, bool) {
+	i := strings.Index(line, key)
+	if i < 0 {
+		return "", false
+	}
+	s := line[i+len(key):]
+	if j := strings.IndexAny(s, " 	"); j >= 0 {
+		s = s[:j]
+	}
+	s = strings.TrimSpace(s)
+	return s, s != ""
+}
+
+func (a *App) stopWorker() {
+	a.mu.Lock()
+	cmd := a.minerCmd
+	a.minerStopRequested = true
+	a.mu.Unlock()
+	if cmd != nil && cmd.Process != nil {
+		_ = cmd.Process.Kill()
+	}
+}
+
+func (a *App) handleMinerStart(w http.ResponseWriter, r *http.Request) {
+	var s settings
+	if err := readBody(r, &s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	if err := a.startWorker("mining", s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) handleMinerStop(w http.ResponseWriter, r *http.Request) {
+	a.stopWorker()
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) handleSelfTest(w http.ResponseWriter, r *http.Request) {
+	var s settings
+	if err := readBody(r, &s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	if err := a.startWorker("selftest", s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) handleBenchmark(w http.ResponseWriter, r *http.Request) {
+	var s settings
+	if err := readBody(r, &s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	if err := a.startWorker("benchmark", s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) ensurePublicPeer() {
+	a.mu.RLock()
+	if a.portMapping != nil {
+		a.mu.RUnlock()
+		return
+	}
+	ownedNode := a.node
+	a.mu.RUnlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	mapping, err := aq.TryUPnPPortMapping(ctx, 18444)
+	cancel()
+	if err != nil {
+		a.addLog("Public node: UPnP unavailable (" + err.Error() + "); continuing outbound-only")
 		return
 	}
 
 	a.mu.Lock()
-	a.cmd = cmd
+	if a.portMapping != nil {
+		a.mu.Unlock()
+		mapping.Close()
+		return
+	}
+	a.portMapping = mapping
 	a.mu.Unlock()
-	a.setRunning(true)
-	a.queueLog("")
-	a.queueLog("=== "+strings.ToUpper(mode)+" ===")
-	a.queueStatus("Running "+mode+"...")
 
-	scan := func(prefix string, r *bufio.Scanner) {
-		for r.Scan() {
-			line := r.Text()
-			a.queueLog(prefix + line)
-			switch {
-			case strings.Contains(line, "BLOCK FOUND"):
-				a.queueStatus("BLOCK FOUND - mining continues")
-			case strings.Contains(line, "SELF-TEST OK"):
-				a.queueStatus("SELF-TEST OK")
-			case strings.Contains(line, "BENCHMARK OK"):
-				a.queueStatus("Benchmark complete")
-			case strings.Contains(line, "Mining height"):
-				a.queueStatus(line)
-			}
+	if ownedNode != nil {
+		if !ownedNode.SetPublicAdvertise(mapping.Advertise) {
+			a.addLog("Public node: endpoint rejected by local node")
+			a.closePublicMapping()
+			return
 		}
 	}
-	outScanner := bufio.NewScanner(stdout)
-	errScanner := bufio.NewScanner(stderr)
-	outScanner.Buffer(make([]byte, 4096), 1024*1024)
-	errScanner.Buffer(make([]byte, 4096), 1024*1024)
-	go scan("", outScanner)
-	go scan("ERROR: ", errScanner)
+	a.addLog("Public node: TCP/18444 mapped to " + mapping.Advertise)
+	a.announcePublic(mapping.Advertise)
 
+	ctxLoop, cancelLoop := context.WithCancel(context.Background())
+	a.mu.Lock()
+	if a.publicCancel != nil {
+		a.publicCancel()
+	}
+	a.publicCancel = cancelLoop
+	a.mu.Unlock()
 	go func() {
-		err := cmd.Wait()
-		a.mu.Lock()
-		a.cmd = nil
-		a.mu.Unlock()
-		a.setRunning(false)
-		if err != nil {
-			a.queueLog("Process stopped: " + err.Error())
-			a.queueStatus("Stopped with error")
-		} else {
-			a.queueStatus("Stopped")
+		t := time.NewTicker(2 * time.Minute)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctxLoop.Done():
+				return
+			case <-t.C:
+				a.announcePublic(mapping.Advertise)
+			}
 		}
 	}()
 }
 
-func (a *appState) stopMiner() {
+func (a *App) announcePublic(endpoint string) {
+	payload := aq.PeerAnnounce{
+		ProtocolVersion: 1,
+		NetworkID:       a.network.NetworkID(),
+		Advertise:       endpoint,
+		ListenPort:      18444,
+	}
+	body, _ := json.Marshal(payload)
+	success := 0
+	var wg sync.WaitGroup
+	var smu sync.Mutex
+	for _, peer := range a.bootstrap {
+		peer := peer
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			req, err := http.NewRequest(http.MethodPost, strings.TrimRight(peer, "/")+"/p2p/announce", bytes.NewReader(body))
+			if err != nil {
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			c := &http.Client{Timeout: 7 * time.Second}
+			resp, err := c.Do(req)
+			if err != nil {
+				return
+			}
+			io.Copy(io.Discard, io.LimitReader(resp.Body, 1024))
+			resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				smu.Lock()
+				success++
+				smu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	a.addLog(fmt.Sprintf("Public node: announcement accepted by %d/%d bootstrap peers; remote peers callback-verify the endpoint", success, len(a.bootstrap)))
+}
+
+func (a *App) closePublicMapping() {
 	a.mu.Lock()
-	cmd := a.cmd
+	mapping := a.portMapping
+	cancel := a.publicCancel
+	a.portMapping = nil
+	a.publicCancel = nil
 	a.mu.Unlock()
-	if cmd != nil && cmd.Process != nil {
-		_ = cmd.Process.Kill()
-		a.queueStatus("Stopping...")
+	if cancel != nil {
+		cancel()
+	}
+	if mapping != nil {
+		mapping.Close()
+		a.addLog("Public node: TCP/18444 mapping closed")
 	}
 }
 
-func messageBox(title, text string) {
-	procMessageBoxW.Call(0,
-		uintptr(unsafe.Pointer(utf16Ptr(text))),
-		uintptr(unsafe.Pointer(utf16Ptr(title))),
-		0x00000040)
-}
-
-func wndProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
-	switch message {
-	case WM_COMMAND:
-		switch loword(wParam) {
-		case ID_START:
-			app.run("mine")
-		case ID_STOP:
-			app.stopMiner()
-		case ID_TEST:
-			app.run("selftest")
-		case ID_BENCH:
-			app.run("benchmark")
+func (a *App) handleExit(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, map[string]any{"ok": true})
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		select {
+		case a.exit <- struct{}{}:
+		default:
 		}
-		return 0
-
-	case WM_TIMER:
-		if wParam == timerID {
-			app.drainUI()
-		}
-		return 0
-
-	case WM_CLOSE:
-		app.stopMiner()
-		procKillTimer.Call(hwnd, timerID)
-		procPostQuitMessage.Call(0)
-		return 0
-
-	case WM_DESTROY:
-		app.stopMiner()
-		procPostQuitMessage.Call(0)
-		return 0
-	}
-	r, _, _ := procDefWindowProcW.Call(hwnd, uintptr(message), wParam, lParam)
-	return r
+	}()
 }
 
-func buildUI(hwnd uintptr) {
-	s := loadSettings()
-
-	createControl("STATIC", "AuronQ GPU Miner", WS_CHILD|WS_VISIBLE, 20, 15, 280, 28, hwnd, 0)
-	createControl("STATIC", "CUDA Mainnet miner - AQM64", WS_CHILD|WS_VISIBLE, 20, 42, 300, 20, hwnd, 0)
-
-	createControl("STATIC", "Full node URL:", WS_CHILD|WS_VISIBLE, 20, 78, 120, 22, hwnd, 0)
-	app.node = createControl("EDIT", s.Node, WS_CHILD|WS_VISIBLE|WS_BORDER|WS_TABSTOP|ES_LEFT, 145, 75, 665, 26, hwnd, ID_NODE)
-
-	createControl("STATIC", "Reward address:", WS_CHILD|WS_VISIBLE, 20, 113, 120, 22, hwnd, 0)
-	app.address = createControl("EDIT", s.Address, WS_CHILD|WS_VISIBLE|WS_BORDER|WS_TABSTOP|ES_LEFT, 145, 110, 665, 26, hwnd, ID_ADDRESS)
-
-	createControl("STATIC", "CUDA device:", WS_CHILD|WS_VISIBLE, 20, 148, 105, 22, hwnd, 0)
-	app.device = createControl("EDIT", strconv.Itoa(s.Device), WS_CHILD|WS_VISIBLE|WS_BORDER|WS_TABSTOP|ES_NUMBER, 125, 145, 55, 26, hwnd, ID_DEVICE)
-
-	createControl("STATIC", "Batch:", WS_CHILD|WS_VISIBLE, 205, 148, 50, 22, hwnd, 0)
-	app.batch = createControl("EDIT", strconv.Itoa(s.Batch), WS_CHILD|WS_VISIBLE|WS_BORDER|WS_TABSTOP|ES_NUMBER, 255, 145, 55, 26, hwnd, ID_BATCH)
-
-	app.selftest = createControl("BUTTON", "Run GPU/CPU self-test before mining", WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX, 340, 145, 280, 26, hwnd, ID_SELFTEST)
-	if s.SelfTest {
-		send(app.selftest, BM_SETCHECK, BST_CHECKED, 0)
-	}
-
-	app.start = createControl("BUTTON", "Start mining", WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_DEFPUSHBUTTON, 20, 190, 145, 34, hwnd, ID_START)
-	app.stop = createControl("BUTTON", "Stop", WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 175, 190, 100, 34, hwnd, ID_STOP)
-	app.test = createControl("BUTTON", "Self-test", WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 300, 190, 120, 34, hwnd, ID_TEST)
-	app.bench = createControl("BUTTON", "15 s benchmark", WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_PUSHBUTTON, 430, 190, 150, 34, hwnd, ID_BENCH)
-	procEnableWindow.Call(app.stop, 0)
-
-	createControl("STATIC", "Status:", WS_CHILD|WS_VISIBLE, 20, 241, 55, 20, hwnd, 0)
-	app.status = createControl("STATIC", "Ready", WS_CHILD|WS_VISIBLE, 78, 241, 730, 20, hwnd, ID_STATUS)
-
-	createControl("STATIC", "Miner log:", WS_CHILD|WS_VISIBLE, 20, 270, 100, 20, hwnd, 0)
-	app.log = createControl("EDIT", "", WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|ES_LEFT|ES_MULTILINE|ES_AUTOVSCROLL|ES_READONLY, 20, 292, 790, 300, hwnd, ID_LOG)
-
-	createControl("STATIC", "Tip: keep AuronQ Desktop/full node synchronized while mining. Batch 60 is validated on RTX 4050 Laptop GPU.", WS_CHILD|WS_VISIBLE, 20, 605, 790, 20, hwnd, 0)
+func (a *App) shutdown() {
+	a.stopWorker()
+	a.closePublicMapping()
+	a.stopOwnedNode()
 }
 
-func main() {
-	procSetProcessDPIAware.Call()
-	hInst, _, _ := procGetModuleHandleW.Call(0)
-	cursor, _, _ := procLoadCursorW.Call(0, IDC_ARROW)
-
-	wc := wndClassEx{
-		CbSize:        uint32(unsafe.Sizeof(wndClassEx{})),
-		LpfnWndProc:   syscall.NewCallback(wndProc),
-		HInstance:     hInst,
-		HCursor:       cursor,
-		HbrBackground: COLOR_WINDOW + 1,
-		LpszClassName: utf16Ptr(className),
+func reopenExisting(base string) bool {
+	c := &http.Client{Timeout: 750 * time.Millisecond}
+	resp, err := c.Get(base + "/api/state")
+	if err != nil {
+		return false
 	}
-	if r, _, _ := procRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc))); r == 0 {
-		messageBox("AuronQ GPU Miner", "Could not register Windows window class.")
-		return
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false
 	}
-
-	style := uint32(WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX)
-	hwnd, _, _ := procCreateWindowExW.Call(
-		0,
-		uintptr(unsafe.Pointer(utf16Ptr(className))),
-		uintptr(unsafe.Pointer(utf16Ptr("AuronQ GPU Miner"))),
-		uintptr(style),
-		200, 100, 850, 680,
-		0, 0, hInst, 0,
-	)
-	if hwnd == 0 {
-		messageBox("AuronQ GPU Miner", "Could not create the main window.")
-		return
+	var st appState
+	if json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&st) != nil || st.Version == "" {
+		return false
 	}
-	app.hwnd = hwnd
-	buildUI(hwnd)
-	procSetTimer.Call(hwnd, timerID, 150, 0)
-	procShowWindow.Call(hwnd, SW_SHOW)
-	procUpdateWindow.Call(hwnd)
+	_ = openDesktopWindow(base + "/")
+	return true
+}
 
-	var m msg
-	for {
-		r, _, _ := procGetMessageW.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
-		if int32(r) <= 0 {
-			break
+func openDesktopWindow(url string) error {
+	if runtime.GOOS != "windows" {
+		return exec.Command("xdg-open", url).Start()
+	}
+	candidates := []string{
+		filepath.Join(os.Getenv("ProgramFiles(x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("ProgramFiles"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("LocalAppData"), "Microsoft", "Edge", "Application", "msedge.exe"),
+	}
+	for _, p := range candidates {
+		if p != "" {
+			if _, err := os.Stat(p); err == nil {
+				return exec.Command(p, "--app="+url, "--start-maximized").Start()
+			}
 		}
-		procTranslateMessage.Call(uintptr(unsafe.Pointer(&m)))
-		procDispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
 	}
+	return exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", url).Start()
 }
