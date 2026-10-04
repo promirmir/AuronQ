@@ -38,17 +38,24 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host ""
-Write-Host "[2/3] Building Go miner..."
+Write-Host "[2/4] Building Go miner CLI..."
 & $go build -trimpath -o (Join-Path $dist "auronq-gpu-miner.exe") .\cmd\auronq-gpu-miner
 if ($LASTEXITCODE -ne 0) {
-    throw "Go build failed with exit code $LASTEXITCODE"
+    throw "Go CLI build failed with exit code $LASTEXITCODE"
+}
+
+Write-Host ""
+Write-Host "[3/4] Building native Windows GUI..."
+& $go build -trimpath -ldflags "-H=windowsgui" -o (Join-Path $dist "AuronQ-GPU-Miner.exe") .\cmd\auronq-gpu-miner-gui
+if ($LASTEXITCODE -ne 0) {
+    throw "Go GUI build failed with exit code $LASTEXITCODE"
 }
 
 Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll") (Join-Path $dist "auronq-aqm64-cuda.dll") -Force
 Copy-Item (Join-Path $root "gpu\cuda\README.md") (Join-Path $dist "README-GPU-MINER.md") -Force
 
 Write-Host ""
-Write-Host "[3/3] Running mandatory GPU/CPU AQM64 equivalence self-test..."
+Write-Host "[4/4] Running mandatory GPU/CPU AQM64 equivalence self-test..."
 Push-Location $dist
 try {
     .\auronq-gpu-miner.exe --self-test
@@ -64,4 +71,8 @@ Write-Host "SUCCESS"
 Write-Host "Built and self-tested:"
 Write-Host "  $dist"
 Write-Host ""
+Write-Host "Windows app:"
+Write-Host "  $(Join-Path $dist "AuronQ-GPU-Miner.exe")"
+Write-Host ""
+Write-Host "Double-click AuronQ-GPU-Miner.exe for the graphical interface."
 Write-Host "Do not start Mainnet mining unless the self-test printed SELF-TEST OK."
