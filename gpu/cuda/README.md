@@ -22,10 +22,10 @@ conservative batch from free VRAM and the GPU SM count.
 - Windows x64
 - NVIDIA GPU with CUDA Compute Capability 7.5+
 - NVIDIA driver
-- CUDA Toolkit 12.x to build the DLL from source
+- CUDA Toolkit 13.4.x (or another compatible CUDA 13.x toolkit) to build the DLL from source
 - a running AuronQ full node, normally http://127.0.0.1:18444
 
-RTX 20/30/40-class cards are the initial target. The first implementation is
+RTX 20/30/40-class cards are the initial target. RTX 4050 Laptop GPU is supported by the current sm_89 build target. The first implementation is
 correctness-first; kernel tuning comes after device self-test and real hardware
 benchmarks.
 
