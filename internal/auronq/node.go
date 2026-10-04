@@ -981,6 +981,35 @@ func (n *Node) handler() http.Handler {
 		go n.broadcast("/p2p/block", b, "")
 	})
 
+	mux.HandleFunc("/p2p/headers", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if !n.allowBlockRequest(r) {
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "header request rate limit exceeded"})
+			return
+		}
+		start, err := strconv.ParseUint(r.URL.Query().Get("start"), 10, 64)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid start height"})
+			return
+		}
+		limit := 64
+		if raw := r.URL.Query().Get("limit"); raw != "" {
+			v, err := strconv.Atoi(raw)
+			if err != nil || v < 1 || v > 256 {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid header limit"})
+				return
+			}
+			limit = v
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"start":   start,
+			"headers": n.Chain.Headers(start, limit),
+		})
+	})
+
 	mux.HandleFunc("/p2p/hello", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			w.WriteHeader(405)
