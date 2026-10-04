@@ -65,3 +65,21 @@ func TestDesktopShowsPublicNodeReadiness(t *testing.T) {
 		}
 	}
 }
+
+func TestDesktopMiningCanHelpNetworkAutomatically(t *testing.T) {
+	b, err := webFS.ReadFile("web/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(b)
+	for _, want := range []string{
+		`id="minerPublicNode"`,
+		`PublicNode:$('minerPublicNode').checked`,
+		`UPnP`,
+		`TCP/18444`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("automatic public mining UI missing %q", want)
+		}
+	}
+}
