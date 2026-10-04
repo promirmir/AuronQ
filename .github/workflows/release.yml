@@ -37,7 +37,7 @@ jobs:
           go build -trimpath -buildvcs=false -ldflags="-s -w -buildid= -H=windowsgui" -o AuronQ-Desktop.exe ./cmd/auronq-desktop
           go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq-cli.exe ./cmd/auronq
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item AuronQ-Desktop.exe,auronq-cli.exe,network.json,bootstrap.json,README-WINDOWS.md,START-AURONQ.cmd,START-SEED-NODE.cmd dist\
+          Copy-Item AuronQ-Desktop.exe,auronq-cli.exe,network.json,bootstrap.json,README-WINDOWS.md,START-AURONQ.cmd,START-PUBLIC-NODE.cmd,START-SEED-NODE.cmd dist\
           Get-FileHash dist\AuronQ-Desktop.exe -Algorithm SHA256 | Format-List | Out-File dist\SHA256SUMS-Windows.txt
           Get-FileHash dist\auronq-cli.exe -Algorithm SHA256 | Format-List | Out-File -Append dist\SHA256SUMS-Windows.txt
           Compress-Archive -Path dist\* -DestinationPath "AuronQ-$version-Windows-x64.zip" -Force
@@ -87,7 +87,7 @@ jobs:
           body: |
             ## AuronQ Mainnet
 
-            This is the current AuronQ Desktop / full-node Mainnet release.
+            This is the current AuronQ Desktop / full-node Mainnet release. v1.7.13 hardens peer discovery against dead DNS endpoints and stale peer re-announcement.
 
             ### Windows
             Download the Windows x64 ZIP, verify its checksum, extract the entire archive and run `START-AURONQ.cmd`.
