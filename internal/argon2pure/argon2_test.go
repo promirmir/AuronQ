@@ -40,3 +40,33 @@ func TestArgon2idKnownVectors(t *testing.T) {
 		}
 	}
 }
+
+func TestSingleLaneAcceleratorBoundaryMatchesIDKey(t *testing.T) {
+	password := []byte("auronq-gpu-boundary-test")
+	salt := []byte("0123456789abcdef0123456789abcdef")
+	const (
+		timeCost = uint32(2)
+		memory   = uint32(64)
+		keyLen   = uint32(64)
+	)
+	initial, err := PrepareSingleLaneBlocks(password, salt, timeCost, memory, keyLen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := normalizedMemory(memory, 1)
+	B := make([]block, m)
+	copy(B[0][:], initial[:blockLength])
+	copy(B[1][:], initial[blockLength:])
+	processBlocks(B, timeCost, m, 1)
+
+	final := make([]uint64, blockLength)
+	copy(final, B[m-1][:])
+	got, err := ExtractSingleLaneKey(final, keyLen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := IDKey(password, salt, timeCost, memory, 1, keyLen)
+	if string(got) != string(want) {
+		t.Fatalf("accelerator boundary mismatch: got %x want %x", got, want)
+	}
+}
