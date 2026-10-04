@@ -19,6 +19,7 @@ The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 
 | Mainnet specification | [MAINNET.md](MAINNET.md) |
 | Protocol | [PROTOCOL.md](PROTOCOL.md) |
 | AQM64 Proof-of-Work | [AQM64.md](AQM64.md) |
+| Decentralization model | [DECENTRALIZATION.md](DECENTRALIZATION.md) |
 | Network independence | [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md) |
 | Public network | [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md) |
 | Threat model | [THREAT-MODEL.md](THREAT-MODEL.md) |
@@ -95,11 +96,16 @@ The current Windows binaries are **not Authenticode-signed**, so Windows SmartSc
 
 ## Public blockchain explorer
 
-A live public Mainnet explorer is available at:
+There is **no canonical central AuronQ Explorer**. Every AuronQ full node serves
+the same read-only Explorer from its own locally validated canonical chain at
+`/explorer`.
+
+One currently reachable public instance is:
 
 `https://mir.taild63f46.ts.net/explorer`
 
-It is served by an AuronQ full node and is read-only.
+That URL is only one full-node instance and has no special authority. If it
+disappears, other full nodes and their local Explorers continue to operate.
 
 ## Built-in blockchain explorer
 
@@ -115,7 +121,7 @@ For a publicly reachable node, append `/explorer` to its HTTPS node address. The
 - transaction lookup by TXID, including inputs, outputs, fees and confirmations;
 - address lookup with spendable/total balance and recent transaction history.
 
-Explorer endpoints are rate-limited. Explorer v1 reads canonical chain and mempool data directly from the full node; it has no consensus privileges and does not modify blockchain state.
+Explorer endpoints are rate-limited. Explorer v1 reads canonical chain and mempool data directly from **that node**; it has no consensus privileges and does not modify blockchain state. Desktop users therefore inspect their own independently validated chain rather than trusting a project-operated explorer service.
 
 ## Android alpha
 
@@ -160,7 +166,7 @@ At present the manifest advertises **two externally verified public bootstrap en
 - `https://mir.taild63f46.ts.net`
 - `https://desktop-4nifg1j.taild63f46.ts.net`
 
-These endpoints are only first-contact relays to ordinary full nodes. It has no consensus privileges. Full nodes independently validate blocks, transactions, Network ID and cumulative chain work.
+These endpoints are only first-contact hints to ordinary full nodes. They have no consensus privileges and, from the decentralization-v3 hardening onward, repeatedly failing configured seeds are pruned from the running peer set instead of remaining permanent authorities. Full nodes independently validate blocks, transactions, Network ID and cumulative chain work.
 
 AuronQ full nodes already persist verified public peers and exchange them through peer gossip. In addition, the repository now has a scheduled public-peer crawler that follows AuronQ gossip, verifies reachable Mainnet peers and can append them to `bootstrap.json` automatically. This means that, as independently operated public nodes appear, the first-contact registry can become multi-peer without relying on the founder's computer being online.
 

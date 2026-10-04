@@ -458,8 +458,8 @@ public class MainActivity extends Activity {
         root.addView(refresh, mt(14));
 
         TextView model = text(tr(
-                "AuronQ Mobile jest klientem portfela, nie pełnym nodem. Sprawdza Network ID i odczytuje stan z publicznego noda AuronQ Mainnet. Zapamiętuje poznane publiczne nody, aby nie zależeć od jednego komputera startowego.",
-                "AuronQ Mobile is a wallet client, not a full node. It verifies the Network ID and reads state from public AuronQ Mainnet nodes. It remembers discovered public nodes so it does not depend on a single startup computer."), 12, false);
+                "AuronQ Mobile jest lekkim klientem portfela, nie pełnym nodem. Klucze pozostają lokalnie, aplikacja sprawdza Network ID, korzysta z wymiennych publicznych nodów AuronQ, zapamiętuje peery poznane z sieci P2P i nie traktuje żadnego noda startowego jako zaufanego źródła konsensusu.",
+                "AuronQ Mobile is a light wallet client, not a full node. Keys remain local, the app verifies the Network ID, uses replaceable public AuronQ nodes, remembers peers learned from the P2P network, and does not treat any startup node as a trusted consensus authority."), 12, false);
         model.setTextColor(MUTED);
         root.addView(model, mt(18));
 

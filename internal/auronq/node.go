@@ -38,7 +38,6 @@ type Node struct {
 	pmu          sync.RWMutex
 	peers      map[string]struct{}
 	announced  map[string]struct{}
-	bootstrap  map[string]struct{}
 	failures   map[string]int
 	syncCursor int
 	blockSem   chan struct{}
@@ -137,15 +136,18 @@ func NewNode(chain *Chain, cfg NodeConfig) *Node {
 		publicClient: newPublicPeerHTTPClient(cfg.LookupHost),
 		peers:        map[string]struct{}{},
 		announced:    map[string]struct{}{},
-		bootstrap:    map[string]struct{}{},
 		failures:     map[string]int{},
 		blockSem:     make(chan struct{}, maxConcurrentBlockValidation),
 		rate:         map[string]requestRateWindow{},
 	}
-	configured := append([]string(nil), chain.network.SeedPeers...)
-	configured = append(configured, cfg.Peers...)
-	for _, p := range configured {
-		n.addBootstrapPeer(p)
+	// SeedPeers and configured peers are startup hints, not permanent authorities.
+	// They may be removed after repeated failures; learned peers from the P2P network
+	// are persisted separately and can fully replace the original bootstrap set.
+	for _, p := range chain.network.SeedPeers {
+		n.addPeer(p)
+	}
+	for _, p := range cfg.Peers {
+		n.addPeer(p)
 	}
 	n.loadPeerStore()
 	return n
@@ -368,19 +370,6 @@ func (n *Node) addPeer(p string) {
 	n.pmu.Unlock()
 }
 
-func (n *Node) addBootstrapPeer(p string) {
-	p = normalizePeer(p)
-	if p == "" || p == normalizePeer(n.cfg.Advertise) {
-		return
-	}
-	n.pmu.Lock()
-	if len(n.peers) < maxKnownPeers {
-		n.peers[p] = struct{}{}
-		n.bootstrap[p] = struct{}{}
-	}
-	n.pmu.Unlock()
-}
-
 func (n *Node) addDiscoveredPeer(p string) {
 	p = normalizePeer(p)
 	if !isPublicAdvertisedPeer(p) || p == normalizePeer(n.cfg.Advertise) {
@@ -419,9 +408,9 @@ func (n *Node) AddPeer(p string) { n.addDiscoveredPeer(p) }
 
 // AddLocalPeer adds an explicitly discovered local/private peer for the current
 // process. Local peers are deliberately not gossiped to the public network and
-// are not written to the public peer store. This is used by the desktop
-// application for zero-touch LAN discovery.
-func (n *Node) AddLocalPeer(p string) { n.addBootstrapPeer(p) }
+// are not written to the public peer store. They are ordinary transient peers:
+// if they disappear they are pruned like any other failed connection.
+func (n *Node) AddLocalPeer(p string) { n.addPeer(p) }
 
 func (n *Node) peerList() []string {
 	n.pmu.RLock()
@@ -687,9 +676,6 @@ func (n *Node) recordPeerSuccess(peer string) {
 func (n *Node) recordPeerFailure(peer string) {
 	n.pmu.Lock()
 	defer n.pmu.Unlock()
-	if _, keep := n.bootstrap[peer]; keep {
-		return
-	}
 	n.failures[peer]++
 	if n.failures[peer] >= peerFailureDrop {
 		delete(n.peers, peer)

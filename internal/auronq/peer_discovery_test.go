@@ -185,7 +185,7 @@ func TestAnnounceSelfSendsListenPortWithoutManualAdvertise(t *testing.T) {
 	}
 }
 
-func TestDeadLearnedPeerIsPrunedButBootstrapIsKept(t *testing.T) {
+func TestDeadPeersArePrunedRegardlessOfOrigin(t *testing.T) {
 	_, c := testPeerNetwork(t)
 	n := NewNode(c, NodeConfig{Peers: []string{"http://1.1.1.1:18444"}})
 	n.addDiscoveredPeer("http://8.8.8.8:18444")
@@ -193,9 +193,8 @@ func TestDeadLearnedPeerIsPrunedButBootstrapIsKept(t *testing.T) {
 		n.recordPeerFailure("http://8.8.8.8:18444")
 		n.recordPeerFailure("http://1.1.1.1:18444")
 	}
-	got := n.peerList()
-	if len(got) != 1 || got[0] != "http://1.1.1.1:18444" {
-		t.Fatalf("peer list=%v", got)
+	if got := n.peerList(); len(got) != 0 {
+		t.Fatalf("failed peers retained authority: %v", got)
 	}
 }
 
@@ -367,5 +366,56 @@ func TestDiversePeerOrderInterleavesNetgroups(t *testing.T) {
 	}
 	if len(firstGroups) != 3 {
 		t.Fatalf("first sync candidates are not netgroup-diverse: %v", out[:3])
+	}
+}
+
+
+func TestConfiguredSeedPeersArePrunableHints(t *testing.T) {
+	netCfg, chain := testPeerNetwork(t)
+	netCfg.SeedPeers = []string{"http://127.0.0.2:18444"}
+	n := NewNode(chain, NodeConfig{})
+	peer := "http://127.0.0.2:18444"
+	found := false
+	for _, p := range n.peerList() {
+		if p == peer {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("configured seed was not loaded: %v", n.peerList())
+	}
+	for i := 0; i < peerFailureDrop; i++ {
+		n.recordPeerFailure(peer)
+	}
+	for _, p := range n.peerList() {
+		if p == peer {
+			t.Fatalf("failed seed remained authoritative after %d failures: %v", peerFailureDrop, n.peerList())
+		}
+	}
+}
+
+func TestConfiguredPeersArePrunableAndReappearOnlyByConfiguration(t *testing.T) {
+	_, chain := testPeerNetwork(t)
+	peer := "http://127.0.0.3:18444"
+	n := NewNode(chain, NodeConfig{Peers: []string{peer}})
+	for i := 0; i < peerFailureDrop; i++ {
+		n.recordPeerFailure(peer)
+	}
+	for _, p := range n.peerList() {
+		if p == peer {
+			t.Fatalf("configured peer was not pruned: %v", n.peerList())
+		}
+	}
+	restarted := NewNode(chain, NodeConfig{Peers: []string{peer}})
+	found := false
+	for _, p := range restarted.peerList() {
+		if p == peer {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("configured peer should be retried on a new process start")
 	}
 }
