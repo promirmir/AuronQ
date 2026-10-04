@@ -25,7 +25,7 @@ import (
 	aq "auronq/internal/auronq"
 )
 
-const desktopVersion = "1.7.10"
+const desktopVersion = "1.7.11"
 
 //go:embed web/*
 var webFS embed.FS
