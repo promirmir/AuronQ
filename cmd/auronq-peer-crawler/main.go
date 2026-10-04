@@ -183,7 +183,19 @@ func netgroup(raw string) string {
 	}
 	ip := net.ParseIP(strings.Trim(u.Hostname(), "[]"))
 	if ip == nil {
-		return "dns:" + strings.ToLower(u.Hostname())
+		host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
+		parts := strings.Split(host, ".")
+		if len(parts) >= 3 {
+			// Keep common second-level ccTLDs together, otherwise group by the
+			// registrable-looking parent domain. This is diversity only, not trust.
+			secondLevel := map[string]bool{"co": true, "com": true, "net": true, "org": true, "gov": true, "ac": true}
+			if len(parts[len(parts)-1]) == 2 && secondLevel[parts[len(parts)-2]] && len(parts) >= 3 {
+				host = strings.Join(parts[len(parts)-3:], ".")
+			} else {
+				host = strings.Join(parts[len(parts)-2:], ".")
+			}
+		}
+		return "dns:" + host
 	}
 	if v4 := ip.To4(); v4 != nil {
 		return fmt.Sprintf("v4:%d.%d", v4[0], v4[1])

@@ -40,7 +40,7 @@ A node behind NAT/CGNAT participates normally through outbound connections. A di
 
 AuronQ does not have a founder/master node. Once full nodes know each other, they persist verified public peers locally, exchange those peers in `/p2p/hello`, reconnect after restarts, synchronize by cumulative work and continue validating/mining even if the original bootstrap computer is offline.
 
-A completely fresh installation still needs at least one discovery route. To reduce dependence on manual operator maintenance, the repository now contains an autonomous peer-registry crawler. GitHub Actions periodically starts from the current `bootstrap.json`, follows AuronQ peer gossip, callback-checks reachable candidates, requires the exact Mainnet Network ID/protocol, rejects private/CGNAT/documentation addresses, applies basic netgroup diversity and appends verified public peers to the bootstrap manifest.
+A completely fresh installation still needs at least one discovery route. To reduce dependence on manual operator maintenance, the repository now contains an autonomous peer-registry crawler. GitHub Actions runs the registry crawler hourly. It starts from the current `bootstrap.json`, follows AuronQ peer gossip, callback-checks reachable candidates, requires the exact Mainnet Network ID/protocol, rejects private/CGNAT/documentation addresses, applies network-group diversity (including grouping DNS peers by parent domain) and appends verified public peers to the bootstrap manifest.
 
 The crawler never changes consensus and never makes a peer trusted for blocks: every full node still validates the chain locally. It also deliberately preserves existing manifest entries during transient outages instead of deleting the registry.
 
@@ -71,7 +71,7 @@ These controls do not replace professional adversarial review or DDoS/Sybil test
 
 ## Becoming an independent public node
 
-Windows source/release packaging includes an opt-in `START-PUBLIC-NODE.cmd`. It opens TCP/18444 in Windows Firewall and starts AuronQ Desktop. A router/public ISP path must still allow inbound TCP/18444; CGNAT normally requires a VPS or public relay. Public reachability is verified by another node before that address is accepted into peer gossip.
+Windows source/release packaging includes an opt-in `START-PUBLIC-NODE.cmd`. It opens TCP/18444 in Windows Firewall and starts AuronQ Desktop. A router/public ISP path must still allow inbound TCP/18444; CGNAT normally requires a VPS or public relay. Public reachability is verified by another node before that address is accepted into peer gossip. Once verified and gossiped, the hourly registry crawler can discover the endpoint and add it to the public bootstrap registry through the protected PR/CI process.
 
 Normal users do not need inbound connectivity and can keep using `START-AURONQ.cmd`.
 
