@@ -1,0 +1,10 @@
+AuronQ Mobile 0.5.1 Alpha
+
+- Independently validates the AuronQ Mainnet header chain from embedded genesis.
+- Locally verifies AQM64 proof-of-work, difficulty, timestamps and chain continuity.
+- Uses multiple replaceable peers for Mainnet observation.
+- Balance, wallet history and spendable UTXO state are accepted only from peers matching the locally verified header chain.
+- History and UTXO state are compared across agreeing peers; conflicts fail closed.
+- Private keys and ML-DSA-87 transaction signing remain local.
+- Signed transactions are broadcast directly to agreeing verified-chain peers.
+- Remains a light client: full UTXO/block validation is still performed by full nodes.
