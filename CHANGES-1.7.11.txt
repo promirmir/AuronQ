@@ -1,0 +1,8 @@
+AuronQ 1.7.11 Mainnet
+
+- Adds bounded canonical header batches at /p2p/headers for light-client verification.
+- Adds shared header-only consensus validation for version, AQM64 algorithm, height/PrevHash continuity, difficulty target, AQM64 PoW, Median Time Past and future timestamp bounds.
+- Full transaction/UTXO/coinbase/signature validation remains unchanged.
+- Adds regression coverage for the header validator and P2P header endpoint.
+- This is the server-side prerequisite for AuronQ Mobile 0.5.0 header verification.
+- Network ID, genesis, monetary policy, AQM64 parameters, signatures and transaction consensus rules are unchanged.
