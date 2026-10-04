@@ -1,3 +1,13 @@
+## Android 0.5.3 Alpha
+
+- fresh installs can use independently verified public IPv4 full nodes advertised as `http://<public-ip>:18444`, not only the two HTTPS bootstrap endpoints;
+- cleartext mobile peers are accepted only as literal globally routable IP addresses; private, loopback, CGNAT and documentation ranges remain rejected, DNS peers still require HTTPS, and redirects remain disabled;
+- bundles the three newly crawler-verified public IPv4 Mainnet peers as direct fallbacks;
+- shows “network reachable / verifying AQM64” immediately instead of presenting first-install header verification as a connection failure;
+- a temporary refresh failure no longer erases an already verified mobile state or flashes the app back to “offline” every few seconds;
+- header verification progress is persisted after every successful batch so a flaky peer or app restart resumes from the last verified height instead of replaying AQM64 from genesis;
+- no Mainnet consensus, Network ID, genesis, transaction, PoW or monetary changes.
+
 ## Android 0.5.2 Alpha
 
 - prevents temporary node timeouts or a lagging peer from wiping the locally verified header cache and forcing an expensive full AQM64 replay;
