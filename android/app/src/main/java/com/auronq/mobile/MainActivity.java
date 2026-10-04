@@ -68,6 +68,7 @@ public class MainActivity extends Activity {
     private String nodeUrl = "";
     private String walletAddress = "";
     private String currentScreen = "home";
+    private String lastHistoryKey = "";
     private boolean liveBusy = false;
 
     private FrameLayout content;
@@ -347,7 +348,10 @@ public class MainActivity extends Activity {
         walletHistory.setOrientation(LinearLayout.VERTICAL);
         historyCard.addView(walletHistory, mt(10));
         Button historyRefresh = secondaryButton(tr("Odśwież historię", "Refresh history"));
-        historyRefresh.setOnClickListener(v -> refreshAll());
+        historyRefresh.setOnClickListener(v -> {
+            lastHistoryKey = "";
+            refreshAll();
+        });
         historyCard.addView(historyRefresh, mt(10));
         root.addView(historyCard, mt(18));
 
@@ -565,10 +569,15 @@ public class MainActivity extends Activity {
                         String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
                         balance = Bridge.balance(node, addr);
                         if ("wallet".equals(currentScreen)) {
-                            try {
-                                history = Bridge.history(node, addr, 50);
-                            } catch (Exception e) {
-                                historyError = e.getMessage();
+                            JSONObject snapshotState = new JSONObject(snapshot);
+                            String historyKey = addr + ":" + snapshotState.optLong("height") + ":" + snapshotState.optInt("mempool");
+                            if (!historyKey.equals(lastHistoryKey)) {
+                                try {
+                                    history = Bridge.history(node, addr, 50);
+                                    lastHistoryKey = historyKey;
+                                } catch (Exception e) {
+                                    historyError = e.getMessage();
+                                }
                             }
                         }
                     } catch (Exception ignored) {
@@ -789,6 +798,7 @@ public class MainActivity extends Activity {
                 () -> Bridge.createWallet(walletFile.getAbsolutePath(), password),
                 value -> {
                     walletAddress = value;
+                    lastHistoryKey = "";
                     loadWalletState();
                     refreshAll();
                     toast(tr("Portfel utworzony", "Wallet created"));
@@ -872,6 +882,7 @@ public class MainActivity extends Activity {
                 .setPositiveButton(tr("Usuń", "Delete"), (d, w) -> {
                     if (walletFile.delete()) {
                         walletAddress = "";
+                        lastHistoryKey = "";
                         passwordInput.setText("");
                         loadWalletState();
                         refreshAll();
@@ -957,6 +968,7 @@ public class MainActivity extends Activity {
                         return;
                     }
                     walletAddress = addr;
+                    lastHistoryKey = "";
                     loadWalletState();
                     refreshAll();
                     toast(tr("Portfel zaimportowany", "Wallet imported"));
