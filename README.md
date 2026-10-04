@@ -30,9 +30,9 @@ The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 
 
 For a normal Windows user, no manual peer configuration, Tailscale, port forwarding, Go, Docker or command line setup is required.
 
-1. Download **[AuronQ-1.7.3-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.3/AuronQ-1.7.3-Windows-x64.zip)** from this repository's official Releases page.
+1. Download **[AuronQ-1.7.4-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.4/AuronQ-1.7.4-Windows-x64.zip)** from this repository's official Releases page.
 2. Verify the ZIP SHA-256 if possible:
-   `a06c62561ab9c8673ac14384e1bba5af51e5e4f9b888cb9f7d1dbe238c0cfb23`
+   `ab863dbf7eebc6f8e44c76afe6a6221079e6f0ba18f813a5c5a99fcfe28ba1a0`
 3. Extract the **entire ZIP** to a new folder. Do not run files directly from inside the archive.
 4. Run **`START-AURONQ.cmd` once**.
 5. AuronQ Desktop will start the full node, verify the Mainnet configuration, discover the public bootstrap nodes and begin synchronization automatically.
@@ -68,23 +68,25 @@ AuronQ may be relevant to developers, miners, node operators and researchers loo
 
 ## Project status
 
-Current stable desktop/full-node release: **AuronQ 1.7.3 Mainnet**.
+Current stable desktop/full-node release: **AuronQ 1.7.4 Mainnet**.
+
+Version 1.7.4 adds a rate-limited public wallet-history endpoint for light/mobile clients and exposes an **estimated AQM64 network hashrate** derived from recent canonical block work and timestamps. AuronQ Desktop displays this as **Network power (est.)**. This value is an estimate, not a direct measurement of every miner.
 
 The network is operational, but decentralization is still developing. The bootstrap manifest currently contains **two independently reachable public bootstrap endpoints**, both externally verified by the repository crawler. Bootstrap nodes have no consensus privileges; every full node validates the canonical chain itself. Additional independently operated public nodes and discovery routes are still desirable to reduce first-contact dependency further.
 
 ## Download
 
-**Windows x64:** [AuronQ-1.7.3-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.3/AuronQ-1.7.3-Windows-x64.zip)
+**Windows x64:** [AuronQ-1.7.4-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.4/AuronQ-1.7.4-Windows-x64.zip)
 
-**Linux amd64:** [AuronQ-1.7.3-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.3/AuronQ-1.7.3-Linux-amd64.tar.gz)
+**Linux amd64:** [AuronQ-1.7.4-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.4/AuronQ-1.7.4-Linux-amd64.tar.gz)
 
-Release page: [AuronQ 1.7.3 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.3)
+Release page: [AuronQ 1.7.4 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.4)
 
 SHA-256:
 
 ```text
-a06c62561ab9c8673ac14384e1bba5af51e5e4f9b888cb9f7d1dbe238c0cfb23  AuronQ-1.7.3-Windows-x64.zip
-94eb50e5f8ddd2f1b1b37a7fc86521e309b5bd196de4cfc9d2445e5cf3501c46  AuronQ-1.7.3-Linux-amd64.tar.gz
+ab863dbf7eebc6f8e44c76afe6a6221079e6f0ba18f813a5c5a99fcfe28ba1a0  AuronQ-1.7.4-Windows-x64.zip
+8dd43dbef6c1e8eb4aaa7eb5e5dc7f3d1f3064a6555cf7788456dcfd480b5a61  AuronQ-1.7.4-Linux-amd64.tar.gz
 ```
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
@@ -93,13 +95,13 @@ The current Windows binaries are **not Authenticode-signed**, so Windows SmartSc
 
 ## Android alpha
 
-For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.3.0 Alpha**:
+For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.4.0 Alpha**:
 
-- [AuronQ-Mobile-0.3.0-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.3.0-alpha/AuronQ-Mobile-0.3.0-alpha.apk)
-- Release page: [android-v0.3.0-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.3.0-alpha)
-- SHA-256: `9f92008d5174f831bced33bb11b91c08f11142e0d49610a99a29cfc159e1b9ba`
+- [AuronQ-Mobile-0.4.0-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.4.0-alpha/AuronQ-Mobile-0.4.0-alpha.apk)
+- Release page: [android-v0.4.0-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.4.0-alpha)
+- SHA-256: `c7d2dd36abc066b4e24149e5cb1cfb3e4f2f16a39dbb9fbd0523b7430d09be99`
 
-The Android alpha is a wallet client, not a full node. It keeps/signs with the encrypted AuronQ wallet locally and uses an HTTPS AuronQ Mainnet node for balances, UTXOs and transaction submission. Version 0.3.0 adds PL/EN switching, live AuronQ Mainnet telemetry, recent blocks, remembered public-node discovery, failover and a mobile interface styled after AuronQ Desktop. It is debug-signed test software; do not use substantial value.
+The Android alpha is a wallet client, not a full node. It keeps/signs with the encrypted AuronQ wallet locally and uses an HTTPS AuronQ Mainnet node for balances, UTXOs, transaction submission and wallet history. Version 0.4.0 adds transaction history for received, sent, mining and genesis entries, including status, amount, block, timestamp, confirmations and TXID. History is refreshed when the observed chain height or mempool changes. Wallet history requires a reachable **AuronQ 1.7.4+ full node**; private keys and signing remain local on the phone. It is debug-signed test software; do not use substantial value.
 
 ## Mainnet identity
 
@@ -152,10 +154,10 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
 
-The current stable release is **v1.7.3**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
+The current stable release is **v1.7.4**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
 
 ## Security status
 
-AuronQ 1.7.3 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
+AuronQ 1.7.4 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
 
 See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
