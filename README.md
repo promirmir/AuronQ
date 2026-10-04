@@ -19,7 +19,7 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 | Component | Current release | Status | Download |
 |---|---:|---|---|
 | Desktop / Full Node | **v1.7.13** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) |
-| AuronQ Mobile | **0.5.2 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.2-alpha/AuronQ-Mobile-0.5.2-alpha.apk) |
+| AuronQ Mobile | **0.5.3 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) |
 
 **Project site:** https://promirmir.github.io/AuronQ/
 
@@ -34,7 +34,7 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 ```text
 7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
 2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6  AuronQ-1.7.13-Linux-amd64.tar.gz
-718c33fa4bc412f5ce7e065c92929ae966a971f4b2d8129bd71249656247331c  AuronQ-Mobile-0.5.2-alpha.apk
+913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c  AuronQ-Mobile-0.5.3-alpha.apk
 ```
 
 ## What has been built
@@ -135,7 +135,7 @@ Its availability does not determine consensus and it has no special authority.
 
 ## AuronQ Mobile
 
-AuronQ Mobile 0.5.2 Alpha is a **light wallet, not a full node**.
+AuronQ Mobile 0.5.3 Alpha is a **light wallet, not a full node**.
 
 It:
 
