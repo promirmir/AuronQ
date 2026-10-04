@@ -18,7 +18,7 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 
 | Component | Current release | Status | Download |
 |---|---:|---|---|
-| Desktop / Full Node | **v1.7.12** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Linux-amd64.tar.gz) |
+| Desktop / Full Node | **v1.7.13** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) |
 | AuronQ Mobile | **0.5.1 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.1-alpha/AuronQ-Mobile-0.5.1-alpha.apk) |
 
 **Project site:** https://promirmir.github.io/AuronQ/
@@ -32,8 +32,8 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 ### Current checksums
 
 ```text
-f5fe001141b005fb6b993313650a9f61caa2d0893959f54017010ba15750b5a3  AuronQ-1.7.12-Windows-x64.zip
-c2690e5948468d30e7eff939ba4430e735ed755cc0c249fc26fdba8305e42ce3  AuronQ-1.7.12-Linux-amd64.tar.gz
+7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
+2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6  AuronQ-1.7.13-Linux-amd64.tar.gz
 c224dd9f94d52132d71e7f781dfadcbbc3a7bc92c2c07bf32d38dc4929328c73  AuronQ-Mobile-0.5.1-alpha.apk
 ```
 
@@ -78,7 +78,7 @@ See [DECENTRALIZATION.md](DECENTRALIZATION.md) and [NETWORK-INDEPENDENCE.md](NET
 
 ## Quick start — Windows
 
-1. Download the current [Windows x64 release](https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Windows-x64.zip).
+1. Download the current [Windows x64 release](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip).
 2. Verify its SHA-256 against the value above.
 3. Extract the **entire ZIP** to a new folder.
 4. Run **`START-AURONQ.cmd`**.
