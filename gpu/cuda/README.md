@@ -12,10 +12,17 @@ Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
 with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
 result between the CUDA backend and the canonical CPU PowHash implementation.
 
-First measured end-to-end offline benchmark on that device: 6800 AQM64 hashes
-in 30.029 s, averaging 226.447 H/s at batch 40. This is a single-device
-prototype measurement, not a guaranteed performance figure; laptop power
-limits, thermals, clocks and batch size can materially change throughput.
+Measured end-to-end offline benchmark on that device:
+
+- batch 20: 118.733 H/s
+- batch 40: 226.263 H/s (30 s repeat: 226.447 H/s)
+- batch 60: 316.227 H/s
+- batch 64: 299.377 H/s
+
+Batch 60 was the best of the tested values on this RTX 4050 Laptop GPU. This is
+a single-device prototype measurement, not a guaranteed performance figure;
+laptop power limits, thermals, clocks and batch size can materially change
+throughput.
 
 The heavy Argon2id memory graph runs on CUDA. SHAKE256 domain separation,
 Argon2 initialization/final extraction, target comparison, template handling
