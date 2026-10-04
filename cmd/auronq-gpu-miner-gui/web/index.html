@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AuronQ GPU Miner</title>
+<style>
+:root{--bg:#070b12;--panel:#0e1521;--panel2:#121c2b;--line:#213047;--text:#edf4ff;--muted:#8fa2ba;--accent:#68e2b7;--accent2:#66a6ff;--danger:#ff6f82;--warn:#ffc866;--ok:#68e2b7;--shadow:0 18px 50px rgba(0,0,0,.35);--r:18px}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% -10%,rgba(102,166,255,.12),transparent 34%),radial-gradient(circle at -10% 100%,rgba(104,226,183,.08),transparent 30%),var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+button,input,select,textarea{font:inherit}.app{display:grid;grid-template-columns:238px 1fr;min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;padding:24px 18px;border-right:1px solid var(--line);background:rgba(7,11,18,.82);backdrop-filter:blur(18px);display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:12px;padding:4px 8px 24px}.mark{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#071017;font-weight:900;font-size:19px;box-shadow:0 8px 28px rgba(104,226,183,.19)}.brand strong{font-size:19px;letter-spacing:.2px}.brand small{display:block;color:var(--muted);font-size:11px}
+.nav{display:grid;gap:7px}.nav button{all:unset;cursor:pointer;padding:11px 12px;border-radius:12px;color:var(--muted);display:flex;align-items:center;gap:11px;font-weight:650}.nav button:hover{background:#111b29;color:var(--text)}.nav button.active{color:var(--text);background:linear-gradient(90deg,rgba(104,226,183,.13),rgba(102,166,255,.08));box-shadow:inset 3px 0 0 var(--accent)}.ico{width:19px;text-align:center}
+.side-bottom{margin-top:auto;display:grid;gap:10px}.network-mini{padding:12px;background:#0c131e;border:1px solid var(--line);border-radius:13px;color:var(--muted);font-size:12px}.network-mini b{color:var(--text);display:block;margin-bottom:4px}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#566579;margin-right:7px}.dot.ok{background:var(--ok);box-shadow:0 0 12px rgba(104,226,183,.6)}.dot.bad{background:var(--danger)}.dot.warn{background:var(--warn)}
+.main{min-width:0}.topbar{height:74px;padding:0 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(33,48,71,.7);position:sticky;top:0;z-index:5;background:rgba(7,11,18,.72);backdrop-filter:blur(16px)}.topbar h1{font-size:19px;margin:0}.statusline{display:flex;gap:10px;align-items:center}.pill{border:1px solid var(--line);background:#0d1520;border-radius:999px;padding:7px 11px;color:var(--muted);font-size:12px}.pill strong{color:var(--text)}
+.lang{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.lang button{border:0;background:#0d1520;color:var(--muted);padding:7px 10px;cursor:pointer}.lang button.active{background:linear-gradient(135deg,var(--accent),#59cda7);color:#06120f;font-weight:800}
+.content{padding:30px;max-width:1420px;margin:0 auto}.view{display:none}.view.active{display:block}.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px}.hero h2{margin:0 0 6px;font-size:27px}.hero p{margin:0;color:var(--muted);max-width:760px}
+.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:16px}.card{background:linear-gradient(180deg,rgba(18,28,43,.94),rgba(12,19,30,.96));border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}.stat-label{color:var(--muted);font-size:12px;margin-bottom:8px}.stat-value{font-size:25px;font-weight:760;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat-foot{color:var(--muted);font-size:11px;margin-top:7px}
+.two{grid-template-columns:minmax(0,1.25fr) minmax(330px,.75fr)}.section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.section-title h3{margin:0;font-size:16px}
+.btn{border:0;border-radius:11px;padding:10px 14px;font-weight:700;cursor:pointer;transition:.18s;background:#1a2638;color:var(--text)}.btn:hover{transform:translateY(-1px);filter:brightness(1.08)}.btn.primary{background:linear-gradient(135deg,var(--accent),#59cda7);color:#06120f}.btn.blue{background:linear-gradient(135deg,var(--accent2),#5488df);color:white}.btn.danger{background:rgba(255,111,130,.13);border:1px solid rgba(255,111,130,.3);color:#ff9eaa}.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted)}.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.form{display:grid;gap:14px}.field{display:grid;gap:7px}.field label{font-size:12px;color:var(--muted);font-weight:650}.field input,.field select{width:100%;background:#08111b;border:1px solid var(--line);color:var(--text);border-radius:11px;padding:11px 12px;outline:none}.field input:focus,.field select:focus{border-color:#4d779b;box-shadow:0 0 0 3px rgba(102,166,255,.09)}.hint{font-size:11px;color:var(--muted)}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.toggle{display:flex;align-items:flex-start;gap:10px;padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#0a121d}.toggle input{margin-top:3px}.toggle b{display:block;margin-bottom:3px}.toggle span{display:block;color:var(--muted);font-size:11px}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:9px 14px;font-size:12px}.kv div:nth-child(odd){color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;word-break:break-all}.logs{background:#050a10;border:1px solid var(--line);border-radius:13px;padding:13px;height:390px;overflow:auto;font:11px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;color:#9fb0c5;white-space:pre-wrap}.banner{border-radius:14px;padding:13px 15px;margin-bottom:16px;border:1px solid}.banner.info{background:rgba(102,166,255,.08);border-color:rgba(102,166,255,.24);color:#bcd5ff}.banner.warn{background:rgba(255,200,102,.08);border-color:rgba(255,200,102,.25);color:#ffe0a4}.banner.ok{background:rgba(104,226,183,.08);border-color:rgba(104,226,183,.25);color:#aaf0d6}
+.meter{height:10px;background:#08111b;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin:15px 0}.meter>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:.35s}
+.actions{display:flex;gap:9px;flex-wrap:wrap}.footnote{color:var(--muted);font-size:11px;margin-top:12px}
+@media(max-width:950px){.app{grid-template-columns:1fr}.sidebar{position:relative;height:auto}.stats,.two{grid-template-columns:1fr}.topbar{position:relative}.row{grid-template-columns:1fr}.nav{grid-template-columns:repeat(4,1fr)}.side-bottom{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="mark">AQ</div><div><strong>AuronQ</strong><small>GPU Miner</small></div></div>
+    <nav class="nav">
+      <button class="active" data-view="overview"><span class="ico">◈</span><span data-i18n="nav_overview">Przegląd</span></button>
+      <button data-view="mining"><span class="ico">⚡</span><span data-i18n="nav_mining">Kopanie</span></button>
+      <button data-view="network"><span class="ico">◎</span><span data-i18n="nav_network">Sieć</span></button>
+      <button data-view="logs"><span class="ico">≡</span><span data-i18n="nav_logs">Logi</span></button>
+    </nav>
+    <div class="side-bottom">
+      <div class="network-mini">
+        <b><span id="sideDot" class="dot"></span><span data-i18n="mainnet">AuronQ Mainnet</span></b>
+        <span id="sideNetwork">—</span>
+      </div>
+      <div class="network-mini">
+        <b data-i18n="public_node">Publiczny node</b>
+        <span id="sidePublic">—</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1 id="pageTitle">AuronQ GPU Miner</h1>
+      <div class="statusline">
+        <div class="pill"><span data-i18n="node">Node</span>: <strong id="topNode">—</strong></div>
+        <div class="pill"><span data-i18n="miner">Miner</span>: <strong id="topMiner">—</strong></div>
+        <div class="lang"><button id="langPL">PL</button><button id="langEN">EN</button></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <section class="view active" id="view-overview">
+        <div class="hero"><div><h2 data-i18n="overview_title">Panel GPU</h2><p data-i18n="overview_desc">Kopanie AQM64, pełny node i udział w P2P w jednym programie.</p></div></div>
+        <div class="grid stats">
+          <div class="card"><div class="stat-label" data-i18n="hashrate">Hashrate GPU</div><div class="stat-value" id="statHash">0 H/s</div><div class="stat-foot" id="statGPU">—</div></div>
+          <div class="card"><div class="stat-label" data-i18n="height">Wysokość sieci</div><div class="stat-value" id="statHeight">—</div><div class="stat-foot" id="statSync">—</div></div>
+          <div class="card"><div class="stat-label" data-i18n="peers">Peery</div><div class="stat-value" id="statPeers">—</div><div class="stat-foot" data-i18n="peer_foot">znane i aktywnie synchronizowane</div></div>
+          <div class="card"><div class="stat-label" data-i18n="blocks">Znalezione bloki</div><div class="stat-value" id="statBlocks">0</div><div class="stat-foot" id="statLastBlock">—</div></div>
+        </div>
+        <div class="grid two">
+          <div class="card">
+            <div class="section-title"><h3 data-i18n="mining_status">Status kopania</h3><span class="pill" id="miningBadge">—</span></div>
+            <div id="overviewBanner" class="banner info" data-i18n="ready_desc">Program automatycznie użyje lokalnego pełnego noda albo uruchomi własny.</div>
+            <div class="meter"><div id="hashMeter"></div></div>
+            <div class="kv">
+              <div data-i18n="gpu">GPU</div><div id="ovGPU">—</div>
+              <div data-i18n="batch">Batch</div><div id="ovBatch">—</div>
+              <div data-i18n="reward_address">Adres nagrody</div><div id="ovAddress" class="mono">—</div>
+              <div data-i18n="current_height">Aktualny blok</div><div id="ovMiningHeight">—</div>
+            </div>
+            <div class="actions" style="margin-top:16px">
+              <button class="btn primary" id="quickStart" data-i18n="start_mining">Start kopania</button>
+              <button class="btn danger" id="quickStop" data-i18n="stop_mining">Zatrzymaj</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title"><h3 data-i18n="network_participation">Udział w sieci</h3></div>
+            <div class="kv">
+              <div data-i18n="node_mode">Tryb noda</div><div id="ovNodeMode">—</div>
+              <div data-i18n="public_endpoint">Publiczny endpoint</div><div id="ovPublic" class="mono">—</div>
+              <div data-i18n="network_hashrate">Hashrate sieci</div><div id="ovNetHash">—</div>
+              <div data-i18n="network_id">Network ID</div><div id="ovNetID" class="mono">—</div>
+            </div>
+            <div class="footnote" data-i18n="public_note">Podczas kopania aplikacja może automatycznie otworzyć TCP/18444 przez UPnP i ogłosić node peerom. Przy CGNAT kopanie nadal działa jako node wychodzący.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-mining">
+        <div class="hero"><div><h2 data-i18n="mining_title">Kopanie GPU</h2><p data-i18n="mining_desc">Ustaw adres nagrody, GPU i batch. RTX 4050 Laptop GPU osiągnął najlepszy wynik przy batch 60.</p></div></div>
+        <div class="grid two">
+          <div class="card">
+            <div class="section-title"><h3 data-i18n="configuration">Konfiguracja</h3></div>
+            <div class="form">
+              <div class="field"><label data-i18n="reward_address">Adres nagrody</label><input id="address" placeholder="aurq1..."><div class="hint" data-i18n="address_hint">Nagrody za znalezione bloki trafią bezpośrednio na ten adres.</div></div>
+              <div class="row">
+                <div class="field"><label data-i18n="cuda_device">Urządzenie CUDA</label><input id="device" type="number" min="0" value="0"></div>
+                <div class="field"><label data-i18n="batch">Batch</label><input id="batch" type="number" min="1" max="64" value="60"></div>
+              </div>
+              <label class="toggle"><input id="selfTest" type="checkbox" checked><span><b data-i18n="selftest_before">Self-test przed kopaniem</b><span data-i18n="selftest_hint">GPU i CPU muszą policzyć identyczny AQM64 przed uruchomieniem Mainnet.</span></span></label>
+              <label class="toggle"><input id="autoPublic" type="checkbox" checked><span><b data-i18n="support_public">Wspieraj sieć jako publiczny node podczas kopania</b><span data-i18n="support_public_hint">Aplikacja spróbuje UPnP TCP/18444 i ogłosi endpoint peerom. Niepowodzenie nie zatrzymuje kopania.</span></span></label>
+              <div class="actions">
+                <button class="btn primary" id="startBtn" data-i18n="start_mining">Start kopania</button>
+                <button class="btn danger" id="stopBtn" data-i18n="stop_mining">Zatrzymaj</button>
+                <button class="btn blue" id="testBtn" data-i18n="run_selftest">Uruchom self-test</button>
+                <button class="btn ghost" id="benchBtn" data-i18n="run_benchmark">Benchmark 15 s</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title"><h3 data-i18n="live_stats">Statystyki na żywo</h3></div>
+            <div class="kv">
+              <div data-i18n="state">Stan</div><div id="mState">—</div>
+              <div data-i18n="hashrate">Hashrate GPU</div><div id="mHash">—</div>
+              <div data-i18n="current_height">Aktualny blok</div><div id="mHeight">—</div>
+              <div data-i18n="blocks">Znalezione bloki</div><div id="mBlocks">—</div>
+              <div data-i18n="last_block">Ostatni blok</div><div id="mLast" class="mono">—</div>
+              <div data-i18n="last_error">Ostatni błąd</div><div id="mError">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-network">
+        <div class="hero"><div><h2 data-i18n="network_title">Sieć P2P</h2><p data-i18n="network_desc">Pełny node waliduje łańcuch, synchronizuje się z peerami i może stać się publicznym punktem sieci.</p></div></div>
+        <div id="networkBanner" class="banner info">—</div>
+        <div class="grid two">
+          <div class="card">
+            <div class="section-title"><h3 data-i18n="node_status">Status noda</h3><button class="btn ghost" id="reconnectBtn" data-i18n="reconnect">Połącz ponownie</button></div>
+            <div class="kv">
+              <div data-i18n="node_mode">Tryb noda</div><div id="nMode">—</div>
+              <div data-i18n="height">Wysokość</div><div id="nHeight">—</div>
+              <div data-i18n="sync_target">Wysokość peerów</div><div id="nTarget">—</div>
+              <div data-i18n="peers">Peery</div><div id="nPeers">—</div>
+              <div data-i18n="public_endpoint">Publiczny endpoint</div><div id="nPublic" class="mono">—</div>
+              <div data-i18n="network_hashrate">Hashrate sieci</div><div id="nHash">—</div>
+              <div data-i18n="tip">Tip</div><div id="nTip" class="mono">—</div>
+              <div data-i18n="network_id">Network ID</div><div id="nID" class="mono">—</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title"><h3 data-i18n="how_peers_work">Jak tworzone są peery</h3></div>
+            <div class="banner ok" data-i18n="peer_explain_1">Node startuje z bootstrap peerami, uczy się kolejnych przez P2P i zapisuje publiczny peer store.</div>
+            <div class="banner info" data-i18n="peer_explain_2">Podczas kopania z włączoną opcją publicznego noda aplikacja tworzy mapowanie UPnP TCP/18444 i wysyła ogłoszenie do peerów, które wykonują callback-verification.</div>
+            <div class="banner warn" data-i18n="peer_explain_3">Jeśli operator ma CGNAT lub router bez UPnP, node pozostaje outbound-only. Nadal waliduje, kopie, synchronizuje i przekazuje bloki przez połączenia wychodzące.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-logs">
+        <div class="hero"><div><h2 data-i18n="logs_title">Logi</h2><p data-i18n="logs_desc">Zdarzenia minera, noda, synchronizacji i publicznego peera.</p></div></div>
+        <div class="card"><div id="logBox" class="logs">—</div></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script>
+const TOKEN="__AURONQ_TOKEN__";
+const T={
+pl:{
+nav_overview:"Przegląd",nav_mining:"Kopanie",nav_network:"Sieć",nav_logs:"Logi",mainnet:"AuronQ Mainnet",public_node:"Publiczny node",node:"Node",miner:"Miner",
+overview_title:"Panel GPU",overview_desc:"Kopanie AQM64, pełny node i udział w P2P w jednym programie.",hashrate:"Hashrate GPU",height:"Wysokość sieci",peers:"Peery",peer_foot:"znane i aktywnie synchronizowane",blocks:"Znalezione bloki",mining_status:"Status kopania",ready_desc:"Program automatycznie użyje lokalnego pełnego noda albo uruchomi własny.",gpu:"GPU",batch:"Batch",reward_address:"Adres nagrody",current_height:"Aktualny blok",start_mining:"Start kopania",stop_mining:"Zatrzymaj",network_participation:"Udział w sieci",node_mode:"Tryb noda",public_endpoint:"Publiczny endpoint",network_hashrate:"Hashrate sieci",network_id:"Network ID",public_note:"Podczas kopania aplikacja może automatycznie otworzyć TCP/18444 przez UPnP i ogłosić node peerom. Przy CGNAT kopanie nadal działa jako node wychodzący.",
+mining_title:"Kopanie GPU",mining_desc:"Ustaw adres nagrody, GPU i batch. RTX 4050 Laptop GPU osiągnął najlepszy wynik przy batch 60.",configuration:"Konfiguracja",address_hint:"Nagrody za znalezione bloki trafią bezpośrednio na ten adres.",cuda_device:"Urządzenie CUDA",selftest_before:"Self-test przed kopaniem",selftest_hint:"GPU i CPU muszą policzyć identyczny AQM64 przed uruchomieniem Mainnet.",support_public:"Wspieraj sieć jako publiczny node podczas kopania",support_public_hint:"Aplikacja spróbuje UPnP TCP/18444 i ogłosi endpoint peerom. Niepowodzenie nie zatrzymuje kopania.",run_selftest:"Uruchom self-test",run_benchmark:"Benchmark 15 s",live_stats:"Statystyki na żywo",state:"Stan",last_block:"Ostatni blok",last_error:"Ostatni błąd",
+network_title:"Sieć P2P",network_desc:"Pełny node waliduje łańcuch, synchronizuje się z peerami i może stać się publicznym punktem sieci.",node_status:"Status noda",reconnect:"Połącz ponownie",sync_target:"Wysokość peerów",tip:"Tip",how_peers_work:"Jak tworzone są peery",peer_explain_1:"Node startuje z bootstrap peerami, uczy się kolejnych przez P2P i zapisuje publiczny peer store.",peer_explain_2:"Podczas kopania z włączoną opcją publicznego noda aplikacja tworzy mapowanie UPnP TCP/18444 i wysyła ogłoszenie do peerów, które wykonują callback-verification.",peer_explain_3:"Jeśli operator ma CGNAT lub router bez UPnP, node pozostaje outbound-only. Nadal waliduje, kopie, synchronizuje i przekazuje bloki przez połączenia wychodzące.",logs_title:"Logi",logs_desc:"Zdarzenia minera, noda, synchronizacji i publicznego peera.",
+running:"Działa",stopped:"Zatrzymany",ready:"Gotowy",offline:"Offline",embedded:"Wbudowany pełny node",external:"Lokalny AuronQ Desktop / zewnętrzny node",public_active:"Publiczny",outbound:"Tylko wychodzący",syncing:"Synchronizacja",synced:"Zsynchronizowany",unknown:"Nieznany",benchmarking:"Benchmark",selftesting:"Self-test",mining:"Kopanie",node_error:"Błąd noda",waiting:"Oczekiwanie"
+},
+en:{
+nav_overview:"Overview",nav_mining:"Mining",nav_network:"Network",nav_logs:"Logs",mainnet:"AuronQ Mainnet",public_node:"Public node",node:"Node",miner:"Miner",
+overview_title:"GPU dashboard",overview_desc:"AQM64 mining, a full node and P2P participation in one application.",hashrate:"GPU hashrate",height:"Network height",peers:"Peers",peer_foot:"known and actively synchronized",blocks:"Blocks found",mining_status:"Mining status",ready_desc:"The app automatically uses a local full node or starts its own.",gpu:"GPU",batch:"Batch",reward_address:"Reward address",current_height:"Current block",start_mining:"Start mining",stop_mining:"Stop",network_participation:"Network participation",node_mode:"Node mode",public_endpoint:"Public endpoint",network_hashrate:"Network hashrate",network_id:"Network ID",public_note:"While mining, the app can automatically map TCP/18444 with UPnP and announce the node to peers. With CGNAT, mining still works as an outbound-only node.",
+mining_title:"GPU mining",mining_desc:"Set the reward address, GPU and batch. RTX 4050 Laptop GPU measured best at batch 60.",configuration:"Configuration",address_hint:"Block rewards are paid directly to this address.",cuda_device:"CUDA device",selftest_before:"Self-test before mining",selftest_hint:"GPU and CPU must produce byte-identical AQM64 before Mainnet mining starts.",support_public:"Support the network as a public node while mining",support_public_hint:"The app will try UPnP TCP/18444 and announce the endpoint to peers. Failure does not stop mining.",run_selftest:"Run self-test",run_benchmark:"15 s benchmark",live_stats:"Live statistics",state:"State",last_block:"Last block",last_error:"Last error",
+network_title:"P2P network",network_desc:"The full node validates the chain, synchronizes with peers and can become a public network endpoint.",node_status:"Node status",reconnect:"Reconnect",sync_target:"Peer height",tip:"Tip",how_peers_work:"How peers are created",peer_explain_1:"The node starts from bootstrap peers, learns more through P2P and persists a public peer store.",peer_explain_2:"While mining with public-node support enabled, the app creates a UPnP TCP/18444 mapping and announces the endpoint to peers, which callback-verify it.",peer_explain_3:"If the operator is behind CGNAT or a router without UPnP, the node remains outbound-only. It still validates, mines, synchronizes and relays blocks through outbound connections.",logs_title:"Logs",logs_desc:"Miner, node, synchronization and public-peer events.",
+running:"Running",stopped:"Stopped",ready:"Ready",offline:"Offline",embedded:"Embedded full node",external:"Local AuronQ Desktop / external node",public_active:"Public",outbound:"Outbound only",syncing:"Synchronizing",synced:"Synchronized",unknown:"Unknown",benchmarking:"Benchmark",selftesting:"Self-test",mining:"Mining",node_error:"Node error",waiting:"Waiting"
+}};
+let lang=localStorage.getItem("auronqGpuLang")||"pl";
+let lastState=null;
+function tr(k){return (T[lang]&&T[lang][k])||k}
+function applyLang(){
+ document.documentElement.lang=lang;
+ document.querySelectorAll("[data-i18n]").forEach(x=>{const k=x.dataset.i18n;if(T[lang][k])x.textContent=T[lang][k]});
+ document.getElementById("langPL").classList.toggle("active",lang==="pl");
+ document.getElementById("langEN").classList.toggle("active",lang==="en");
+ render(lastState);
+}
+function setLang(x){lang=x;localStorage.setItem("auronqGpuLang",x);applyLang(); saveSettings(false)}
+document.getElementById("langPL").onclick=()=>setLang("pl");document.getElementById("langEN").onclick=()=>setLang("en");
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");
+ document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));document.getElementById("view-"+b.dataset.view).classList.add("active");
+});
+async function api(path,body){
+ const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json","X-AuronQ-Token":TOKEN},body:JSON.stringify(body||{})});
+ const x=await r.json().catch(()=>({}));
+ if(!r.ok)throw new Error(x.error||("HTTP "+r.status));
+ return x;
+}
+function values(){return {address:address.value.trim(),device:Number(device.value||0),batch:Number(batch.value||60),auto_public:autoPublic.checked,self_test:selfTest.checked,language:lang}}
+async function saveSettings(show=true){try{await api("/api/settings",values())}catch(e){if(show)alert(e.message)}}
+async function startMining(){try{await saveSettings(false);await api("/api/miner/start",values())}catch(e){alert(e.message)}}
+async function stopMining(){try{await api("/api/miner/stop",{})}catch(e){alert(e.message)}}
+async function selfTestRun(){try{await saveSettings(false);await api("/api/self-test",values())}catch(e){alert(e.message)}}
+async function benchmarkRun(){try{await saveSettings(false);await api("/api/benchmark",values())}catch(e){alert(e.message)}}
+document.getElementById("startBtn").onclick=startMining;document.getElementById("quickStart").onclick=startMining;
+document.getElementById("stopBtn").onclick=stopMining;document.getElementById("quickStop").onclick=stopMining;
+document.getElementById("testBtn").onclick=selfTestRun;document.getElementById("benchBtn").onclick=benchmarkRun;
+document.getElementById("reconnectBtn").onclick=async()=>{try{await api("/api/node/reconnect",{})}catch(e){alert(e.message)}};
+function fmtRate(v){v=Number(v||0);if(v>=1e9)return(v/1e9).toFixed(2)+" GH/s";if(v>=1e6)return(v/1e6).toFixed(2)+" MH/s";if(v>=1e3)return(v/1e3).toFixed(2)+" kH/s";return v.toFixed(v<100?2:1)+" H/s"}
+function short(s){if(!s)return"—";return s.length>28?s.slice(0,13)+"…"+s.slice(-12):s}
+function minerLabel(m){if(!m||!m.running)return tr("stopped");if(m.mode==="benchmark")return tr("benchmarking");if(m.mode==="selftest")return tr("selftesting");return tr("mining")}
+function nodeMode(s){if(!s||!s.node_running)return tr("offline");return s.node_owned?tr("embedded"):tr("external")}
+function render(s){
+ if(!s)return;lastState=s;
+ if(!document.activeElement||document.activeElement.tagName!=="INPUT"){
+  address.value=s.settings?.address||address.value;device.value=s.settings?.device??0;batch.value=s.settings?.batch??60;
+ }
+ autoPublic.checked=s.settings?.auto_public!==false;selfTest.checked=s.settings?.self_test!==false;
+ statHash.textContent=fmtRate(s.miner?.hashrate);statGPU.textContent=s.gpu_name||"—";statHeight.textContent=s.height??"—";statPeers.textContent=s.peers??"—";statBlocks.textContent=s.miner?.blocks_found||0;statLastBlock.textContent=short(s.miner?.last_block);
+ const synced=s.synchronized;statSync.textContent=s.node_running?(synced?tr("synced"):tr("syncing")+" "+(s.sync_target||"")):tr("offline");
+ ovGPU.textContent=s.gpu_name||"—";ovBatch.textContent=s.settings?.batch??"—";ovAddress.textContent=short(s.settings?.address);ovMiningHeight.textContent=s.miner?.height||"—";ovNodeMode.textContent=nodeMode(s);ovPublic.textContent=s.public_endpoint||tr("outbound");ovNetHash.textContent=fmtRate(s.network_hashrate);ovNetID.textContent=short(s.network_id);
+ mState.textContent=minerLabel(s.miner);mHash.textContent=fmtRate(s.miner?.hashrate);mHeight.textContent=s.miner?.height||"—";mBlocks.textContent=s.miner?.blocks_found||0;mLast.textContent=s.miner?.last_block||"—";mError.textContent=s.miner?.last_error||"—";
+ nMode.textContent=nodeMode(s);nHeight.textContent=s.height??"—";nTarget.textContent=s.sync_target??"—";nPeers.textContent=s.peers??"—";nPublic.textContent=s.public_endpoint||tr("outbound");nHash.textContent=fmtRate(s.network_hashrate);nTip.textContent=s.tip||"—";nID.textContent=s.network_id||"—";
+ topNode.textContent=s.node_running?(s.synchronized?tr("synced"):tr("syncing")):tr("offline");topMiner.textContent=minerLabel(s.miner);
+ sideNetwork.textContent=s.node_running?((s.height??0)+" / "+(s.sync_target??s.height??0)):tr("offline");sidePublic.textContent=s.public_endpoint?tr("public_active"):tr("outbound");
+ sideDot.className="dot "+(s.node_running?(s.synchronized?"ok":"warn"):"bad");
+ miningBadge.textContent=minerLabel(s.miner);
+ overviewBanner.className="banner "+(s.miner?.running?"ok":"info");overviewBanner.textContent=s.miner?.running?(tr("mining")+" • "+fmtRate(s.miner.hashrate)):tr("ready_desc");
+ const pct=Math.min(100,(Number(s.miner?.hashrate||0)/400)*100);hashMeter.style.width=pct+"%";
+ networkBanner.className="banner "+(s.public_endpoint?"ok":(s.node_running?"info":"warn"));
+ networkBanner.textContent=s.node_error?(tr("node_error")+": "+s.node_error):(s.public_endpoint?(tr("public_active")+": "+s.public_endpoint):(s.node_running?tr("outbound"):tr("offline")));
+ const running=!!s.miner?.running;startBtn.disabled=running;quickStart.disabled=running;stopBtn.disabled=!running;quickStop.disabled=!running;testBtn.disabled=running;benchBtn.disabled=running;
+ logBox.textContent=(s.logs&&s.logs.length)?s.logs.join("\n"):"—";logBox.scrollTop=logBox.scrollHeight;
+}
+async function refresh(){
+ try{const r=await fetch("/api/state",{cache:"no-store"});const s=await r.json();render(s)}catch(e){topNode.textContent=tr("offline")}
+}
+applyLang();refresh();setInterval(refresh,1000);
+</script>
+</body>
+</html>
