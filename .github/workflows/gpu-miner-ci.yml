@@ -57,8 +57,13 @@ jobs:
           go build -trimpath -o dist-ci\auronq-gpu-miner.exe .\cmd\auronq-gpu-miner
           go build -trimpath -ldflags "-H=windowsgui" -o dist-ci\AuronQ-GPU-Miner.exe .\cmd\auronq-gpu-miner-gui
 
-      - name: Verify Mainnet package inputs
+      - name: Verify Windows package layout
         shell: pwsh
         run: |
+          if (!(Test-Path .\dist-ci\AuronQ-GPU-Miner.exe)) { throw "GUI missing" }
+          if (!(Test-Path .\dist-ci\auronq-gpu-worker.exe)) { throw "worker missing" }
+          $gui = (Get-FileHash .\dist-ci\AuronQ-GPU-Miner.exe -Algorithm SHA256).Hash
+          $worker = (Get-FileHash .\dist-ci\auronq-gpu-worker.exe -Algorithm SHA256).Hash
+          if ($gui -eq $worker) { throw "GUI and worker must be distinct binaries" }
           if (!(Test-Path .\network.json)) { throw "network.json missing" }
           if (!(Test-Path .\bootstrap.json)) { throw "bootstrap.json missing" }
