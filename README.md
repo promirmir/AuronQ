@@ -18,7 +18,7 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 
 | Component | Current release | Status | Download |
 |---|---:|---|---|
-| Desktop / Full Node | **v1.7.11** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Linux-amd64.tar.gz) |
+| Desktop / Full Node | **v1.7.12** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Linux-amd64.tar.gz) |
 | AuronQ Mobile | **0.5.1 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.1-alpha/AuronQ-Mobile-0.5.1-alpha.apk) |
 
 **Project site:** https://promirmir.github.io/AuronQ/
@@ -28,8 +28,8 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 ### Current checksums
 
 ```text
-cd1b0ff59fdaf28753758473336f2b9908c769374de5e1874dd0808ebd86f0ee  AuronQ-1.7.11-Windows-x64.zip
-bcb87751fa6c559ed008f245a804b8341c664460068cfd5623ea5d3b13372a50  AuronQ-1.7.11-Linux-amd64.tar.gz
+f5fe001141b005fb6b993313650a9f61caa2d0893959f54017010ba15750b5a3  AuronQ-1.7.12-Windows-x64.zip
+c2690e5948468d30e7eff939ba4430e735ed755cc0c249fc26fdba8305e42ce3  AuronQ-1.7.12-Linux-amd64.tar.gz
 c224dd9f94d52132d71e7f781dfadcbbc3a7bc92c2c07bf32d38dc4929328c73  AuronQ-Mobile-0.5.1-alpha.apk
 ```
 
@@ -74,7 +74,7 @@ See [DECENTRALIZATION.md](DECENTRALIZATION.md) and [NETWORK-INDEPENDENCE.md](NET
 
 ## Quick start — Windows
 
-1. Download the current [Windows x64 release](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip).
+1. Download the current [Windows x64 release](https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Windows-x64.zip).
 2. Verify its SHA-256 against the value above.
 3. Extract the **entire ZIP** to a new folder.
 4. Run **`START-AURONQ.cmd`**.
@@ -157,6 +157,7 @@ It does **not** reconstruct the entire UTXO set from every full block, so it mus
 - **Mobile trust reduction:** multi-peer agreement, then local header/AQM64 verification and verified-chain wallet-state quorum.
 - **Build integrity:** deterministic/reproducible build checks on Linux and Windows.
 - **Explorer decentralization:** peer-aware links between independently hosted full-node explorers.
+- **Mining correctness:** CLI/Desktop miners now cancel stale templates when the canonical tip advances or reorgs.
 
 Detailed history: [CHANGELOG.md](CHANGELOG.md)
 
