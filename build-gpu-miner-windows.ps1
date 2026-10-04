@@ -31,7 +31,7 @@ if (Test-Path $dist) {
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
 Write-Host ""
-Write-Host "[1/3] Building CUDA backend..."
+Write-Host "[1/4] Building CUDA backend..."
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "gpu\cuda\build-windows.ps1")
 if ($LASTEXITCODE -ne 0) {
     throw "CUDA backend build failed with exit code $LASTEXITCODE"
@@ -74,5 +74,11 @@ Write-Host ""
 Write-Host "Windows app:"
 Write-Host "  $(Join-Path $dist "AuronQ-GPU-Miner.exe")"
 Write-Host ""
+$zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.1-prototype-Windows-x64.zip"
+if (Test-Path $zipOut) { Remove-Item $zipOut -Force }
+Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zipOut -CompressionLevel Optimal
+
 Write-Host "Double-click AuronQ-GPU-Miner.exe for the graphical interface."
+Write-Host "Package:"
+Write-Host "  $zipOut"
 Write-Host "Do not start Mainnet mining unless the self-test printed SELF-TEST OK."
