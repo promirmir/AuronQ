@@ -471,3 +471,19 @@ func TestRepeatedFailuresQuarantinePeerAgainstManifestReadd(t *testing.T) {
 		t.Fatal("quarantined peer was immediately re-added by manifest refresh")
 	}
 }
+
+
+func TestDiscoverDirectPublicAdvertiseExplicitPublicListen(t *testing.T) {
+	got := discoverDirectPublicAdvertise("8.8.8.8:18444")
+	if got != "http://8.8.8.8:18444" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestDiscoverDirectPublicAdvertiseRejectsPrivateListen(t *testing.T) {
+	for _, listen := range []string{"127.0.0.1:18444", "192.168.1.20:18444", "100.64.1.20:18444"} {
+		if got := discoverDirectPublicAdvertise(listen); got != "" {
+			t.Fatalf("listen %q unexpectedly advertised as %q", listen, got)
+		}
+	}
+}
