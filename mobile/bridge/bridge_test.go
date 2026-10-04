@@ -1,6 +1,9 @@
 package bridge
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestChooseNodeQuorumPrefersPeerAgreementOverLoneHigherClaim(t *testing.T) {
 	obs := []mobileNodeObservation{
@@ -50,5 +53,48 @@ func TestMobileCandidatesPreferLearnedPeersButKeepBundledFallbacks(t *testing.T)
 		if !seen[p] {
 			t.Fatalf("bundled fallback %q missing from %v", p, got)
 		}
+	}
+}
+
+
+func TestChainWorkComparisonUsesHexEncoding(t *testing.T) {
+	// Hex 0x10 (16) must outrank hex 0x0f (15). Parsing as decimal would
+	// reject "f" and fall back to lexicographic ordering.
+	if got := chainWorkCmp("0f", "10"); got >= 0 {
+		t.Fatalf("hex chain work comparison returned %d", got)
+	}
+	if got := chainWorkCmp("ff", "100"); got >= 0 {
+		t.Fatalf("hex chain work comparison returned %d", got)
+	}
+}
+
+func TestFreshHeaderCacheAnchorsExactMainnetGenesis(t *testing.T) {
+	cache, err := freshHeaderCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cache.VerifiedHeight != 0 || cache.VerifiedTip != mainnetGenesisHash || len(cache.History) != 1 {
+		t.Fatalf("unexpected genesis cache: %+v", cache)
+	}
+	if cache.History[0].Hash().String() != mainnetGenesisHash {
+		t.Fatalf("embedded genesis hash=%s", cache.History[0].Hash().String())
+	}
+}
+
+func TestHeaderCacheRoundTripPreservesVerifiedAnchor(t *testing.T) {
+	cache, err := freshHeaderCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "headers", "mainnet.json")
+	if err := saveHeaderCache(path, cache); err != nil {
+		t.Fatal(err)
+	}
+	got, err := loadHeaderCache(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.VerifiedTip != cache.VerifiedTip || got.ChainWork != cache.ChainWork || got.NetworkID != mainnetNetworkID {
+		t.Fatalf("cache mismatch: got=%+v want=%+v", got, cache)
 	}
 }
