@@ -425,9 +425,11 @@ func (a *App) state() appState {
 		PublicVerified: publicVerified,
 	}
 
+	localChainWork := ""
 	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
 	defer cancel()
 	if ns, err := aq.NewClient(localNodeURL).StatusContext(ctx); err == nil && ns.NetworkID == a.network.NetworkID() {
+		localChainWork = ns.ChainWork
 		st.NodeRunning = true
 		st.Height = ns.Height
 		st.Tip = ns.Tip.String()
@@ -451,7 +453,7 @@ func (a *App) state() appState {
 	if st.NodeRunning && st.SyncPeers > 0 && st.SyncCommon && syncBestWork != "" {
 		localWork := new(big.Int)
 		bestWork := new(big.Int)
-		if _, ok := localWork.SetString(nodeChainWork(localNodeURL), 16); ok {
+		if _, ok := localWork.SetString(localChainWork, 16); ok {
 			if _, ok := bestWork.SetString(syncBestWork, 16); ok && localWork.Cmp(bestWork) >= 0 {
 				st.Synchronized = true
 			}
@@ -465,16 +467,6 @@ func (a *App) state() appState {
 		st.Miner.Height = st.Height + 1
 	}
 	return st
-}
-
-func nodeChainWork(base string) string {
-	ctx, cancel := context.WithTimeout(context.Background(), 700*time.Millisecond)
-	defer cancel()
-	st, err := aq.NewClient(base).StatusContext(ctx)
-	if err != nil {
-		return ""
-	}
-	return st.ChainWork
 }
 
 type blockHashResponse struct {
