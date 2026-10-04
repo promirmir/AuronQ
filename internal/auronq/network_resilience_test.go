@@ -280,3 +280,104 @@ func TestTwentyNodeMultiPartitionConvergence(t *testing.T) {
 		}
 	}
 }
+
+
+func TestNetworkContinuesAfterOriginalSeedNodesDisappear(t *testing.T) {
+	easyPowForTest(t)
+
+	_, founderPub, err := GenerateMLDSA87()
+	if err != nil {
+		t.Fatal(err)
+	}
+	founder := AddressFromPub(founderPub, SchemeMLDSA87, TestnetNetworkByte)
+	g, err := CreateGenesis(founder, TestnetNetworkByte, time.Now().Unix()-30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	minedGenesis, err := MineParallel(ctx, g, 1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g = minedGenesis.Block
+
+	netCfg := &NetworkConfig{
+		Name:             "founder-nodes-gone",
+		ProtocolVersion:  1,
+		NetworkByte:      TestnetNetworkByte,
+		CoinbaseMaturity: TestnetCoinbaseMaturity,
+		FounderAddress:   founder,
+		Genesis:          g,
+	}
+
+	chains := make([]*Chain, 4)
+	for i := range chains {
+		chains[i], err = OpenChain(t.TempDir(), netCfg)
+		if err != nil {
+			t.Fatalf("open node %d: %v", i, err)
+		}
+	}
+
+	// Node 0 represents the original project/bootstrap machine. It only
+	// introduces nodes 1 and 2 to the initial chain.
+	mineTestBlocks(t, chains[0], founder, 2)
+	original := NewNode(chains[0], NodeConfig{})
+	originalServer := httptest.NewServer(original.handler())
+	for _, i := range []int{1, 2} {
+		n := NewNode(chains[i], NodeConfig{})
+		if err := n.syncPeer(originalServer.URL); err != nil {
+			t.Fatalf("initial sync node %d: %v", i, err)
+		}
+	}
+
+	// The original project machine disappears permanently.
+	originalServer.Close()
+
+	// A later independent participant extends the chain and another survivor
+	// follows it without any contact with node 0.
+	mineTestBlocks(t, chains[1], founder, 2)
+	survivorA := NewNode(chains[1], NodeConfig{})
+	srvA := httptest.NewServer(survivorA.handler())
+	defer srvA.Close()
+	survivorB := NewNode(chains[2], NodeConfig{})
+	if err := survivorB.syncPeer(srvA.URL); err != nil {
+		t.Fatalf("survivor sync after founder loss: %v", err)
+	}
+
+	// Node 3 is a completely fresh installation. Its only introduction is a
+	// surviving non-founder peer. It must reconstruct the canonical chain
+	// without the original bootstrap machine.
+	fresh := NewNode(chains[3], NodeConfig{Peers: []string{srvA.URL}})
+	if err := fresh.syncPeer(srvA.URL); err != nil {
+		t.Fatalf("fresh node could not join through surviving peer: %v", err)
+	}
+
+	want := chains[1].State()
+	for _, i := range []int{1, 2, 3} {
+		got := chains[i].State()
+		if got.Height != want.Height || got.Tip != want.Tip || got.ChainWork != want.ChainWork || got.Issued != want.Issued {
+			t.Fatalf("node %d diverged after original seed removal: got=%+v want=%+v", i, got, want)
+		}
+	}
+
+	// A different surviving node can become the producer, and the rest of the
+	// network still converges without reviving node 0.
+	mineTestBlocks(t, chains[2], founder, 1)
+	srvB := httptest.NewServer(NewNode(chains[2], NodeConfig{}).handler())
+	defer srvB.Close()
+	if err := survivorA.syncPeer(srvB.URL); err != nil {
+		t.Fatalf("survivor A failed to follow survivor B: %v", err)
+	}
+	if err := fresh.syncPeer(srvA.URL); err != nil {
+		t.Fatalf("fresh node failed to follow post-founder network: %v", err)
+	}
+
+	want = chains[2].State()
+	for _, i := range []int{1, 2, 3} {
+		got := chains[i].State()
+		if got.Height != want.Height || got.Tip != want.Tip || got.ChainWork != want.ChainWork || got.Issued != want.Issued {
+			t.Fatalf("node %d final state mismatch: got=%+v want=%+v", i, got, want)
+		}
+	}
+}
