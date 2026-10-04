@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -73,6 +74,8 @@ type appState struct {
 	PublicEndpoint  string     `json:"public_endpoint,omitempty"`
 	PublicVerified  bool       `json:"public_verified"`
 	SyncTarget      uint64     `json:"sync_target"`
+	SyncPeers       int        `json:"sync_peers"`
+	SyncCommon      bool       `json:"sync_common"`
 	Synchronized    bool       `json:"synchronized"`
 	GPUName         string     `json:"gpu_name,omitempty"`
 	Miner           minerState `json:"miner"`
@@ -105,9 +108,12 @@ type App struct {
 	minerStopRequested bool
 	gpuName            string
 
-	cfg        settings
-	syncTarget uint64
-	logs       []string
+	cfg          settings
+	syncTarget   uint64
+	syncPeers    int
+	syncCommon   bool
+	syncBestWork string
+	logs         []string
 	token      string
 	exit       chan struct{}
 }
@@ -393,6 +399,9 @@ func (a *App) state() appState {
 	nodeOwned := a.nodeOwned
 	nodeErr := a.nodeErr
 	syncTarget := a.syncTarget
+	syncPeers := a.syncPeers
+	syncCommon := a.syncCommon
+	syncBestWork := a.syncBestWork
 	gpu := a.gpuName
 	logs := append([]string(nil), a.logs...)
 	mapping := a.portMapping
@@ -407,6 +416,8 @@ func (a *App) state() appState {
 		NodeOwned:   nodeOwned,
 		NodeError:   nodeErr,
 		SyncTarget:  syncTarget,
+		SyncPeers:   syncPeers,
+		SyncCommon:  syncCommon,
 		GPUName:     gpu,
 		Miner:       miner,
 		Settings:       cfg,
@@ -432,11 +443,63 @@ func (a *App) state() appState {
 	if st.PublicEndpoint == "" && mapping != nil {
 		st.PublicEndpoint = mapping.Advertise
 	}
-	if st.SyncTarget == 0 {
-		st.SyncTarget = st.Height
+
+	// "Synchronized" is based on the strongest reachable peer chain work and a
+	// verified common block, not on height alone. Height can be misleading when
+	// a local miner has just produced a block that public peers have not seen yet.
+	st.Synchronized = false
+	if st.NodeRunning && st.SyncPeers > 0 && st.SyncCommon && syncBestWork != "" {
+		localWork := new(big.Int)
+		bestWork := new(big.Int)
+		if _, ok := localWork.SetString(nodeChainWork(localNodeURL), 16); ok {
+			if _, ok := bestWork.SetString(syncBestWork, 16); ok && localWork.Cmp(bestWork) >= 0 {
+				st.Synchronized = true
+			}
+		}
 	}
-	st.Synchronized = st.NodeRunning && st.Height >= st.SyncTarget
+
+	// The chain height is the last accepted block. While mining, the candidate
+	// height must therefore be chain height + 1. Deriving it from node state
+	// prevents a stale log line from displaying the just-mined block as current.
+	if st.Miner.Running && st.Miner.Mode == "mining" && st.NodeRunning && st.Height < ^uint64(0) {
+		st.Miner.Height = st.Height + 1
+	}
 	return st
+}
+
+func nodeChainWork(base string) string {
+	ctx, cancel := context.WithTimeout(context.Background(), 700*time.Millisecond)
+	defer cancel()
+	st, err := aq.NewClient(base).StatusContext(ctx)
+	if err != nil {
+		return ""
+	}
+	return st.ChainWork
+}
+
+type blockHashResponse struct {
+	Height uint64  `json:"height"`
+	Hash   aq.Hash `json:"hash"`
+}
+
+func fetchBlockHash(base string, height uint64, timeout time.Duration) (aq.Hash, error) {
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Get(strings.TrimRight(base, "/") + "/p2p/blockhash?height=" + strconv.FormatUint(height, 10))
+	if err != nil {
+		return aq.Hash{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return aq.Hash{}, fmt.Errorf("HTTP %s", resp.Status)
+	}
+	var out blockHashResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&out); err != nil {
+		return aq.Hash{}, err
+	}
+	if out.Height != height {
+		return aq.Hash{}, errors.New("block-height response mismatch")
+	}
+	return out.Hash, nil
 }
 
 func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
@@ -608,49 +671,95 @@ func (a *App) monitorNetwork() {
 }
 
 func (a *App) refreshSyncTarget() {
-	localHeight := uint64(0)
 	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
-	if st, err := aq.NewClient(localNodeURL).StatusContext(ctx); err == nil && st.NetworkID == a.network.NetworkID() {
-		localHeight = st.Height
-	}
+	local, localErr := aq.NewClient(localNodeURL).StatusContext(ctx)
 	cancel()
-
-	type result struct {
-		height uint64
+	if localErr != nil || local.NetworkID != a.network.NetworkID() {
+		a.mu.Lock()
+		a.syncTarget = 0
+		a.syncPeers = 0
+		a.syncCommon = false
+		a.syncBestWork = ""
+		a.mu.Unlock()
+		return
 	}
-	ch := make(chan result, len(a.bootstrap))
+
+	type peerResult struct {
+		peer  string
+		hello aq.Hello
+		work  *big.Int
+		ok    bool
+	}
+	ch := make(chan peerResult, len(a.bootstrap))
 	for _, peer := range a.bootstrap {
 		peer := peer
 		go func() {
-			c := &http.Client{Timeout: 1800 * time.Millisecond}
-			resp, err := c.Get(strings.TrimRight(peer, "/") + "/p2p/hello")
+			client := &http.Client{Timeout: 1800 * time.Millisecond}
+			resp, err := client.Get(strings.TrimRight(peer, "/") + "/p2p/hello")
 			if err != nil {
-				ch <- result{}
+				ch <- peerResult{}
 				return
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
-				ch <- result{}
+				ch <- peerResult{}
 				return
 			}
 			var h aq.Hello
 			if json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&h) != nil ||
 				h.ProtocolVersion != 1 || h.NetworkID != a.network.NetworkID() {
-				ch <- result{}
+				ch <- peerResult{}
 				return
 			}
-			ch <- result{height: h.Height}
+			w := new(big.Int)
+			if _, ok := w.SetString(h.ChainWork, 16); !ok {
+				ch <- peerResult{}
+				return
+			}
+			ch <- peerResult{peer: peer, hello: h, work: w, ok: true}
 		}()
 	}
-	target := localHeight
+
+	var best peerResult
+	reachable := 0
 	for range a.bootstrap {
 		r := <-ch
-		if r.height > target {
-			target = r.height
+		if !r.ok {
+			continue
+		}
+		reachable++
+		if !best.ok || r.work.Cmp(best.work) > 0 ||
+			(r.work.Cmp(best.work) == 0 && r.hello.Height > best.hello.Height) {
+			best = r
 		}
 	}
+
+	if !best.ok {
+		a.mu.Lock()
+		a.syncTarget = 0
+		a.syncPeers = 0
+		a.syncCommon = false
+		a.syncBestWork = ""
+		a.mu.Unlock()
+		return
+	}
+
+	commonHeight := local.Height
+	if best.hello.Height < commonHeight {
+		commonHeight = best.hello.Height
+	}
+	common := false
+	if localHash, err := fetchBlockHash(localNodeURL, commonHeight, 1200*time.Millisecond); err == nil {
+		if remoteHash, err := fetchBlockHash(best.peer, commonHeight, 1800*time.Millisecond); err == nil {
+			common = localHash == remoteHash
+		}
+	}
+
 	a.mu.Lock()
-	a.syncTarget = target
+	a.syncTarget = best.hello.Height
+	a.syncPeers = reachable
+	a.syncCommon = common
+	a.syncBestWork = best.hello.ChainWork
 	a.mu.Unlock()
 }
 
@@ -729,8 +838,14 @@ func (a *App) startWorker(mode string, s settings) error {
 		}
 		a.refreshSyncTarget()
 		state := a.state()
-		if state.SyncTarget > 0 && state.Height < state.SyncTarget {
-			return fmt.Errorf("full node is synchronizing: local height %d, peer height %d", state.Height, state.SyncTarget)
+		if state.SyncPeers == 0 {
+			return errors.New("cannot verify synchronization: no Mainnet bootstrap peer responded")
+		}
+		if !state.SyncCommon {
+			return fmt.Errorf("cannot mine: local chain does not match the strongest reachable peer at the common height")
+		}
+		if !state.Synchronized {
+			return fmt.Errorf("full node is not synchronized to the strongest known chain: local height %d, peer height %d", state.Height, state.SyncTarget)
 		}
 	}
 	if err := a.saveSettings(s); err != nil {
