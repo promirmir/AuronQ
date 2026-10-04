@@ -39,6 +39,7 @@ type Node struct {
 	peers      map[string]struct{}
 	announced  map[string]struct{}
 	failures   map[string]int
+	quarantined map[string]time.Time
 	syncCursor int
 	blockSem   chan struct{}
 	rateMu     sync.Mutex
@@ -51,6 +52,7 @@ const (
 	maxSyncPeersPerRound         = 8
 	maxSyncBlocksPerRound        = 256
 	peerFailureDrop              = 6
+	deadPeerQuarantine           = 30 * time.Minute
 	dnsRefreshInterval           = 5 * time.Minute
 	bootstrapRefreshInterval     = 2 * time.Minute
 	maxBootstrapManifestBytes    = 64 * 1024
@@ -137,6 +139,7 @@ func NewNode(chain *Chain, cfg NodeConfig) *Node {
 		peers:        map[string]struct{}{},
 		announced:    map[string]struct{}{},
 		failures:     map[string]int{},
+		quarantined:  map[string]time.Time{},
 		blockSem:     make(chan struct{}, maxConcurrentBlockValidation),
 		rate:         map[string]requestRateWindow{},
 	}
@@ -380,6 +383,13 @@ func (n *Node) addDiscoveredPeer(p string) {
 		return
 	}
 	n.pmu.Lock()
+	if until, blocked := n.quarantined[p]; blocked {
+		if time.Now().Before(until) {
+			n.pmu.Unlock()
+			return
+		}
+		delete(n.quarantined, p)
+	}
 	before := len(n.peers)
 	if before < maxKnownPeers {
 		if _, exists := n.peers[p]; !exists {
@@ -500,6 +510,12 @@ func (n *Node) addManifestPeer(raw string) bool {
 	}
 	n.pmu.Lock()
 	defer n.pmu.Unlock()
+	if until, blocked := n.quarantined[p]; blocked {
+		if time.Now().Before(until) {
+			return false
+		}
+		delete(n.quarantined, p)
+	}
 	if _, exists := n.peers[p]; exists || len(n.peers) >= maxKnownPeers {
 		return false
 	}
@@ -673,16 +689,41 @@ func (n *Node) recordPeerSuccess(peer string) {
 	n.pmu.Unlock()
 }
 
+func (n *Node) quarantinePeer(peer string) {
+	peer = normalizePeer(peer)
+	if peer == "" {
+		return
+	}
+	n.pmu.Lock()
+	delete(n.peers, peer)
+	delete(n.failures, peer)
+	delete(n.announced, peer)
+	n.quarantined[peer] = time.Now().Add(deadPeerQuarantine)
+	n.pmu.Unlock()
+	go n.savePeerStore()
+}
+
 func (n *Node) recordPeerFailure(peer string) {
 	n.pmu.Lock()
-	defer n.pmu.Unlock()
 	n.failures[peer]++
-	if n.failures[peer] >= peerFailureDrop {
-		delete(n.peers, peer)
-		delete(n.failures, peer)
-		delete(n.announced, peer)
-		go n.savePeerStore()
+	drop := n.failures[peer] >= peerFailureDrop
+	n.pmu.Unlock()
+	if drop {
+		n.quarantinePeer(peer)
 	}
+}
+
+func isPermanentPeerLookupFailure(err error) bool {
+	var dnsErr *net.DNSError
+	return errors.As(err, &dnsErr) && dnsErr.IsNotFound
+}
+
+func (n *Node) recordPeerError(peer string, err error) {
+	if isPermanentPeerLookupFailure(err) {
+		n.quarantinePeer(peer)
+		return
+	}
+	n.recordPeerFailure(peer)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -1251,7 +1292,7 @@ func (n *Node) syncAll() {
 		p := peers[(start+i)%len(peers)]
 		if err := n.syncPeer(p); err != nil {
 			log.Printf("sync from %s failed: %v", p, err)
-			n.recordPeerFailure(p)
+			n.recordPeerError(p, err)
 			continue
 		}
 		n.recordPeerSuccess(p)

@@ -2,6 +2,7 @@ package auronq
 
 import (
 	"context"
+	"net"
 	"fmt"
 	"encoding/json"
 	"net/http"
@@ -417,5 +418,56 @@ func TestConfiguredPeersArePrunableAndReappearOnlyByConfiguration(t *testing.T) 
 	}
 	if !found {
 		t.Fatalf("configured peer should be retried on a new process start")
+	}
+}
+
+
+func TestDeadDNSPeerIsQuarantinedImmediately(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	peer := "https://dead-peer.example.com"
+	n := NewNode(c, NodeConfig{})
+	n.addDiscoveredPeer(peer)
+	if len(n.peerList()) != 1 {
+		t.Fatalf("peer not added: %v", n.peerList())
+	}
+
+	err := fmt.Errorf("hello: %w", &net.DNSError{Name: "dead-peer.example.com", Err: "no such host", IsNotFound: true})
+	n.recordPeerError(peer, err)
+
+	if got := n.peerList(); len(got) != 0 {
+		t.Fatalf("dead DNS peer was not removed immediately: %v", got)
+	}
+
+	// Gossip from another peer must not immediately resurrect a known-dead endpoint.
+	n.addDiscoveredPeer(peer)
+	if got := n.peerList(); len(got) != 0 {
+		t.Fatalf("quarantined peer was re-added by gossip: %v", got)
+	}
+
+	// Expired quarantine allows the endpoint to be reconsidered later.
+	n.pmu.Lock()
+	n.quarantined[peer] = time.Now().Add(-time.Second)
+	n.pmu.Unlock()
+	n.addDiscoveredPeer(peer)
+	if got := n.peerList(); len(got) != 1 || got[0] != peer {
+		t.Fatalf("expired quarantine did not allow retry: %v", got)
+	}
+}
+
+func TestRepeatedFailuresQuarantinePeerAgainstManifestReadd(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	peer := "https://stale-peer.example.com"
+	n := NewNode(c, NodeConfig{})
+	if !n.addManifestPeer(peer) {
+		t.Fatal("manifest peer was not added")
+	}
+	for i := 0; i < peerFailureDrop; i++ {
+		n.recordPeerFailure(peer)
+	}
+	if got := n.peerList(); len(got) != 0 {
+		t.Fatalf("failed peer was not removed: %v", got)
+	}
+	if n.addManifestPeer(peer) {
+		t.Fatal("quarantined peer was immediately re-added by manifest refresh")
 	}
 }
