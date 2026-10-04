@@ -54,7 +54,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist-ci | Out-Null
-          go build -trimpath -o dist-ci\auronq-gpu-miner.exe .\cmd\auronq-gpu-miner
+          go build -trimpath -o dist-ci\auronq-gpu-worker.exe .\cmd\auronq-gpu-miner
           go build -trimpath -ldflags "-H=windowsgui" -o dist-ci\AuronQ-GPU-Miner.exe .\cmd\auronq-gpu-miner-gui
 
       - name: Verify Windows package layout
