@@ -421,6 +421,8 @@ func (a *App) state() appState {
 		if st.SyncTarget < ns.Height {
 			st.SyncTarget = ns.Height
 		}
+	} else if !nodeOwned {
+		st.NodeRunning = false
 	}
 	if st.PublicEndpoint == "" && mapping != nil {
 		st.PublicEndpoint = mapping.Advertise
@@ -447,11 +449,24 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) ensureNode() error {
 	a.mu.RLock()
-	if a.nodeRun {
-		a.mu.RUnlock()
+	trackedRun := a.nodeRun
+	trackedOwned := a.nodeOwned
+	a.mu.RUnlock()
+	if trackedRun && trackedOwned {
 		return nil
 	}
-	a.mu.RUnlock()
+	if trackedRun && !trackedOwned {
+		ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
+		st, err := aq.NewClient(localNodeURL).StatusContext(ctx)
+		cancel()
+		if err == nil && st.NetworkID == a.network.NetworkID() {
+			return nil
+		}
+		a.mu.Lock()
+		a.nodeRun = false
+		a.nodeOwned = false
+		a.mu.Unlock()
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
 	st, err := aq.NewClient(localNodeURL).StatusContext(ctx)
@@ -558,6 +573,11 @@ func (a *App) handleReconnect(w http.ResponseWriter, r *http.Request) {
 	a.stopOwnedNode()
 	time.Sleep(200 * time.Millisecond)
 	a.mu.Lock()
+	// External-node tracking is only a cached observation. Clear it so ensureNode
+	// performs a fresh Network-ID-checked probe instead of trusting stale state.
+	if !a.nodeOwned {
+		a.nodeRun = false
+	}
 	a.nodeErr = ""
 	a.mu.Unlock()
 	if err := a.ensureNode(); err != nil {
@@ -738,9 +758,12 @@ func (a *App) startWorker(mode string, s settings) error {
 		if a.minerCmd == cmd {
 			a.minerCmd = nil
 		}
+		finishedMode := a.miner.Mode
 		a.miner.Running = false
 		a.miner.Mode = ""
-		a.miner.Hashrate = 0
+		if finishedMode == "mining" {
+			a.miner.Hashrate = 0
+		}
 		if err != nil && !stopped {
 			a.miner.LastError = err.Error()
 		}
