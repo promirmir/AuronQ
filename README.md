@@ -31,9 +31,9 @@ The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 
 
 For a normal Windows user, no manual peer configuration, Tailscale, port forwarding, Go, Docker or command line setup is required.
 
-1. Download **[AuronQ-1.7.10-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.10/AuronQ-1.7.10-Windows-x64.zip)** from this repository's official Releases page.
+1. Download **[AuronQ-1.7.11-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip)** from this repository's official Releases page.
 2. Verify the ZIP SHA-256 if possible:
-   `e573c3a605fc66c33f6681d51a8c1544b4200fd207463ec8893971ebd20a134c`
+   `cd1b0ff59fdaf28753758473336f2b9908c769374de5e1874dd0808ebd86f0ee`
 3. Extract the **entire ZIP** to a new folder. Do not run files directly from inside the archive.
 4. Run **`START-AURONQ.cmd` once**.
 5. AuronQ Desktop will start the full node, verify the Mainnet configuration, discover the public bootstrap nodes and begin synchronization automatically.
@@ -69,25 +69,25 @@ AuronQ may be relevant to developers, miners, node operators and researchers loo
 
 ## Project status
 
-Current stable desktop/full-node release: **AuronQ 1.7.10 Mainnet**.
+Current stable desktop/full-node release: **AuronQ 1.7.11 Mainnet**.
 
-Version 1.7.10 continues the decentralization hardening: configured seeds are replaceable startup hints rather than permanent authorities, repeatedly failing seeds are pruned, learned public peers persist independently, and the built-in Explorer is explicitly a local view of each full node's own validated canonical chain. CI also contains a distributed regression test in which the original/bootstrap node disappears permanently, surviving nodes continue the chain, and a fresh node joins through a later non-founder peer.
+Version 1.7.11 extends the decentralization model into the Explorer UI: every full node still serves Explorer data from its own locally validated canonical chain, and public Explorers can now surface alternative HTTPS full-node Explorers learned through native AuronQ P2P gossip. No public Explorer is canonical or trusted. The founder-node-removal and replaceable-bootstrap behavior from 1.7.10 remains in place.
 
 The network is operational, but practical decentralization is still developing. The bootstrap manifest currently contains **two externally reachable public bootstrap endpoints** verified by the repository crawler. They have no consensus privileges. Additional independently operated public nodes, miners and independent discovery routes are still required before the live network can be considered operationally independent of the original operator infrastructure.
 
 ## Download
 
-**Windows x64:** [AuronQ-1.7.10-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.10/AuronQ-1.7.10-Windows-x64.zip)
+**Windows x64:** [AuronQ-1.7.11-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip)
 
-**Linux amd64:** [AuronQ-1.7.10-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.10/AuronQ-1.7.10-Linux-amd64.tar.gz)
+**Linux amd64:** [AuronQ-1.7.11-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Linux-amd64.tar.gz)
 
-Release page: [AuronQ 1.7.10 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.10)
+Release page: [AuronQ 1.7.11 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.11)
 
 SHA-256:
 
 ```text
-e573c3a605fc66c33f6681d51a8c1544b4200fd207463ec8893971ebd20a134c  AuronQ-1.7.10-Windows-x64.zip
-af926ef826b721ff635a1740e2aaaa25515fe3d545fb53e92e70a911df24a388  AuronQ-1.7.10-Linux-amd64.tar.gz
+cd1b0ff59fdaf28753758473336f2b9908c769374de5e1874dd0808ebd86f0ee  AuronQ-1.7.11-Windows-x64.zip
+bcb87751fa6c559ed008f245a804b8341c664460068cfd5623ea5d3b13372a50  AuronQ-1.7.11-Linux-amd64.tar.gz
 ```
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
@@ -186,10 +186,10 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
 
-The current stable release is **v1.7.10**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
+The current stable release is **v1.7.11**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
 
 ## Security status
 
-AuronQ 1.7.10 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
+AuronQ 1.7.11 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
 
 See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
