@@ -156,6 +156,25 @@ func (n *Node) SetPublicAdvertise(raw string) bool {
 	return true
 }
 
+// ClearPublicAdvertise removes a runtime endpoint that this process previously
+// installed (for example a temporary UPnP mapping). If expected is non-empty,
+// the endpoint is cleared only when it still matches that value.
+func (n *Node) ClearPublicAdvertise(expected string) bool {
+	want := normalizePeer(expected)
+	n.pmu.Lock()
+	defer n.pmu.Unlock()
+	current := normalizePeer(n.cfg.Advertise)
+	if want != "" && current != want {
+		return false
+	}
+	if current == "" {
+		return true
+	}
+	n.cfg.Advertise = ""
+	n.announced = map[string]struct{}{}
+	return true
+}
+
 func NewNode(chain *Chain, cfg NodeConfig) *Node {
 	if cfg.LookupHost == nil {
 		cfg.LookupHost = net.DefaultResolver.LookupHost
