@@ -24,7 +24,7 @@ Write-Host "NVCC: $nvcc"
 & $go version
 & $nvcc --version | Select-Object -Last 4
 
-$dist = Join-Path $root "dist\AuronQ-GPU-Miner-v0.1-prototype"
+$dist = Join-Path $root "dist\AuronQ-GPU-Miner-v0.2.0-alpha"
 if (Test-Path $dist) {
     Remove-Item -Recurse -Force $dist
 }
@@ -53,6 +53,8 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll") (Join-Path $dist "auronq-aqm64-cuda.dll") -Force
 Copy-Item (Join-Path $root "gpu\cuda\README.md") (Join-Path $dist "README-GPU-MINER.md") -Force
+Copy-Item (Join-Path $root "network.json") (Join-Path $dist "network.json") -Force
+Copy-Item (Join-Path $root "bootstrap.json") (Join-Path $dist "bootstrap.json") -Force
 
 Write-Host ""
 Write-Host "[4/4] Running mandatory GPU/CPU AQM64 equivalence self-test..."
@@ -74,7 +76,7 @@ Write-Host ""
 Write-Host "Windows app:"
 Write-Host "  $(Join-Path $dist "AuronQ-GPU-Miner.exe")"
 Write-Host ""
-$zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.1-prototype-Windows-x64.zip"
+$zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.2.0-alpha-Windows-x64.zip"
 if (Test-Path $zipOut) { Remove-Item $zipOut -Force }
 Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zipOut -CompressionLevel Optimal
 
