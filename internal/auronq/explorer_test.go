@@ -1,6 +1,9 @@
 package auronq
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestAddressFromKeyHashRoundTrip(t *testing.T) {
 	kh := KeyHash{1, 2, 3, 4, 5}
@@ -93,5 +96,17 @@ func TestExplorerRejectsInvalidIdentifiers(t *testing.T) {
 	}
 	if _, _, err := c.ExplorerBlock(nil, "not-a-hash"); err == nil {
 		t.Fatal("invalid block hash accepted")
+	}
+}
+
+func TestExplorerHTMLWiresLiveHeight(t *testing.T) {
+	if !strings.Contains(explorerIndexHTML, `id="height"`) {
+		t.Fatal("explorer height element missing")
+	}
+	if !strings.Contains(explorerIndexHTML, `$('height')`) {
+		t.Fatal("explorer height script binding missing")
+	}
+	if !strings.Contains(explorerIndexHTML, "/v1/explorer/blocks") {
+		t.Fatal("explorer block API binding missing")
 	}
 }
