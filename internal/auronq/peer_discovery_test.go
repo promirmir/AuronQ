@@ -185,7 +185,7 @@ func TestAnnounceSelfSendsListenPortWithoutManualAdvertise(t *testing.T) {
 	}
 }
 
-func TestDeadLearnedPeerIsPrunedButBootstrapIsKept(t *testing.T) {
+func TestDeadPeersArePrunedRegardlessOfOrigin(t *testing.T) {
 	_, c := testPeerNetwork(t)
 	n := NewNode(c, NodeConfig{Peers: []string{"http://1.1.1.1:18444"}})
 	n.addDiscoveredPeer("http://8.8.8.8:18444")
@@ -193,9 +193,8 @@ func TestDeadLearnedPeerIsPrunedButBootstrapIsKept(t *testing.T) {
 		n.recordPeerFailure("http://8.8.8.8:18444")
 		n.recordPeerFailure("http://1.1.1.1:18444")
 	}
-	got := n.peerList()
-	if len(got) != 1 || got[0] != "http://1.1.1.1:18444" {
-		t.Fatalf("peer list=%v", got)
+	if got := n.peerList(); len(got) != 0 {
+		t.Fatalf("failed peers retained authority: %v", got)
 	}
 }
 
