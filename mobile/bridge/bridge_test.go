@@ -137,3 +137,31 @@ func TestUTXOFingerprintDetectsStateConflict(t *testing.T) {
 		t.Fatalf("conflicting UTXO sets produced the same fingerprint")
 	}
 }
+
+
+func TestHistoryFingerprintIgnoresMempoolPropagationDifference(t *testing.T) {
+	h := uint64(10)
+	base := []aq.WalletHistoryItem{
+		{TXID: "confirmed", Type: "received", Status: "confirmed", Height: &h, AmountAtoms: 5},
+	}
+	withPending := append([]aq.WalletHistoryItem(nil), base...)
+	withPending = append(withPending, aq.WalletHistoryItem{TXID: "pending", Type: "sent", Status: "pending", AmountAtoms: 1})
+	if historyFingerprint(base) != historyFingerprint(withPending) {
+		t.Fatal("mempool propagation difference changed canonical history fingerprint")
+	}
+}
+
+func TestMergeHistoryPendingUnionsAcrossAgreeingPeers(t *testing.T) {
+	h := uint64(10)
+	confirmed := aq.WalletHistoryItem{TXID: "confirmed", Type: "received", Status: "confirmed", Height: &h}
+	p1 := aq.WalletHistoryItem{TXID: "p1", Type: "sent", Status: "pending", Timestamp: 10}
+	p2 := aq.WalletHistoryItem{TXID: "p2", Type: "received", Status: "pending", Timestamp: 20}
+	group := []historyObservation{
+		{Node: "a", Items: []aq.WalletHistoryItem{p1, confirmed}},
+		{Node: "b", Items: []aq.WalletHistoryItem{p2, confirmed}},
+	}
+	got := mergeHistoryPending(group)
+	if len(got) != 3 || got[0].TXID != "p2" || got[1].TXID != "p1" || got[2].TXID != "confirmed" {
+		t.Fatalf("unexpected merged history: %+v", got)
+	}
+}
