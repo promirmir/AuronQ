@@ -182,9 +182,21 @@ func discoverDirectPublicAdvertise(listen string) string {
 	if err != nil {
 		return ""
 	}
-	candidates := make([]string, 0, len(addrs))
+	rawAddrs := make([]string, 0, len(addrs))
 	for _, addr := range addrs {
-		raw := addr.String()
+		rawAddrs = append(rawAddrs, addr.String())
+	}
+	ip := choosePublicInterfaceIP(rawAddrs)
+	if ip == "" {
+		return ""
+	}
+	return "http://" + net.JoinHostPort(ip, portRaw)
+}
+
+func choosePublicInterfaceIP(rawAddrs []string) string {
+	v4 := make([]string, 0, len(rawAddrs))
+	v6 := make([]string, 0, len(rawAddrs))
+	for _, raw := range rawAddrs {
 		if slash := strings.LastIndex(raw, "/"); slash >= 0 {
 			raw = raw[:slash]
 		}
@@ -192,13 +204,21 @@ func discoverDirectPublicAdvertise(listen string) string {
 		if isNonPublicIP(ip) {
 			continue
 		}
-		candidates = append(candidates, ip.String())
+		if ip4 := ip.To4(); ip4 != nil {
+			v4 = append(v4, ip4.String())
+		} else {
+			v6 = append(v6, ip.String())
+		}
 	}
-	sort.Strings(candidates)
-	if len(candidates) == 0 {
-		return ""
+	sort.Strings(v4)
+	sort.Strings(v6)
+	if len(v4) > 0 {
+		return v4[0]
 	}
-	return "http://" + net.JoinHostPort(candidates[0], portRaw)
+	if len(v6) > 0 {
+		return v6[0]
+	}
+	return ""
 }
 
 func normalizePeer(p string) string {
