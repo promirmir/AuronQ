@@ -43,7 +43,7 @@ To nie oznacza, że sieć może działać bez **jakichkolwiek** komputerów. Tak
 
 Zwykły użytkownik powinien uruchamiać `START-AURONQ.cmd`. Jeżeli świadomie chce wystawić publicznie osiągalny full node, powinien użyć `START-PUBLIC-NODE.cmd`, przekierować TCP/18444 na routerze i upewnić się, że nie jest za CGNAT. `START-SEED-NODE.cmd` pozostaje opcjonalnym wariantem wykorzystującym Tailscale Funnel.
 
-Publiczne peery są wymieniane przez gossip i zapisywane lokalnie. Automatyczny crawler repozytorium co godzinę sprawdza osiągalne publiczne peery AuronQ i przygotowuje aktualizację rejestru przez chroniony proces PR/CI. Niezależny, publicznie osiągalny node jest szczególnie cenny, ponieważ może stać się alternatywną drogą wejścia do sieci, gdy nody projektu są wyłączone.
+Publiczne peery są wymieniane przez gossip i zapisywane lokalnie. Node uruchomiony na serwerze/VPS z publicznym adresem przypisanym bezpośrednio do interfejsu próbuje automatycznie ogłosić swój publiczny endpoint; odbiorca nadal wykonuje callback-verification przed dodaniem go do gossip. Automatyczny crawler repozytorium co godzinę sprawdza osiągalne publiczne peery AuronQ i przygotowuje aktualizację rejestru przez chroniony proces PR/CI. Niezależny, publicznie osiągalny node jest szczególnie cenny, ponieważ może stać się alternatywną drogą wejścia do sieci, gdy nody projektu są wyłączone.
 
 Aktualne bootstrapy są publikowane w `bootstrap.json`; bootstrap nie może zatwierdzić nieważnego bloku ani zmienić Network ID.
 

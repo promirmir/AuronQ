@@ -11,6 +11,7 @@ This file is the concise public history of AuronQ. Detailed historical release n
 - Repeatedly failing peers are quarantined so gossip/bootstrap refresh cannot instantly resurrect them.
 - The public peer-registry crawler now drops existing manifest DNS endpoints that return a permanent DNS not-found result instead of preserving them forever.
 - Public peer discovery runs hourly and groups DNS peers by parent domain for better infrastructure diversity.
+- Directly addressed public VPS/server nodes can auto-advertise their public interface endpoint when `--advertise` is omitted; peers still callback-verify reachability before gossip admission.
 - Windows release packaging now includes `START-PUBLIC-NODE.cmd` for directly reachable independent full nodes.
 - Added regression tests for dead-peer quarantine, manifest re-add prevention and DNS peer grouping.
 - Consensus, AQM64, difficulty, Network ID, genesis, monetary policy and transaction rules are unchanged.

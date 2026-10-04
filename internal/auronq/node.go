@@ -131,6 +131,9 @@ func NewNode(chain *Chain, cfg NodeConfig) *Node {
 	if cfg.LookupHost == nil {
 		cfg.LookupHost = net.DefaultResolver.LookupHost
 	}
+	if strings.TrimSpace(cfg.Advertise) == "" {
+		cfg.Advertise = discoverDirectPublicAdvertise(cfg.Listen)
+	}
 	n := &Node{
 		Chain:        chain,
 		cfg:          cfg,
@@ -155,6 +158,69 @@ func NewNode(chain *Chain, cfg NodeConfig) *Node {
 	n.loadPeerStore()
 	return n
 }
+func discoverDirectPublicAdvertise(listen string) string {
+	host, portRaw, err := net.SplitHostPort(strings.TrimSpace(listen))
+	if err != nil {
+		return ""
+	}
+	port, err := strconv.Atoi(portRaw)
+	if err != nil || port < 1 || port > 65535 {
+		return ""
+	}
+	host = strings.Trim(host, "[]")
+	if ip := net.ParseIP(host); ip != nil && !ip.IsUnspecified() {
+		if isNonPublicIP(ip) {
+			return ""
+		}
+		return "http://" + net.JoinHostPort(ip.String(), portRaw)
+	}
+	if host != "" && host != "0.0.0.0" && host != "::" {
+		return ""
+	}
+
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	rawAddrs := make([]string, 0, len(addrs))
+	for _, addr := range addrs {
+		rawAddrs = append(rawAddrs, addr.String())
+	}
+	ip := choosePublicInterfaceIP(rawAddrs)
+	if ip == "" {
+		return ""
+	}
+	return "http://" + net.JoinHostPort(ip, portRaw)
+}
+
+func choosePublicInterfaceIP(rawAddrs []string) string {
+	v4 := make([]string, 0, len(rawAddrs))
+	v6 := make([]string, 0, len(rawAddrs))
+	for _, raw := range rawAddrs {
+		if slash := strings.LastIndex(raw, "/"); slash >= 0 {
+			raw = raw[:slash]
+		}
+		ip := net.ParseIP(strings.Trim(raw, "[]"))
+		if isNonPublicIP(ip) {
+			continue
+		}
+		if ip4 := ip.To4(); ip4 != nil {
+			v4 = append(v4, ip4.String())
+		} else {
+			v6 = append(v6, ip.String())
+		}
+	}
+	sort.Strings(v4)
+	sort.Strings(v6)
+	if len(v4) > 0 {
+		return v4[0]
+	}
+	if len(v6) > 0 {
+		return v6[0]
+	}
+	return ""
+}
+
 func normalizePeer(p string) string {
 	p = strings.TrimSpace(strings.TrimRight(p, "/"))
 	if p == "" {

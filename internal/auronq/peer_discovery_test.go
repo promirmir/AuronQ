@@ -471,3 +471,39 @@ func TestRepeatedFailuresQuarantinePeerAgainstManifestReadd(t *testing.T) {
 		t.Fatal("quarantined peer was immediately re-added by manifest refresh")
 	}
 }
+
+
+func TestDiscoverDirectPublicAdvertiseExplicitPublicListen(t *testing.T) {
+	got := discoverDirectPublicAdvertise("8.8.8.8:18444")
+	if got != "http://8.8.8.8:18444" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestDiscoverDirectPublicAdvertiseRejectsPrivateListen(t *testing.T) {
+	for _, listen := range []string{"127.0.0.1:18444", "192.168.1.20:18444", "100.64.1.20:18444"} {
+		if got := discoverDirectPublicAdvertise(listen); got != "" {
+			t.Fatalf("listen %q unexpectedly advertised as %q", listen, got)
+		}
+	}
+}
+
+
+func TestChoosePublicInterfaceIPPrefersIPv4(t *testing.T) {
+	got := choosePublicInterfaceIP([]string{
+		"2001:4860:4860::8888/64",
+		"192.168.1.10/24",
+		"8.8.4.4/24",
+		"1.1.1.1/24",
+	})
+	if got != "1.1.1.1" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestChoosePublicInterfaceIPRejectsNonPublicOnly(t *testing.T) {
+	got := choosePublicInterfaceIP([]string{"127.0.0.1/8", "10.0.0.2/24", "192.168.1.2/24", "100.64.0.2/10"})
+	if got != "" {
+		t.Fatalf("got %q", got)
+	}
+}
