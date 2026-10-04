@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -474,7 +475,7 @@ func cmdMine(args []string) error {
 			return err
 		}
 		fmt.Printf("Mining height %d target %s...\n", tpl.Header.Height, tpl.Header.Target.String()[:16])
-		res, err := aq.MineParallel(ctx, tpl, *threads, func(h uint64, d time.Duration) {
+		res, err := aq.MineRemoteTemplate(ctx, cl, tpl, *threads, time.Second, func(h uint64, d time.Duration) {
 			if d > 0 {
 				fmt.Printf("  %.0f H/s | %d hashes\n", float64(h)/d.Seconds(), h)
 			}
@@ -482,6 +483,10 @@ func cmdMine(args []string) error {
 		if err != nil {
 			if ctx.Err() != nil {
 				return nil
+			}
+			if errors.Is(err, aq.ErrMiningTemplateStale) {
+				fmt.Println("Chain tip changed; refreshing mining template")
+				continue
 			}
 			return err
 		}
