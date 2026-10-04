@@ -727,7 +727,16 @@ func verifiedStateObservations(knownNodesJSON, verifiedTip, verifiedWork string,
 }
 
 func historyFingerprint(items []aq.WalletHistoryItem) string {
-	cp := append([]aq.WalletHistoryItem(nil), items...)
+	// Only confirmed/immature canonical history participates in state quorum.
+	// Mempool propagation is intentionally asynchronous, so two honest peers may
+	// temporarily disagree about pending transactions while sharing the exact
+	// same canonical chain.
+	cp := make([]aq.WalletHistoryItem, 0, len(items))
+	for _, item := range items {
+		if item.Status != "pending" {
+			cp = append(cp, item)
+		}
+	}
 	sort.Slice(cp, func(i, j int) bool {
 		if cp[i].TXID != cp[j].TXID {
 			return cp[i].TXID < cp[j].TXID
@@ -741,6 +750,40 @@ func historyFingerprint(items []aq.WalletHistoryItem) string {
 	return string(b)
 }
 
+func mergeHistoryPending(group []historyObservation) []aq.WalletHistoryItem {
+	if len(group) == 0 {
+		return nil
+	}
+	confirmed := make([]aq.WalletHistoryItem, 0, len(group[0].Items))
+	pending := map[string]aq.WalletHistoryItem{}
+	for _, item := range group[0].Items {
+		if item.Status != "pending" {
+			confirmed = append(confirmed, item)
+		}
+	}
+	for _, obs := range group {
+		for _, item := range obs.Items {
+			if item.Status == "pending" {
+				pending[item.TXID] = item
+			}
+		}
+	}
+	pendingItems := make([]aq.WalletHistoryItem, 0, len(pending))
+	for _, item := range pending {
+		pendingItems = append(pendingItems, item)
+	}
+	sort.Slice(pendingItems, func(i, j int) bool {
+		if pendingItems[i].Timestamp != pendingItems[j].Timestamp {
+			return pendingItems[i].Timestamp > pendingItems[j].Timestamp
+		}
+		return pendingItems[i].TXID > pendingItems[j].TXID
+	})
+	out := make([]aq.WalletHistoryItem, 0, len(pendingItems)+len(confirmed))
+	out = append(out, pendingItems...)
+	out = append(out, confirmed...)
+	return out
+}
+
 func utxoFingerprint(items []aq.UTXORecord) string {
 	cp := append([]aq.UTXORecord(nil), items...)
 	sort.Slice(cp, func(i, j int) bool {
@@ -748,6 +791,12 @@ func utxoFingerprint(items []aq.UTXORecord) string {
 	})
 	b, _ := json.Marshal(cp)
 	return string(b)
+}
+
+type historyObservation struct {
+	Node  string
+	Items []aq.WalletHistoryItem
+	Key   string
 }
 
 func QuorumHistoryVerified(knownNodesJSON, address, verifiedTip, verifiedWork string, verifiedHeight int64, limit int) (string, error) {
@@ -764,11 +813,6 @@ func QuorumHistoryVerified(knownNodesJSON, address, verifiedTip, verifiedWork st
 	obs, err := verifiedStateObservations(knownNodesJSON, verifiedTip, verifiedWork, verifiedHeight)
 	if err != nil {
 		return "", err
-	}
-	type historyObservation struct {
-		Node  string
-		Items []aq.WalletHistoryItem
-		Key   string
 	}
 	results := make([]historyObservation, 0, len(obs))
 	for _, o := range obs {
@@ -800,14 +844,19 @@ func QuorumHistoryVerified(knownNodesJSON, address, verifiedTip, verifiedWork st
 		nodes = append(nodes, r.Node)
 	}
 	sort.Strings(nodes)
+	mergedItems := mergeHistoryPending(best)
+	if len(mergedItems) > limit {
+		mergedItems = mergedItems[:limit]
+	}
 	out := map[string]any{
 		"address": strings.TrimSpace(address),
-		"items": best[0].Items,
+		"items": mergedItems,
 		"peer_observed": len(results),
 		"peer_agreement": len(best),
 		"multi_peer_confirmed": len(best) >= 2,
 		"agreement_nodes": nodes,
 		"state_trust": "header-verified-peer-quorum",
+		"pending_policy": "union-across-agreeing-chain-peers",
 	}
 	raw, _ := json.Marshal(out)
 	return string(raw), nil
