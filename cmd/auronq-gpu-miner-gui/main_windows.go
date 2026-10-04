@@ -669,9 +669,12 @@ func (a *App) validateRewardAddress(addr string) error {
 func workerPath() string {
 	exe, err := os.Executable()
 	if err != nil {
-		return "auronq-gpu-miner.exe"
+		return "auronq-gpu-worker.exe"
 	}
-	return filepath.Join(filepath.Dir(exe), "auronq-gpu-miner.exe")
+	// Windows paths are case-insensitive by default. The GUI executable is
+	// AuronQ-GPU-Miner.exe, so the worker must use a genuinely different base
+	// name rather than only different letter casing.
+	return filepath.Join(filepath.Dir(exe), "auronq-gpu-worker.exe")
 }
 
 func (a *App) isWorkerRunning() bool {
