@@ -51,9 +51,21 @@ function Import-MSVCEnvironment {
     Write-Host "Loading MSVC environment from:"
     Write-Host "  $devCmd"
 
-    $envLines = & cmd.exe /s /c ('""{0}" -arch=amd64 -host_arch=amd64 >nul && set"' -f $devCmd)
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to initialize Visual Studio C++ build environment."
+    $tmpCmd = Join-Path $env:TEMP ("auronq-vsenv-" + [guid]::NewGuid().ToString("N") + ".cmd")
+    try {
+        @(
+            "@echo off",
+            ('call "{0}" -arch=amd64 -host_arch=amd64 >nul' -f $devCmd),
+            "if errorlevel 1 exit /b %errorlevel%",
+            "set"
+        ) | Set-Content -Path $tmpCmd -Encoding ASCII
+
+        $envLines = & cmd.exe /d /c $tmpCmd
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to initialize Visual Studio C++ build environment."
+        }
+    } finally {
+        Remove-Item $tmpCmd -Force -ErrorAction SilentlyContinue
     }
 
     foreach ($line in $envLines) {
