@@ -28,6 +28,11 @@ type result struct {
 	Explorer bool
 }
 
+type headersResponse struct {
+	Start   uint64           `json:"start"`
+	Headers []aq.BlockHeader `json:"headers"`
+}
+
 func checkPeer(client *http.Client, peer string) (result, error) {
 	var out result
 	peer = strings.TrimRight(strings.TrimSpace(peer), "/")
@@ -71,6 +76,55 @@ func checkPeer(client *http.Client, peer string) (result, error) {
 	}
 	out.Explorer = true
 	return out, nil
+}
+
+func headerAt(client *http.Client, peer string, height uint64) (aq.BlockHeader, error) {
+	var out headersResponse
+	peer = strings.TrimRight(strings.TrimSpace(peer), "/")
+	resp, err := client.Get(fmt.Sprintf("%s/p2p/headers?start=%d&limit=1", peer, height))
+	if err != nil {
+		return aq.BlockHeader{}, fmt.Errorf("headers: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return aq.BlockHeader{}, fmt.Errorf("headers: HTTP %s", resp.Status)
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 256<<10)).Decode(&out); err != nil {
+		return aq.BlockHeader{}, fmt.Errorf("headers decode: %w", err)
+	}
+	if out.Start != height || len(out.Headers) != 1 || out.Headers[0].Height != height {
+		return aq.BlockHeader{}, fmt.Errorf("unexpected header response at height %d", height)
+	}
+	return out.Headers[0], nil
+}
+
+func verifyCommonHistory(client *http.Client, healthy []result) error {
+	if len(healthy) < 2 {
+		return nil
+	}
+	commonHeight := healthy[0].Hello.Height
+	for _, r := range healthy[1:] {
+		if r.Hello.Height < commonHeight {
+			commonHeight = r.Hello.Height
+		}
+	}
+
+	baseHeader, err := headerAt(client, healthy[0].Peer, commonHeight)
+	if err != nil {
+		return fmt.Errorf("%s common-header check: %w", healthy[0].Peer, err)
+	}
+	baseHash := baseHeader.Hash()
+	for _, r := range healthy[1:] {
+		h, err := headerAt(client, r.Peer, commonHeight)
+		if err != nil {
+			return fmt.Errorf("%s common-header check: %w", r.Peer, err)
+		}
+		if h.Hash() != baseHash {
+			return fmt.Errorf("chain split detected at common height %d: %s=%s %s=%s",
+				commonHeight, healthy[0].Peer, baseHash.String(), r.Peer, h.Hash().String())
+		}
+	}
+	return nil
 }
 
 func readManifest(path string) (manifest, error) {
@@ -139,6 +193,11 @@ func main() {
 		os.Exit(4)
 	}
 
-	fmt.Printf("AuronQ public network health OK: %d/%d peers healthy, height range %d-%d\n",
+	if err := verifyCommonHistory(client, healthy); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(5)
+	}
+
+	fmt.Printf("AuronQ public network health OK: %d/%d peers healthy, height range %d-%d, common history verified\n",
 		len(healthy), len(m.Peers), minHeight, maxHeight)
 }

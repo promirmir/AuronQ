@@ -2,7 +2,7 @@ name: Public network health
 
 on:
   schedule:
-    - cron: '23 * * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
