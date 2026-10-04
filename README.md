@@ -23,6 +23,8 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 
 **Project site:** https://promirmir.github.io/AuronQ/
 
+**Official Bitcointalk ANN / community discussion:** https://bitcointalk.org/index.php?topic=5595868.0
+
 **Release archive:** [GitHub Releases](https://github.com/promirmir/AuronQ/releases) · **History:** [CHANGELOG.md](CHANGELOG.md)
 
 ### Current checksums
@@ -207,6 +209,7 @@ Contributions, reproducible bug reports and independent review are welcome.
 - [Security policy](SECURITY.md)
 - [Issue tracker](https://github.com/promirmir/AuronQ/issues)
 - [Pull requests](https://github.com/promirmir/AuronQ/pulls)
+- [Bitcointalk ANN / community discussion](https://bitcointalk.org/index.php?topic=5595868.0)
 
 ## License
 
