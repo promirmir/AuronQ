@@ -13,10 +13,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.2'
           cache: false
+      - name: Verify release tag is current protected main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+      - name: Verify source version matches tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          grep -Fq "const version = \"${VERSION}\"" cmd/auronq/main.go
+          grep -Fq "const desktopVersion = \"${VERSION}\"" cmd/auronq-desktop/main.go
+      - name: Verify frozen Mainnet identity
+        run: go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1
       - run: go test ./...
       - run: go vet ./...
       - run: go test -race ./...
@@ -87,7 +104,7 @@ jobs:
           body: |
             ## AuronQ Mainnet
 
-            This is the current AuronQ Desktop / full-node Mainnet release. v1.7.13 hardens peer discovery against dead DNS endpoints and stale peer re-announcement.
+            This is the current AuronQ Desktop / full-node Mainnet release.
 
             ### Windows
             Download the Windows x64 ZIP, verify its checksum, extract the entire archive and run `START-AURONQ.cmd`.
