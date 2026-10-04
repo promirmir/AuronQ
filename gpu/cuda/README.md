@@ -60,6 +60,32 @@ powershell -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
 copy .\gpu\cuda\auronq-aqm64-cuda.dll .\
 ~~~
 
+## Windows application
+
+The prototype now includes a native Windows GUI built as `AuronQ-GPU-Miner.exe`.
+It has no external GUI framework dependency. The window provides:
+
+- node URL and AURQ reward address fields
+- CUDA device and batch controls
+- Start / Stop mining
+- mandatory GPU/CPU self-test on demand and an option to run it before mining
+- a 15-second offline benchmark
+- live miner log and block-found/status messages
+- persisted non-secret settings under the user's Windows config directory
+
+The GUI launches the sibling `auronq-gpu-miner.exe` worker with its console
+window hidden. The full node still validates every submitted block.
+
+For a complete Windows package, run from the repository root:
+
+~~~powershell
+powershell -ExecutionPolicy Bypass -File .\build-gpu-miner-windows.ps1
+~~~
+
+The script builds the CUDA DLL, CLI worker and native GUI, performs the
+mandatory GPU/CPU AQM64 self-test, and creates a Windows x64 ZIP under
+`dist`.
+
 ## Mandatory device self-test before mining
 
 Run:
