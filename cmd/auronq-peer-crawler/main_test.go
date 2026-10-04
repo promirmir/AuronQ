@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"errors"
+	"net"
+	"testing"
+)
 
 func TestPublicGossipPeer(t *testing.T) {
 	good := []string{
@@ -69,5 +73,16 @@ func TestDNSNetgroupUsesParentDomain(t *testing.T) {
 	}
 	if a, b := netgroup("https://node-a.example.co.uk"), netgroup("https://node-b.example.co.uk"); a == "" || a != b {
 		t.Fatalf("same ccTLD parent DNS domain should share netgroup: %q %q", a, b)
+	}
+}
+
+
+func TestPermanentLookupFailure(t *testing.T) {
+	nxdomain := &net.DNSError{Name: "dead.example", Err: "no such host", IsNotFound: true}
+	if !isPermanentLookupFailure(nxdomain) {
+		t.Fatal("NXDOMAIN/no-such-host should be permanent")
+	}
+	if isPermanentLookupFailure(errors.New("context deadline exceeded")) {
+		t.Fatal("transient timeout must not be treated as permanent")
 	}
 }
