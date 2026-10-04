@@ -31,9 +31,9 @@ The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 
 
 For a normal Windows user, no manual peer configuration, Tailscale, port forwarding, Go, Docker or command line setup is required.
 
-1. Download **[AuronQ-1.7.8-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.8/AuronQ-1.7.8-Windows-x64.zip)** from this repository's official Releases page.
+1. Download **[AuronQ-1.7.10-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.10/AuronQ-1.7.10-Windows-x64.zip)** from this repository's official Releases page.
 2. Verify the ZIP SHA-256 if possible:
-   `77fc1de0ac7729f36d4e0da312c70b42bcaebc445eaa596718f9dcd578b74d9b`
+   `e573c3a605fc66c33f6681d51a8c1544b4200fd207463ec8893971ebd20a134c`
 3. Extract the **entire ZIP** to a new folder. Do not run files directly from inside the archive.
 4. Run **`START-AURONQ.cmd` once**.
 5. AuronQ Desktop will start the full node, verify the Mainnet configuration, discover the public bootstrap nodes and begin synchronization automatically.
@@ -69,25 +69,25 @@ AuronQ may be relevant to developers, miners, node operators and researchers loo
 
 ## Project status
 
-Current stable desktop/full-node release: **AuronQ 1.7.8 Mainnet**.
+Current stable desktop/full-node release: **AuronQ 1.7.10 Mainnet**.
 
-Version 1.7.8 strengthens public-network resilience: verified public peers are bundled as direct bootstrap fallbacks in addition to the manifest, fork recovery completes the remaining sync batch immediately after a validated higher-work reorganization, and CI now exercises 20-node partition/reorg convergence plus transaction/block fuzzing. The Desktop Explorer tab from 1.7.6 remains available.
+Version 1.7.10 continues the decentralization hardening: configured seeds are replaceable startup hints rather than permanent authorities, repeatedly failing seeds are pruned, learned public peers persist independently, and the built-in Explorer is explicitly a local view of each full node's own validated canonical chain. CI also contains a distributed regression test in which the original/bootstrap node disappears permanently, surviving nodes continue the chain, and a fresh node joins through a later non-founder peer.
 
-The network is operational, but decentralization is still developing. The bootstrap manifest currently contains **two independently reachable public bootstrap endpoints**, both externally verified by the repository crawler. Bootstrap nodes have no consensus privileges; every full node validates the canonical chain itself. Additional independently operated public nodes and discovery routes are still desirable to reduce first-contact dependency further.
+The network is operational, but practical decentralization is still developing. The bootstrap manifest currently contains **two externally reachable public bootstrap endpoints** verified by the repository crawler. They have no consensus privileges. Additional independently operated public nodes, miners and independent discovery routes are still required before the live network can be considered operationally independent of the original operator infrastructure.
 
 ## Download
 
-**Windows x64:** [AuronQ-1.7.8-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.8/AuronQ-1.7.8-Windows-x64.zip)
+**Windows x64:** [AuronQ-1.7.10-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.10/AuronQ-1.7.10-Windows-x64.zip)
 
-**Linux amd64:** [AuronQ-1.7.8-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.8/AuronQ-1.7.8-Linux-amd64.tar.gz)
+**Linux amd64:** [AuronQ-1.7.10-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.10/AuronQ-1.7.10-Linux-amd64.tar.gz)
 
-Release page: [AuronQ 1.7.8 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.8)
+Release page: [AuronQ 1.7.10 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.10)
 
 SHA-256:
 
 ```text
-77fc1de0ac7729f36d4e0da312c70b42bcaebc445eaa596718f9dcd578b74d9b  AuronQ-1.7.8-Windows-x64.zip
-9414b899e1e94bdf4087e7a304f5261addf60f2248aedfc648c4f0ae561a07f0  AuronQ-1.7.8-Linux-amd64.tar.gz
+e573c3a605fc66c33f6681d51a8c1544b4200fd207463ec8893971ebd20a134c  AuronQ-1.7.10-Windows-x64.zip
+af926ef826b721ff635a1740e2aaaa25515fe3d545fb53e92e70a911df24a388  AuronQ-1.7.10-Linux-amd64.tar.gz
 ```
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
@@ -125,13 +125,15 @@ Explorer endpoints are rate-limited. Explorer v1 reads canonical chain and mempo
 
 ## Android alpha
 
-For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.4.0 Alpha**:
+For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.4.2 Alpha**:
 
-- [AuronQ-Mobile-0.4.0-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.4.0-alpha/AuronQ-Mobile-0.4.0-alpha.apk)
-- Release page: [android-v0.4.0-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.4.0-alpha)
-- SHA-256: `c7d2dd36abc066b4e24149e5cb1cfb3e4f2f16a39dbb9fbd0523b7430d09be99`
+- [AuronQ-Mobile-0.4.2-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.4.2-alpha/AuronQ-Mobile-0.4.2-alpha.apk)
+- Release page: [android-v0.4.2-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.4.2-alpha)
+- SHA-256: `0224f45dca6b721577a60dc5dcd03d5734c0468c1abcac6f4c4e183b19c59736`
 
-The Android alpha is a wallet client, not a full node. It keeps/signs with the encrypted AuronQ wallet locally and uses an HTTPS AuronQ Mainnet node for balances, UTXOs, transaction submission and wallet history. Version 0.4.0 adds transaction history for received, sent, mining and genesis entries, including status, amount, block, timestamp, confirmations and TXID. History is refreshed when the observed chain height or mempool changes. Wallet history requires a reachable **AuronQ 1.7.4+ full node**; private keys and signing remain local on the phone. It is debug-signed test software; do not use substantial value.
+AuronQ Mobile remains a **light wallet client, not a full node**. Private keys and ML-DSA-87 signing stay local on the phone. Version 0.4.2 compares Mainnet state across multiple replaceable HTTPS AuronQ nodes, exposes peer agreement, compares wallet balances only across peers reporting the same chain state, fails closed on conflicting same-chain balance responses, remembers P2P-learned nodes and directly fans the same signed transaction out to multiple reachable nodes.
+
+Multi-peer agreement reduces dependence on a single endpoint, but it is **not equivalent to independently validating the complete AQM64 chain**. The APK is debug-signed alpha software and has not received an independent security audit; do not use substantial value.
 
 ## Mainnet identity
 
@@ -170,7 +172,7 @@ These endpoints are only first-contact hints to ordinary full nodes. They have n
 
 AuronQ full nodes already persist verified public peers and exchange them through peer gossip. In addition, the repository now has a scheduled public-peer crawler that follows AuronQ gossip, verifies reachable Mainnet peers and can append them to `bootstrap.json` automatically. This means that, as independently operated public nodes appear, the first-contact registry can become multi-peer without relying on the founder's computer being online.
 
-This does **not** create independent peers out of nothing: the network currently has two crawler-verified public bootstrap endpoints. More independently operated public full nodes are still desirable for stronger practical resilience. A completely fresh install always needs some discovery route; AuronQ also supports DNS seeds for that purpose.
+This does **not** create independent peers out of nothing: the live network currently has two crawler-verified public bootstrap endpoints under the project infrastructure. More independently operated public full nodes are still required for stronger practical resilience. A completely fresh install always needs some discovery route; AuronQ also supports DNS seeds for that purpose. The automated resilience suite now explicitly proves that, once later reachable peers exist, the original bootstrap node can disappear permanently while surviving nodes continue the chain and a fresh node joins through a non-founder peer.
 
 NAT/CGNAT users can participate through outbound connections without port forwarding. Operators who intentionally want to expose a publicly reachable Windows node can use the opt-in `START-SEED-NODE.cmd` with Tailscale Funnel; normal users should continue to use `START-AURONQ.cmd`.
 
@@ -184,10 +186,10 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
 
-The current stable release is **v1.7.8**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
+The current stable release is **v1.7.10**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
 
 ## Security status
 
-AuronQ 1.7.8 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
+AuronQ 1.7.10 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
 
 See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
