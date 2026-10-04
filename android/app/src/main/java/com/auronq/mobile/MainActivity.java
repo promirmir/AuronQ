@@ -68,6 +68,9 @@ public class MainActivity extends Activity {
     private File headerCacheFile;
     private String nodeUrl = "";
     private String walletAddress = "";
+    private String verifiedTip = "";
+    private String verifiedWork = "";
+    private long verifiedHeight = -1;
     private String currentScreen = "home";
     private String lastHistoryKey = "";
     private boolean liveBusy = false;
@@ -576,7 +579,13 @@ public class MainActivity extends Activity {
                             String historyKey = addr + ":" + snapshotState.optLong("height") + ":" + snapshotState.optInt("mempool");
                             if (!historyKey.equals(lastHistoryKey)) {
                                 try {
-                                    history = Bridge.history(node, addr, 50);
+                                    history = Bridge.quorumHistoryVerified(
+                                            prefs.getString("known_nodes", "[]"),
+                                            addr,
+                                            snapshotState.optString("verified_tip"),
+                                            snapshotState.optString("verified_chain_work"),
+                                            snapshotState.optLong("verified_height"),
+                                            50);
                                     lastHistoryKey = historyKey;
                                 } catch (Exception e) {
                                     historyError = e.getMessage();
@@ -614,6 +623,9 @@ public class MainActivity extends Activity {
     private void applySnapshot(String raw) {
         try {
             JSONObject j = new JSONObject(raw);
+            verifiedTip = j.optString("verified_tip", "");
+            verifiedWork = j.optString("verified_chain_work", "");
+            verifiedHeight = j.has("verified_height") ? j.optLong("verified_height", -1) : -1;
             long height = j.optLong("height");
             int peers = j.optInt("peers");
             int mempool = j.optInt("mempool");
@@ -685,6 +697,9 @@ public class MainActivity extends Activity {
         netStatus.setTextColor(DANGER);
         netObserved.setText(error == null ? "—" : error);
         nodeUrl = "";
+        verifiedTip = "";
+        verifiedWork = "";
+        verifiedHeight = -1;
     }
 
     private View blockRow(long height, String hash, long timestamp, int txs) {
@@ -735,8 +750,12 @@ public class MainActivity extends Activity {
             JSONArray items = j.optJSONArray("items");
             walletHistory.removeAllViews();
             int count = items == null ? 0 : items.length();
-            walletHistoryStatus.setText(count + " " + tr("transakcji", "transactions"));
-            walletHistoryStatus.setTextColor(MUTED);
+            int observed = j.optInt("peer_observed", 1);
+            int agreeing = j.optInt("peer_agreement", 1);
+            boolean multi = j.optBoolean("multi_peer_confirmed", false);
+            walletHistoryStatus.setText(count + " " + tr("transakcji", "transactions")
+                    + " • " + tr("zgodność ", "agreement ") + agreeing + "/" + observed);
+            walletHistoryStatus.setTextColor(multi ? ACCENT : MUTED);
             if (count == 0) {
                 TextView empty = text(tr("Brak transakcji dla tego portfela.", "No transactions for this wallet."), 12, false);
                 empty.setTextColor(MUTED);
@@ -856,8 +875,8 @@ public class MainActivity extends Activity {
             toast(tr("Najpierw utwórz albo zaimportuj portfel", "Create or import a wallet first"));
             return;
         }
-        if (nodeUrl.isEmpty()) {
-            toast(tr("Brak połączenia z AuronQ Mainnet", "No connection to AuronQ Mainnet"));
+        if (nodeUrl.isEmpty() || verifiedHeight < 0 || verifiedTip.isEmpty() || verifiedWork.isEmpty()) {
+            toast(tr("Brak niezależnie zweryfikowanego stanu AuronQ Mainnet", "No independently verified AuronQ Mainnet state"));
             return;
         }
         String password = sendPassword.getText().toString();
@@ -872,14 +891,25 @@ public class MainActivity extends Activity {
                 .setNegativeButton(tr("Anuluj", "Cancel"), null)
                 .setPositiveButton(tr("Wyślij", "Send"), (d, w) ->
                         run(tr("Podpisywanie i wysyłanie…", "Signing and sending…"),
-                                () -> Bridge.sendMulti(prefs.getString("known_nodes", "[]"), nodeUrl, walletFile.getAbsolutePath(), password, to, amount),
+                                () -> Bridge.sendMultiVerified(
+                                        prefs.getString("known_nodes", "[]"),
+                                        walletFile.getAbsolutePath(),
+                                        password,
+                                        to,
+                                        amount,
+                                        verifiedTip,
+                                        verifiedWork,
+                                        verifiedHeight),
                                 value -> {
                                     try {
                                         JSONObject j = new JSONObject(value);
                                         int accepted = j.optInt("direct_accepted", 1);
                                         int attempted = j.optInt("broadcast_attempted", 1);
+                                        int utxoAgree = j.optInt("utxo_peer_agreement", 1);
+                                        int utxoObserved = j.optInt("utxo_peer_observed", 1);
                                         sendResult.setText("TXID:\n" + j.optString("txid")
                                                 + "\nFee: " + j.optString("fee") + " AURQ"
+                                                + "\n" + tr("UTXO zgodne: ", "UTXO agreement: ") + utxoAgree + "/" + utxoObserved
                                                 + "\n" + tr("Rozgłoszenie bezpośrednie: ", "Direct broadcast: ") + accepted + "/" + attempted);
                                     } catch (Exception e) {
                                         sendResult.setText(value);

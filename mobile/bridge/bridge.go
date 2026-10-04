@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	mobileVersion       = "0.5.0-alpha"
+	mobileVersion       = "0.5.1-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 )
@@ -705,13 +705,13 @@ func QuorumSnapshot(knownNodesJSON string, recent int) (string, error) {
 	return string(b), nil
 }
 
-func QuorumBalanceVerified(knownNodesJSON, address string, verifiedTip, verifiedWork string, verifiedHeight int64) (string, error) {
+func verifiedStateObservations(knownNodesJSON, verifiedTip, verifiedWork string, verifiedHeight int64) ([]mobileNodeObservation, error) {
 	if verifiedHeight < 0 || strings.TrimSpace(verifiedTip) == "" || strings.TrimSpace(verifiedWork) == "" {
-		return "", errors.New("verified header state is missing")
+		return nil, errors.New("verified header state is missing")
 	}
 	obs, err := collectNodeObservations(knownNodesJSON)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	filtered := make([]mobileNodeObservation, 0, len(obs))
 	for _, o := range obs {
@@ -720,10 +720,204 @@ func QuorumBalanceVerified(knownNodesJSON, address string, verifiedTip, verified
 		}
 	}
 	if len(filtered) == 0 {
-		return "", errors.New("no reachable peer matches the independently verified header chain")
+		return nil, errors.New("no reachable peer matches the independently verified header chain")
 	}
-	nodes := make([]string, 0, len(filtered))
-	for _, o := range filtered {
+	sort.Slice(filtered, func(i, j int) bool { return filtered[i].Node < filtered[j].Node })
+	return filtered, nil
+}
+
+func historyFingerprint(items []aq.WalletHistoryItem) string {
+	cp := append([]aq.WalletHistoryItem(nil), items...)
+	sort.Slice(cp, func(i, j int) bool {
+		if cp[i].TXID != cp[j].TXID {
+			return cp[i].TXID < cp[j].TXID
+		}
+		if cp[i].Status != cp[j].Status {
+			return cp[i].Status < cp[j].Status
+		}
+		return cp[i].Type < cp[j].Type
+	})
+	b, _ := json.Marshal(cp)
+	return string(b)
+}
+
+func utxoFingerprint(items []aq.UTXORecord) string {
+	cp := append([]aq.UTXORecord(nil), items...)
+	sort.Slice(cp, func(i, j int) bool {
+		return cp[i].OutPoint.Key() < cp[j].OutPoint.Key()
+	})
+	b, _ := json.Marshal(cp)
+	return string(b)
+}
+
+func QuorumHistoryVerified(knownNodesJSON, address, verifiedTip, verifiedWork string, verifiedHeight int64, limit int) (string, error) {
+	netByte, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
+	if err != nil || netByte != aq.MainnetNetworkByte {
+		return "", errors.New("invalid AuronQ Mainnet address")
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 250 {
+		limit = 250
+	}
+	obs, err := verifiedStateObservations(knownNodesJSON, verifiedTip, verifiedWork, verifiedHeight)
+	if err != nil {
+		return "", err
+	}
+	type historyObservation struct {
+		Node  string
+		Items []aq.WalletHistoryItem
+		Key   string
+	}
+	results := make([]historyObservation, 0, len(obs))
+	for _, o := range obs {
+		cl := aq.NewClient(o.Node)
+		cl.HTTP = mobileHTTP(8 * time.Second)
+		items, err := cl.History(address, limit)
+		if err == nil {
+			results = append(results, historyObservation{Node: o.Node, Items: items, Key: historyFingerprint(items)})
+		}
+	}
+	if len(results) == 0 {
+		return "", errors.New("no verified-chain peer returned wallet history")
+	}
+	groups := map[string][]historyObservation{}
+	for _, r := range results {
+		groups[r.Key] = append(groups[r.Key], r)
+	}
+	var best []historyObservation
+	for _, g := range groups {
+		if len(g) > len(best) {
+			best = g
+		}
+	}
+	if len(results) >= 2 && len(best) < 2 {
+		return "", errors.New("verified-chain peers returned conflicting wallet history")
+	}
+	nodes := make([]string, 0, len(best))
+	for _, r := range best {
+		nodes = append(nodes, r.Node)
+	}
+	sort.Strings(nodes)
+	out := map[string]any{
+		"address": strings.TrimSpace(address),
+		"items": best[0].Items,
+		"peer_observed": len(results),
+		"peer_agreement": len(best),
+		"multi_peer_confirmed": len(best) >= 2,
+		"agreement_nodes": nodes,
+		"state_trust": "header-verified-peer-quorum",
+	}
+	raw, _ := json.Marshal(out)
+	return string(raw), nil
+}
+
+func verifiedUTXOQuorum(knownNodesJSON, address, verifiedTip, verifiedWork string, verifiedHeight int64) ([]aq.UTXORecord, []string, int, error) {
+	netByte, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
+	if err != nil || netByte != aq.MainnetNetworkByte {
+		return nil, nil, 0, errors.New("invalid AuronQ Mainnet address")
+	}
+	obs, err := verifiedStateObservations(knownNodesJSON, verifiedTip, verifiedWork, verifiedHeight)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	type utxoObservation struct {
+		Node string
+		UTXO []aq.UTXORecord
+		Key  string
+	}
+	results := make([]utxoObservation, 0, len(obs))
+	for _, o := range obs {
+		cl := aq.NewClient(o.Node)
+		cl.HTTP = mobileHTTP(8 * time.Second)
+		items, err := cl.UTXOs(address)
+		if err == nil {
+			results = append(results, utxoObservation{Node: o.Node, UTXO: items, Key: utxoFingerprint(items)})
+		}
+	}
+	if len(results) == 0 {
+		return nil, nil, 0, errors.New("no verified-chain peer returned wallet UTXOs")
+	}
+	groups := map[string][]utxoObservation{}
+	for _, r := range results {
+		groups[r.Key] = append(groups[r.Key], r)
+	}
+	var best []utxoObservation
+	for _, g := range groups {
+		if len(g) > len(best) {
+			best = g
+		}
+	}
+	if len(results) >= 2 && len(best) < 2 {
+		return nil, nil, len(results), errors.New("verified-chain peers returned conflicting wallet UTXOs")
+	}
+	nodes := make([]string, 0, len(best))
+	for _, r := range best {
+		nodes = append(nodes, r.Node)
+	}
+	sort.Strings(nodes)
+	return best[0].UTXO, nodes, len(results), nil
+}
+
+func SendMultiVerified(knownNodesJSON, walletPath, password, to, amount, verifiedTip, verifiedWork string, verifiedHeight int64) (string, error) {
+	w, err := aq.LoadWallet(walletPath, password)
+	if err != nil {
+		return "", err
+	}
+	defer w.Close()
+	if w.File.NetworkByte != aq.MainnetNetworkByte {
+		return "", errors.New("wallet is not an AuronQ Mainnet wallet")
+	}
+	amt, err := aq.ParseAmount(strings.TrimSpace(amount))
+	if err != nil {
+		return "", err
+	}
+	utxos, agreeingNodes, observed, err := verifiedUTXOQuorum(
+		knownNodesJSON, w.Address(), verifiedTip, verifiedWork, verifiedHeight,
+	)
+	if err != nil {
+		return "", err
+	}
+	tx, fee, err := w.BuildTransaction(utxos, strings.TrimSpace(to), amt, aq.MainnetNetworkByte)
+	if err != nil {
+		return "", err
+	}
+
+	accepted := make([]string, 0, len(agreeingNodes))
+	for _, node := range agreeingNodes {
+		cl := aq.NewClient(node)
+		cl.HTTP = mobileHTTP(10 * time.Second)
+		if _, err := cl.SubmitTx(tx); err == nil {
+			accepted = append(accepted, node)
+		}
+	}
+	if len(accepted) == 0 {
+		return "", errors.New("transaction was not accepted by any verified-chain peer")
+	}
+	out := map[string]any{
+		"txid": tx.ID().String(),
+		"fee_atoms": fee,
+		"fee": aq.FormatAmount(fee),
+		"broadcast_attempted": len(agreeingNodes),
+		"direct_accepted": len(accepted),
+		"accepted_nodes": accepted,
+		"utxo_peer_observed": observed,
+		"utxo_peer_agreement": len(agreeingNodes),
+		"utxo_multi_peer_confirmed": len(agreeingNodes) >= 2,
+		"state_trust": "header-verified-peer-quorum",
+	}
+	b, _ := json.Marshal(out)
+	return string(b), nil
+}
+
+func QuorumBalanceVerified(knownNodesJSON, address string, verifiedTip, verifiedWork string, verifiedHeight int64) (string, error) {
+	obs, err := verifiedStateObservations(knownNodesJSON, verifiedTip, verifiedWork, verifiedHeight)
+	if err != nil {
+		return "", err
+	}
+	nodes := make([]string, 0, len(obs))
+	for _, o := range obs {
 		nodes = append(nodes, o.Node)
 	}
 	return quorumBalanceFromNodes(nodes, address)

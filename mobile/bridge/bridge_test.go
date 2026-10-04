@@ -2,6 +2,8 @@ package bridge
 
 import (
 	"path/filepath"
+
+	aq "auronq/internal/auronq"
 	"testing"
 )
 
@@ -96,5 +98,42 @@ func TestHeaderCacheRoundTripPreservesVerifiedAnchor(t *testing.T) {
 	}
 	if got.VerifiedTip != cache.VerifiedTip || got.ChainWork != cache.ChainWork || got.NetworkID != mainnetNetworkID {
 		t.Fatalf("cache mismatch: got=%+v want=%+v", got, cache)
+	}
+}
+
+
+func TestHistoryFingerprintIgnoresPeerOrdering(t *testing.T) {
+	h1 := uint64(10)
+	a := []aq.WalletHistoryItem{
+		{TXID: "bb", Type: "received", Status: "confirmed", Height: &h1, AmountAtoms: 2},
+		{TXID: "aa", Type: "sent", Status: "confirmed", Height: &h1, AmountAtoms: 1},
+	}
+	b := []aq.WalletHistoryItem{a[1], a[0]}
+	if historyFingerprint(a) != historyFingerprint(b) {
+		t.Fatalf("equivalent history produced different fingerprints")
+	}
+}
+
+func TestUTXOFingerprintIgnoresPeerOrdering(t *testing.T) {
+	var h1, h2 aq.Hash
+	h1[63] = 1
+	h2[63] = 2
+	a := []aq.UTXORecord{
+		{OutPoint: aq.OutPoint{TxID: h2, Index: 1}, UTXO: aq.UTXO{Height: 2}},
+		{OutPoint: aq.OutPoint{TxID: h1, Index: 0}, UTXO: aq.UTXO{Height: 1}},
+	}
+	b := []aq.UTXORecord{a[1], a[0]}
+	if utxoFingerprint(a) != utxoFingerprint(b) {
+		t.Fatalf("equivalent UTXO sets produced different fingerprints")
+	}
+}
+
+func TestUTXOFingerprintDetectsStateConflict(t *testing.T) {
+	var h aq.Hash
+	h[63] = 1
+	a := []aq.UTXORecord{{OutPoint: aq.OutPoint{TxID: h, Index: 0}, UTXO: aq.UTXO{Height: 1, Out: aq.TxOutput{Value: 100}}}}
+	b := []aq.UTXORecord{{OutPoint: aq.OutPoint{TxID: h, Index: 0}, UTXO: aq.UTXO{Height: 1, Out: aq.TxOutput{Value: 101}}}}
+	if utxoFingerprint(a) == utxoFingerprint(b) {
+		t.Fatalf("conflicting UTXO sets produced the same fingerprint")
 	}
 }
