@@ -67,6 +67,8 @@ public class MainActivity extends Activity {
     private File walletFile;
     private String nodeUrl = "";
     private String walletAddress = "";
+    private String currentScreen = "home";
+    private String lastHistoryKey = "";
     private boolean liveBusy = false;
 
     private FrameLayout content;
@@ -97,6 +99,8 @@ public class MainActivity extends Activity {
     private Button copyButton;
     private Button sendShortcutButton;
     private Button deleteButton;
+    private TextView walletHistoryStatus;
+    private LinearLayout walletHistory;
 
     private EditText sendPassword;
     private EditText recipientInput;
@@ -335,6 +339,22 @@ public class MainActivity extends Activity {
         sendShortcutButton.setOnClickListener(v -> showScreen("send"));
         root.addView(sendShortcutButton, mt(12));
 
+        LinearLayout historyCard = card();
+        historyCard.addView(section(tr("HISTORIA TRANSAKCJI", "TRANSACTION HISTORY")));
+        walletHistoryStatus = text(tr("Otwórz portfel, aby pobrać historię.", "Open the wallet to load history."), 11, false);
+        walletHistoryStatus.setTextColor(MUTED);
+        historyCard.addView(walletHistoryStatus, mt(6));
+        walletHistory = new LinearLayout(this);
+        walletHistory.setOrientation(LinearLayout.VERTICAL);
+        historyCard.addView(walletHistory, mt(10));
+        Button historyRefresh = secondaryButton(tr("Odśwież historię", "Refresh history"));
+        historyRefresh.setOnClickListener(v -> {
+            lastHistoryKey = "";
+            refreshAll();
+        });
+        historyCard.addView(historyRefresh, mt(10));
+        root.addView(historyCard, mt(18));
+
         deleteButton = dangerButton(tr("Usuń lokalny portfel", "Delete local wallet"));
         deleteButton.setOnClickListener(v -> deleteWallet());
         root.addView(deleteButton, mt(28));
@@ -447,6 +467,7 @@ public class MainActivity extends Activity {
     }
 
     private void showScreen(String which) {
+        currentScreen = which;
         ((View) dashboardScreen.getParent()).setVisibility("home".equals(which) ? View.VISIBLE : View.GONE);
         ((View) walletScreen.getParent()).setVisibility("wallet".equals(which) ? View.VISIBLE : View.GONE);
         ((View) sendScreen.getParent()).setVisibility("send".equals(which) ? View.VISIBLE : View.GONE);
@@ -461,6 +482,7 @@ public class MainActivity extends Activity {
         if ("wallet".equals(which)) topTitle.setText(tr("Portfel", "Wallet"));
         if ("send".equals(which)) topTitle.setText(tr("Wyślij", "Send"));
         if ("network".equals(which)) topTitle.setText(tr("Sieć na żywo", "Network Live"));
+        if ("wallet".equals(which)) refreshAll();
     }
 
     private String discoverResilientNode() throws Exception {
@@ -540,10 +562,24 @@ public class MainActivity extends Activity {
                 rememberNetwork(node);
 
                 String balance = null;
+                String history = null;
+                String historyError = null;
                 if (walletFile.exists()) {
                     try {
                         String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
                         balance = Bridge.balance(node, addr);
+                        if ("wallet".equals(currentScreen)) {
+                            JSONObject snapshotState = new JSONObject(snapshot);
+                            String historyKey = addr + ":" + snapshotState.optLong("height") + ":" + snapshotState.optInt("mempool");
+                            if (!historyKey.equals(lastHistoryKey)) {
+                                try {
+                                    history = Bridge.history(node, addr, 50);
+                                    lastHistoryKey = historyKey;
+                                } catch (Exception e) {
+                                    historyError = e.getMessage();
+                                }
+                            }
+                        }
                     } catch (Exception ignored) {
                     }
                 }
@@ -551,10 +587,18 @@ public class MainActivity extends Activity {
                 final String finalNode = node;
                 final String finalSnapshot = snapshot;
                 final String finalBalance = balance;
+                final String finalHistory = history;
+                final String finalHistoryError = historyError;
                 runOnUiThread(() -> {
                     nodeUrl = finalNode;
                     applySnapshot(finalSnapshot);
                     if (finalBalance != null) applyBalance(finalBalance);
+                    if (finalHistory != null) {
+                        applyHistory(finalHistory);
+                    } else if (finalHistoryError != null && "wallet".equals(currentScreen)) {
+                        walletHistoryStatus.setText(tr("Historia niedostępna: ", "History unavailable: ") + finalHistoryError);
+                        walletHistoryStatus.setTextColor(DANGER);
+                    }
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> setNetworkOffline(e.getMessage()));
@@ -667,6 +711,81 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void applyHistory(String raw) {
+        try {
+            JSONObject j = new JSONObject(raw);
+            JSONArray items = j.optJSONArray("items");
+            walletHistory.removeAllViews();
+            int count = items == null ? 0 : items.length();
+            walletHistoryStatus.setText(count + " " + tr("transakcji", "transactions"));
+            walletHistoryStatus.setTextColor(MUTED);
+            if (count == 0) {
+                TextView empty = text(tr("Brak transakcji dla tego portfela.", "No transactions for this wallet."), 12, false);
+                empty.setTextColor(MUTED);
+                walletHistory.addView(empty);
+                return;
+            }
+            for (int i = 0; i < count; i++) {
+                JSONObject item = items.optJSONObject(i);
+                if (item != null) walletHistory.addView(historyRow(item));
+            }
+        } catch (Exception e) {
+            walletHistoryStatus.setText(tr("Nie udało się odczytać historii.", "Could not read transaction history."));
+            walletHistoryStatus.setTextColor(DANGER);
+        }
+    }
+
+    private View historyRow(JSONObject item) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setPadding(dp(12), dp(10), dp(12), dp(10));
+        row.setBackground(round(PANEL2, LINE, 12));
+
+        String type = item.optString("type", "received");
+        String status = item.optString("status", "confirmed");
+        String typeText;
+        if ("genesis".equals(type)) typeText = tr("Genesis", "Genesis");
+        else if ("mining".equals(type)) typeText = tr("Nagroda z kopania", "Mining reward");
+        else if ("sent".equals(type)) typeText = tr("Wysłano", "Sent");
+        else typeText = tr("Odebrano", "Received");
+
+        String statusText;
+        if ("pending".equals(status)) statusText = tr("Oczekuje", "Pending");
+        else if ("immature".equals(status)) statusText = tr("Dojrzewa", "Immature");
+        else statusText = tr("Potwierdzona", "Confirmed");
+
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        TextView kind = text(typeText, 14, true);
+        top.addView(kind, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        String amount = item.optString("amount", "0.00000000");
+        TextView value = text(("sent".equals(type) ? "-" : "+") + amount + " AURQ", 13, true);
+        value.setTextColor("sent".equals(type) ? DANGER : ACCENT);
+        top.addView(value);
+        row.addView(top);
+
+        TextView stat = text(statusText + " • " + item.optLong("confirmations", 0) + " " + tr("potw.", "conf."), 10, true);
+        stat.setTextColor("pending".equals(status) ? BLUE : MUTED);
+        row.addView(stat, mt(4));
+
+        String block = item.isNull("height") ? "mempool" : "#" + item.optLong("height");
+        TextView meta = text(formatTime(item.optLong("timestamp")) + " • " + block, 10, false);
+        meta.setTextColor(MUTED);
+        row.addView(meta, mt(3));
+
+        TextView txid = text(shortHash(item.optString("txid")), 10, false);
+        txid.setTextColor(MUTED);
+        txid.setTextIsSelectable(true);
+        row.addView(txid, mt(3));
+
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        p.bottomMargin = dp(8);
+        row.setLayoutParams(p);
+        return row;
+    }
+
     private void createWallet() {
         if (walletFile.exists()) {
             toast(tr(
@@ -679,6 +798,7 @@ public class MainActivity extends Activity {
                 () -> Bridge.createWallet(walletFile.getAbsolutePath(), password),
                 value -> {
                     walletAddress = value;
+                    lastHistoryKey = "";
                     loadWalletState();
                     refreshAll();
                     toast(tr("Portfel utworzony", "Wallet created"));
@@ -762,6 +882,7 @@ public class MainActivity extends Activity {
                 .setPositiveButton(tr("Usuń", "Delete"), (d, w) -> {
                     if (walletFile.delete()) {
                         walletAddress = "";
+                        lastHistoryKey = "";
                         passwordInput.setText("");
                         loadWalletState();
                         refreshAll();
@@ -783,6 +904,11 @@ public class MainActivity extends Activity {
             copyButton.setEnabled(false);
             sendShortcutButton.setEnabled(false);
             deleteButton.setEnabled(false);
+            if (walletHistory != null) walletHistory.removeAllViews();
+            if (walletHistoryStatus != null) {
+                walletHistoryStatus.setText(tr("Brak lokalnego portfela", "No local wallet"));
+                walletHistoryStatus.setTextColor(MUTED);
+            }
             return;
         }
         executor.execute(() -> {
@@ -842,6 +968,7 @@ public class MainActivity extends Activity {
                         return;
                     }
                     walletAddress = addr;
+                    lastHistoryKey = "";
                     loadWalletState();
                     refreshAll();
                     toast(tr("Portfel zaimportowany", "Wallet imported"));

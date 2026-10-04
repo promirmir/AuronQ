@@ -1,0 +1,69 @@
+name: Android CI
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'mobile/bridge/**'
+      - 'internal/auronq/**'
+      - 'go.mod'
+      - '.github/workflows/android-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+
+      - name: Test Go code
+        run: |
+          go test ./...
+          go vet ./...
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK/NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+
+      - name: Install gomobile
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+
+      - name: Build Go bridge AAR
+        run: |
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build Android APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleDebug

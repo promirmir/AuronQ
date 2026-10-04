@@ -62,6 +62,19 @@ func (c *Client) Balance(addr string) (BalanceResponse, error) {
 	err := c.get("/v1/balance?address="+url.QueryEscape(addr), &x)
 	return x, err
 }
+func (c *Client) History(addr string, limit int) ([]WalletHistoryItem, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 250 {
+		limit = 250
+	}
+	var x struct {
+		Items []WalletHistoryItem `json:"items"`
+	}
+	err := c.get("/v1/history?address="+url.QueryEscape(addr)+"&limit="+fmt.Sprint(limit), &x)
+	return x.Items, err
+}
 func (c *Client) UTXOs(addr string) ([]UTXORecord, error) {
 	var x []UTXORecord
 	err := c.get("/v1/utxos?address="+url.QueryEscape(addr), &x)
