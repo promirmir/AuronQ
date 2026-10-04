@@ -1,195 +1,212 @@
-# AuronQ (AURQ) — Post-Quantum UTXO Proof-of-Work Cryptocurrency
+# AuronQ (AURQ)
 
 [![CI](https://github.com/promirmir/AuronQ/actions/workflows/ci.yml/badge.svg)](https://github.com/promirmir/AuronQ/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag)](https://github.com/promirmir/AuronQ/releases)
+[![Network hardening](https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml/badge.svg)](https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml)
+[![Reproducible builds](https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml/badge.svg)](https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml)
+[![Latest release](https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag)](https://github.com/promirmir/AuronQ/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ)](go.mod)
 
-**AuronQ (AURQ)** is an open-source cryptocurrency and blockchain project written in Go. It uses a **UTXO** ledger, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
+**AuronQ** is an open-source experimental cryptocurrency network written in Go. It combines a **UTXO ledger**, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
 
-The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 and Linux amd64, and an Android wallet client is available as an alpha release.
+The AuronQ Mainnet is live. The project is designed around **independent full-node validation, replaceable peer discovery, local wallets, local explorers and no privileged founder node**.
 
-> **Security note:** AuronQ uses a standardized post-quantum signature scheme for transactions, but neither AQM64 nor the complete consensus/network implementation has received an independent professional security or cryptographic audit. “Post-quantum signatures” should not be interpreted as a guarantee that the entire system is immune to all present or future attacks.
+> [!WARNING]
+> AuronQ is experimental financial software. AQM64 and the complete consensus/network implementation have **not** received an independent professional security or cryptographic audit. Do not use substantial value.
 
-## Quick links
+## Current releases
 
-| Resource | Link |
+| Component | Current release | Status | Download |
+|---|---:|---|---|
+| Desktop / Full Node | **v1.7.11** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Linux-amd64.tar.gz) |
+| AuronQ Mobile | **0.5.1 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.1-alpha/AuronQ-Mobile-0.5.1-alpha.apk) |
+
+**Project site:** https://promirmir.github.io/AuronQ/
+
+**Release archive:** [GitHub Releases](https://github.com/promirmir/AuronQ/releases) · **History:** [CHANGELOG.md](CHANGELOG.md)
+
+### Current checksums
+
+```text
+cd1b0ff59fdaf28753758473336f2b9908c769374de5e1874dd0808ebd86f0ee  AuronQ-1.7.11-Windows-x64.zip
+bcb87751fa6c559ed008f245a804b8341c664460068cfd5623ea5d3b13372a50  AuronQ-1.7.11-Linux-amd64.tar.gz
+c224dd9f94d52132d71e7f781dfadcbbc3a7bc92c2c07bf32d38dc4929328c73  AuronQ-Mobile-0.5.1-alpha.apk
+```
+
+## What has been built
+
+| Area | Status | What AuronQ currently provides |
+|---|---|---|
+| Mainnet | ✅ Live | Fixed Network ID and genesis, persistent chain storage |
+| Full-node validation | ✅ | Local validation of blocks, transactions, signatures, timestamps, difficulty and cumulative work |
+| Wallets | ✅ | Local ML-DSA-87 wallet creation/import, send/receive and wallet history |
+| Proof-of-Work | ✅ | AQM64 CPU mining and cumulative-work chain selection |
+| P2P | ✅ | Persisted peers, peer gossip, replaceable seed hints, bounded bootstrap manifests and DNS-seed support |
+| Founder-node independence | ✅ Tested | Regression test removes the original bootstrap node permanently and joins a fresh node through a surviving peer |
+| Explorer | ✅ | Every full node serves its own read-only explorer from its locally validated chain |
+| Explorer network | ✅ | Public explorers can surface alternative HTTPS explorers learned through native P2P gossip |
+| Reorg resilience | ✅ | Higher-work fork validation, immediate post-reorg sync continuation |
+| Network hardening | ✅ | 20-node partition/fork/restart convergence tests, netgroup diversity, Sybil/eclipse concentration limits |
+| Fuzzing / race testing | ✅ | Transaction/block parser fuzzing and Linux race detector in CI |
+| Reproducible builds | ✅ | Release-style deterministic build checks on Linux and Windows |
+| Public health monitoring | ✅ | Scheduled checks for Network ID, height/tip agreement and Explorer availability |
+| Android light client | ✅ Alpha | Local header/AQM64 verification plus verified-chain multi-peer wallet-state quorum |
+| Independent external audit | ❌ Not yet | Required before treating AuronQ as mature financial infrastructure |
+| Broad independent node/miner set | ⚠️ Developing | More independently operated public nodes and miners are required |
+
+## Architecture
+
+AuronQ follows a **full-node-first** model.
+
+Each AuronQ full node:
+
+- stores and validates its own canonical blockchain;
+- independently verifies AQM64 proof-of-work and cumulative work;
+- validates UTXO spends and ML-DSA-87 signatures locally;
+- maintains its own mempool;
+- discovers and persists peers;
+- relays valid transactions and blocks;
+- serves its own local read-only blockchain Explorer.
+
+Bootstrap peers are **rendezvous hints, not authorities**. They cannot approve invalid blocks, select the canonical chain, change monetary rules or override a node's validation. Repeatedly failing seed peers are pruned from the running peer set.
+
+See [DECENTRALIZATION.md](DECENTRALIZATION.md) and [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md).
+
+## Quick start — Windows
+
+1. Download the current [Windows x64 release](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip).
+2. Verify its SHA-256 against the value above.
+3. Extract the **entire ZIP** to a new folder.
+4. Run **`START-AURONQ.cmd`**.
+5. Wait for the local full node to load and synchronize.
+6. Create or import a wallet and **back it up before using it**.
+7. Use the built-in Explorer, send/receive AURQ, and enable CPU mining only if you intentionally want to mine.
+
+Persistent Desktop data is stored under:
+
+`%AppData%\AuronQ`
+
+Windows binaries are not currently Authenticode-signed, so SmartScreen may warn on first launch.
+
+Detailed guide: [README-WINDOWS.md](README-WINDOWS.md)
+
+## Mainnet identity
+
+| Parameter | Value |
 |---|---|
-| Latest releases | [GitHub Releases](https://github.com/promirmir/AuronQ/releases) |
+| Symbol | **AURQ** |
+| Ledger | UTXO |
+| Transaction signatures | ML-DSA-87 |
+| Proof-of-Work | AQM64 |
+| Target block spacing | 600 seconds |
+| Nominal supply cap | 21,000,000 AURQ |
+| Genesis founder allocation | 210,000 AURQ |
+| Coinbase maturity | 100 blocks |
+
+**Network ID**
+
+`44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c`
+
+**Genesis hash**
+
+`5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4`
+
+Canonical specification: [MAINNET.md](MAINNET.md)
+
+## Explorer
+
+There is **no canonical central AuronQ Explorer**.
+
+Every full node exposes a read-only Explorer at:
+
+`/explorer`
+
+The Explorer reads that node's own independently validated canonical chain. A public Explorer can additionally show alternative HTTPS full-node Explorers learned through AuronQ peer gossip.
+
+One currently reachable instance is:
+
+`https://mir.taild63f46.ts.net/explorer`
+
+Its availability does not determine consensus and it has no special authority.
+
+## AuronQ Mobile
+
+AuronQ Mobile 0.5.1 Alpha is a **light wallet, not a full node**.
+
+It:
+
+- keeps private keys and ML-DSA-87 signing local on the phone;
+- independently validates the Mainnet header chain from embedded genesis;
+- locally verifies AQM64 proof-of-work, difficulty, timestamps and hash continuity;
+- accepts balance/history/UTXO state only from peers matching the verified header chain;
+- compares canonical wallet state across agreeing peers and fails closed on conflicts;
+- broadcasts locally signed transactions to agreeing verified-chain peers.
+
+It does **not** reconstruct the entire UTXO set from every full block, so it must not be described as equivalent to a full node.
+
+## Engineering milestones
+
+- **Mainnet launch:** public Windows/Linux full-node releases with immutable Network ID and genesis.
+- **Wallet safety:** guarded local wallet deletion and backup warnings.
+- **Public networking:** HTTPS/DNS peer discovery, peer gossip, persistent peers and public endpoint advertisement.
+- **Observability:** wallet history API and estimated network hash power.
+- **Explorer:** built-in read-only Explorer, then Desktop integration and CSP hardening.
+- **Resilience:** direct bootstrap fallbacks, faster reorg recovery, 20-node partition convergence and hourly public health checks.
+- **P2P hardening:** peer netgroups, DNS parent-domain grouping and sync diversity.
+- **Founder independence:** startup seeds made prunable/replaceable; regression tests remove the original bootstrap node.
+- **Mobile trust reduction:** multi-peer agreement, then local header/AQM64 verification and verified-chain wallet-state quorum.
+- **Build integrity:** deterministic/reproducible build checks on Linux and Windows.
+- **Explorer decentralization:** peer-aware links between independently hosted full-node explorers.
+
+Detailed history: [CHANGELOG.md](CHANGELOG.md)
+
+## Roadmap
+
+The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The highest-value items are:
+
+1. more independently operated public full nodes and miners;
+2. additional discovery routes, including independently operated DNS seeds;
+3. continued adversarial P2P / eclipse / Sybil / DoS testing;
+4. further reduction of light-client trust in remote full-node state;
+5. independent professional review of AQM64, consensus and networking;
+6. production-grade signing/distribution hardening for binaries and mobile releases.
+
+## Documentation
+
+| Topic | Document |
+|---|---|
 | Mainnet specification | [MAINNET.md](MAINNET.md) |
 | Protocol | [PROTOCOL.md](PROTOCOL.md) |
 | AQM64 Proof-of-Work | [AQM64.md](AQM64.md) |
 | Decentralization model | [DECENTRALIZATION.md](DECENTRALIZATION.md) |
 | Network independence | [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md) |
-| Public network | [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md) |
+| Public networking | [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md) |
 | Threat model | [THREAT-MODEL.md](THREAT-MODEL.md) |
 | Security policy | [SECURITY.md](SECURITY.md) |
+| Test matrix | [TEST-MATRIX.md](TEST-MATRIX.md) |
 | FAQ | [FAQ.md](FAQ.md) |
+| Windows guide | [README-WINDOWS.md](README-WINDOWS.md) |
 | Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Release history | [CHANGELOG.md](CHANGELOG.md) |
+| Historical material | [docs/archive/README.md](docs/archive/README.md) |
 
-## Quick Start — Windows
+## Security
 
-For a normal Windows user, no manual peer configuration, Tailscale, port forwarding, Go, Docker or command line setup is required.
+AuronQ's use of ML-DSA-87 provides a standardized post-quantum signature scheme for transactions. That **does not** prove that the complete cryptocurrency is post-quantum secure or production secure.
 
-1. Download **[AuronQ-1.7.11-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip)** from this repository's official Releases page.
-2. Verify the ZIP SHA-256 if possible:
-   `cd1b0ff59fdaf28753758473336f2b9908c769374de5e1874dd0808ebd86f0ee`
-3. Extract the **entire ZIP** to a new folder. Do not run files directly from inside the archive.
-4. Run **`START-AURONQ.cmd` once**.
-5. AuronQ Desktop will start the full node, verify the Mainnet configuration, discover the public bootstrap nodes and begin synchronization automatically.
-6. In **Wallets**, create a wallet or import an existing one. Back up the wallet before using it for anything important.
-7. After the node is synchronized, you can receive/send AURQ and optionally use the built-in CPU miner.
+AQM64, consensus, networking, wallet behavior and implementation details still require independent review.
 
-A normal user should use **`START-AURONQ.cmd`**.  
-**`START-SEED-NODE.cmd` is only for operators who intentionally want to expose a public bootstrap/full node through Tailscale Funnel.**
+Please read [SECURITY.md](SECURITY.md) before reporting or evaluating security issues.
 
-AuronQ Desktop stores its persistent data under:
+## Contributing
 
-`%AppData%\AuronQ`
+Contributions, reproducible bug reports and independent review are welcome.
 
-This includes wallets, chain data and learned peers. Updating the application does not require deleting that directory.
+- [Contributing guide](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Issue tracker](https://github.com/promirmir/AuronQ/issues)
+- [Pull requests](https://github.com/promirmir/AuronQ/pulls)
 
-Windows binaries are currently not Authenticode-signed. Windows SmartScreen may show a warning on first launch; verify that the archive came from this repository and that its SHA-256 matches the value published above before running it.
+## License
 
-For a longer Windows guide, see **[README-WINDOWS.md](README-WINDOWS.md)**.
-
-## What makes AuronQ technically distinct?
-
-- **Post-quantum transaction signatures:** ML-DSA-87 is used for transaction signing.
-- **UTXO accounting model:** transactions consume and create unspent transaction outputs.
-- **Proof-of-Work consensus:** mining uses the AuronQ-specific AQM64 construction.
-- **Independent full-node validation:** each full node validates blocks, transactions, Network ID and chain work locally.
-- **Peer-to-peer networking:** nodes discover peers through persisted peers, configured seeds, DNS seeds, an HTTPS bootstrap manifest and peer gossip.
-- **Open-source implementation:** the node, wallet-related code, protocol documentation and build/CI configuration are public in this repository.
-- **Go implementation:** CI tests Linux and Windows builds, vetting, and a race-detector run on Linux.
-
-## Who is this repository for?
-
-AuronQ may be relevant to developers, miners, node operators and researchers looking for an experimental **post-quantum cryptocurrency**, **ML-DSA blockchain implementation**, **UTXO Proof-of-Work network**, **Go cryptocurrency node**, or a public example of integrating post-quantum signatures into a cryptocurrency transaction system.
-
-## Project status
-
-Current stable desktop/full-node release: **AuronQ 1.7.11 Mainnet**.
-
-Version 1.7.11 extends the decentralization model into the Explorer UI: every full node still serves Explorer data from its own locally validated canonical chain, and public Explorers can now surface alternative HTTPS full-node Explorers learned through native AuronQ P2P gossip. No public Explorer is canonical or trusted. The founder-node-removal and replaceable-bootstrap behavior from 1.7.10 remains in place.
-
-The network is operational, but practical decentralization is still developing. The bootstrap manifest currently contains **two externally reachable public bootstrap endpoints** verified by the repository crawler. They have no consensus privileges. Additional independently operated public nodes, miners and independent discovery routes are still required before the live network can be considered operationally independent of the original operator infrastructure.
-
-## Download
-
-**Windows x64:** [AuronQ-1.7.11-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Windows-x64.zip)
-
-**Linux amd64:** [AuronQ-1.7.11-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.11/AuronQ-1.7.11-Linux-amd64.tar.gz)
-
-Release page: [AuronQ 1.7.11 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.11)
-
-SHA-256:
-
-```text
-cd1b0ff59fdaf28753758473336f2b9908c769374de5e1874dd0808ebd86f0ee  AuronQ-1.7.11-Windows-x64.zip
-bcb87751fa6c559ed008f245a804b8341c664460068cfd5623ea5d3b13372a50  AuronQ-1.7.11-Linux-amd64.tar.gz
-```
-
-Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
-
-The current Windows binaries are **not Authenticode-signed**, so Windows SmartScreen may warn on first launch. Verify the SHA-256 above and download only from this repository's Releases page.
-
-## Public blockchain explorer
-
-There is **no canonical central AuronQ Explorer**. Every AuronQ full node serves
-the same read-only Explorer from its own locally validated canonical chain at
-`/explorer`.
-
-One currently reachable public instance is:
-
-`https://mir.taild63f46.ts.net/explorer`
-
-That URL is only one full-node instance and has no special authority. If it
-disappears, other full nodes and their local Explorers continue to operate.
-
-## Built-in blockchain explorer
-
-AuronQ 1.7.5+ full nodes include a built-in, read-only blockchain explorer at:
-
-`/explorer`
-
-For a publicly reachable node, append `/explorer` to its HTTPS node address. The explorer provides:
-
-- live Mainnet height, peer count, mempool size, issued supply and estimated AQM64 network power;
-- the latest canonical blocks;
-- block lookup by height or block hash;
-- transaction lookup by TXID, including inputs, outputs, fees and confirmations;
-- address lookup with spendable/total balance and recent transaction history.
-
-Explorer endpoints are rate-limited. Explorer v1 reads canonical chain and mempool data directly from **that node**; it has no consensus privileges and does not modify blockchain state. Desktop users therefore inspect their own independently validated chain rather than trusting a project-operated explorer service.
-
-## Android alpha
-
-For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.5.1 Alpha**:
-
-- [AuronQ-Mobile-0.5.1-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.1-alpha/AuronQ-Mobile-0.5.1-alpha.apk)
-- Release page: [android-v0.5.1-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.1-alpha)
-- SHA-256: `c224dd9f94d52132d71e7f781dfadcbbc3a7bc92c2c07bf32d38dc4929328c73`
-
-AuronQ Mobile remains a **light wallet client, not a full node**. Private keys and ML-DSA-87 signing stay local on the phone. Version 0.5.1 independently validates the AuronQ Mainnet header chain from the embedded genesis header, including AQM64 proof-of-work, difficulty, timestamp and previous-hash continuity. It then accepts balance/history/UTXO state only from peers matching that locally verified header state, compares wallet state across those peers and fails closed on conflicting canonical state. Normal asynchronous mempool differences are tolerated by requiring agreement on canonical history while merging pending observations from agreeing peers.
-
-This is materially stronger than trusting one API node, but it is still **not equivalent to a full node** because the phone does not reconstruct and validate the complete UTXO/block state locally. The APK is debug-signed alpha software and has not received an independent security audit; do not use substantial value.
-
-## Mainnet identity
-
-Network ID:
-
-`44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c`
-
-Genesis hash:
-
-`5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4`
-
-Genesis founder allocation: 210,000 AURQ (1% of the nominal 21,000,000 AURQ cap). Initial subsidy: 49.5 AURQ. Coinbase maturity: 100 blocks. Target spacing: 600 seconds.
-
-## Public P2P discovery
-
-AuronQ does not use a central blockchain server. Every full node keeps and validates its own canonical chain.
-
-A fresh node can discover peers from:
-
-- previously learned peers stored locally;
-- configured fixed seeds;
-- DNS seeds;
-- the bounded HTTPS bootstrap manifest;
-- peer gossip after the first connection.
-
-The official stable manifest is:
-
-`https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
-
-At present the manifest advertises **two externally verified public bootstrap endpoints**:
-
-- `https://mir.taild63f46.ts.net`
-- `https://desktop-4nifg1j.taild63f46.ts.net`
-
-These endpoints are only first-contact hints to ordinary full nodes. They have no consensus privileges and, from the decentralization-v3 hardening onward, repeatedly failing configured seeds are pruned from the running peer set instead of remaining permanent authorities. Full nodes independently validate blocks, transactions, Network ID and cumulative chain work.
-
-AuronQ full nodes already persist verified public peers and exchange them through peer gossip. In addition, the repository now has a scheduled public-peer crawler that follows AuronQ gossip, verifies reachable Mainnet peers and can append them to `bootstrap.json` automatically. This means that, as independently operated public nodes appear, the first-contact registry can become multi-peer without relying on the founder's computer being online.
-
-This does **not** create independent peers out of nothing: the live network currently has two crawler-verified public bootstrap endpoints under the project infrastructure. More independently operated public full nodes are still required for stronger practical resilience. A completely fresh install always needs some discovery route; AuronQ also supports DNS seeds for that purpose. The automated resilience suite now explicitly proves that, once later reachable peers exist, the original bootstrap node can disappear permanently while surviving nodes continue the chain and a fresh node joins through a non-founder peer.
-
-NAT/CGNAT users can participate through outbound connections without port forwarding. Operators who intentionally want to expose a publicly reachable Windows node can use the opt-in `START-SEED-NODE.cmd` with Tailscale Funnel; normal users should continue to use `START-AURONQ.cmd`.
-
-## Network behavior
-
-The node exchanges peer metadata, transactions and blocks over its P2P HTTP transport. It validates downloaded blocks locally, selects chains by cumulative work, limits synchronization batches, rate-limits requests/block submission, persists known public peers, and repairs a same-branch peer that missed one or more block broadcasts by pushing the missing validated extension.
-
-A real two-node test synchronized the same mainnet chain through height 5 and the same tip after mining and catch-up repair.
-
-## Source and CI
-
-The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
-
-The current stable release is **v1.7.11**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
-
-## Security status
-
-AuronQ 1.7.11 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
-
-See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
+AuronQ is released under the [MIT License](LICENSE).
