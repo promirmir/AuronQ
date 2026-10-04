@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -22,5 +24,26 @@ func TestDesktopExplorerTabIsWired(t *testing.T) {
 		if !strings.Contains(html, want) {
 			t.Fatalf("desktop explorer wiring missing %q", want)
 		}
+	}
+}
+
+func TestDesktopCSPAllowsOnlyLocalExplorerFrame(t *testing.T) {
+	h := securityHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	req := httptest.NewRequest(http.MethodGet, "http://127.0.0.1:18445/", nil)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	csp := rec.Header().Get("Content-Security-Policy")
+	var frameDirective string
+	for _, part := range strings.Split(csp, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "frame-src ") {
+			frameDirective = part
+			break
+		}
+	}
+	if frameDirective != "frame-src http://127.0.0.1:18444" {
+		t.Fatalf("unexpected frame-src directive: %q (full CSP: %q)", frameDirective, csp)
 	}
 }
