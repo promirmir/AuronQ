@@ -128,6 +128,32 @@ type BootstrapManifest struct {
 	ExpiresAt int64    `json:"expires_at,omitempty"`
 }
 
+func (n *Node) PublicAdvertise() string {
+	n.pmu.RLock()
+	defer n.pmu.RUnlock()
+	return n.cfg.Advertise
+}
+
+// SetPublicAdvertise enables a newly verified-looking public endpoint at
+// runtime (for example after a local router creates a port mapping). Peers
+// still callback-verify it before admitting it to public gossip.
+func (n *Node) SetPublicAdvertise(raw string) bool {
+	adv := normalizePeer(raw)
+	if !isPublicAdvertisedPeer(adv) {
+		return false
+	}
+	n.pmu.Lock()
+	defer n.pmu.Unlock()
+	if normalizePeer(n.PublicAdvertise()) == adv {
+		return true
+	}
+	n.cfg.Advertise = adv
+	// A previous announce may have happened before NAT traversal succeeded.
+	// Clear this cache so every connected peer gets a fresh announcement.
+	n.announced = map[string]struct{}{}
+	return true
+}
+
 func NewNode(chain *Chain, cfg NodeConfig) *Node {
 	if cfg.LookupHost == nil {
 		cfg.LookupHost = net.DefaultResolver.LookupHost
@@ -430,7 +456,7 @@ func diversePeerOrder(peers []string) []string {
 
 func (n *Node) addPeer(p string) {
 	p = normalizePeer(p)
-	if p == "" || p == normalizePeer(n.cfg.Advertise) {
+	if p == "" || p == normalizePeer(n.PublicAdvertise()) {
 		return
 	}
 	n.pmu.Lock()
@@ -442,7 +468,7 @@ func (n *Node) addPeer(p string) {
 
 func (n *Node) addDiscoveredPeer(p string) {
 	p = normalizePeer(p)
-	if !isPublicAdvertisedPeer(p) || p == normalizePeer(n.cfg.Advertise) {
+	if !isPublicAdvertisedPeer(p) || p == normalizePeer(n.PublicAdvertise()) {
 		return
 	}
 	group := peerNetgroup(p)
@@ -568,7 +594,7 @@ func (n *Node) addManifestPeer(raw string) bool {
 		return false
 	}
 	p := normalizePeer(raw)
-	if p == "" || p == normalizePeer(n.cfg.Advertise) {
+	if p == "" || p == normalizePeer(n.PublicAdvertise()) {
 		return false
 	}
 	group := peerNetgroup(p)
@@ -986,7 +1012,7 @@ func (n *Node) handler() http.Handler {
 			return
 		}
 		st := n.Chain.State()
-		writeJSON(w, 200, Status{Network: n.Chain.network.Name, NetworkID: n.Chain.NetworkID(), Height: st.Height, Tip: st.Tip, ChainWork: st.ChainWork, Issued: st.Issued, IssuedCoins: float64(st.Issued) / float64(Coin), MaxSupply: MaxSupplyAtoms, Mempool: n.Chain.MempoolSize(), Peers: len(n.peerList()), NetworkHashrate: n.Chain.EstimatedNetworkHashrate(DifficultyWindow), PublicAdvertise: n.cfg.Advertise})
+		writeJSON(w, 200, Status{Network: n.Chain.network.Name, NetworkID: n.Chain.NetworkID(), Height: st.Height, Tip: st.Tip, ChainWork: st.ChainWork, Issued: st.Issued, IssuedCoins: float64(st.Issued) / float64(Coin), MaxSupply: MaxSupplyAtoms, Mempool: n.Chain.MempoolSize(), Peers: len(n.peerList()), NetworkHashrate: n.Chain.EstimatedNetworkHashrate(DifficultyWindow), PublicAdvertise: n.PublicAdvertise()})
 	})
 	mux.HandleFunc("/v1/balance", func(w http.ResponseWriter, r *http.Request) {
 		addr := r.URL.Query().Get("address")
@@ -1124,7 +1150,7 @@ func (n *Node) handler() http.Handler {
 			return
 		}
 		st := n.Chain.State()
-		writeJSON(w, 200, Hello{1, n.Chain.NetworkID(), st.Height, st.Tip, st.ChainWork, n.cfg.Advertise, n.advertisedPeerList()})
+		writeJSON(w, 200, Hello{1, n.Chain.NetworkID(), st.Height, st.Tip, st.ChainWork, n.PublicAdvertise(), n.advertisedPeerList()})
 	})
 	mux.HandleFunc("/p2p/announce", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
@@ -1443,7 +1469,7 @@ func (n *Node) pushMissingExtension(peer string, hello Hello, local ChainState) 
 	return true, nil
 }
 func (n *Node) announceSelf(peer string) {
-	adv := normalizePeer(n.cfg.Advertise)
+	adv := normalizePeer(n.PublicAdvertise())
 	if !isPublicAdvertisedPeer(adv) {
 		adv = ""
 	}

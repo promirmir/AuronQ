@@ -101,6 +101,7 @@ type App struct {
 
 	miner       minerState
 	minerCancel context.CancelFunc
+	portMapping *aq.PortMapping
 
 	logs        []string
 	token       string
@@ -910,7 +911,12 @@ func (a *App) startNode() error {
 func (a *App) stopNode() {
 	a.mu.Lock()
 	c := a.nodeCancel
+	mapping := a.portMapping
+	a.portMapping = nil
 	a.mu.Unlock()
+	if mapping != nil {
+		mapping.Close()
+	}
 	if c != nil {
 		c()
 		time.Sleep(150 * time.Millisecond)
@@ -1137,17 +1143,56 @@ func (a *App) handleSend(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true, "txid": res.TXID.String(), "fee": aq.FormatAmount(fee)})
 }
 
-func (a *App) startMiner(wallet string, threads int) error {
+func (a *App) helpNetworkWhileMining() {
+	a.mu.RLock()
+	node := a.node
+	existing := a.portMapping
+	a.mu.RUnlock()
+	if node == nil || node.PublicAdvertise() != "" || existing != nil {
+		return
+	}
+	if strings.TrimSpace(os.Getenv("AURONQ_DISABLE_AUTO_PUBLIC")) == "1" {
+		a.addLog("Public node: automatyczne mapowanie portu wyłączone przez AURONQ_DISABLE_AUTO_PUBLIC=1")
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	mapping, err := aq.TryUPnPPortMapping(ctx, 18444)
+	if err != nil {
+		a.addLog("Public node: router nie udostępnił automatycznie TCP/18444 (" + err.Error() + "); mining działa dalej przez połączenia wychodzące")
+		return
+	}
+	if !node.SetPublicAdvertise(mapping.Advertise) {
+		mapping.Close()
+		a.addLog("Public node: odrzucono wykryty endpoint")
+		return
+	}
+	a.mu.Lock()
+	if a.portMapping != nil {
+		old := a.portMapping
+		a.mu.Unlock()
+		mapping.Close()
+		_ = old
+		return
+	}
+	a.portMapping = mapping
+	a.mu.Unlock()
+	a.addLog("Public node: mining uruchomił automatyczne mapowanie TCP/18444 → " + mapping.Advertise)
+}
+
+func (a *App) startMiner(wallet string, threads int, helpNetwork bool) error {
 	a.mu.Lock()
 	if a.miner.Running {
 		a.mu.Unlock()
 		return errors.New("miner już działa")
 	}
-	if !a.nodeRun {
-		a.mu.Unlock()
-		return errors.New("najpierw uruchom node")
-	}
+	nodeRunning := a.nodeRun
 	a.mu.Unlock()
+	if !nodeRunning {
+		if err := a.startNode(); err != nil {
+			return fmt.Errorf("nie można automatycznie uruchomić noda: %w", err)
+		}
+	}
 	p, err := a.walletPath(wallet)
 	if err != nil {
 		return err
@@ -1165,6 +1210,9 @@ func (a *App) startMiner(wallet string, threads int) error {
 	}
 	if threads > runtime.NumCPU() {
 		threads = runtime.NumCPU()
+	}
+	if helpNetwork {
+		a.helpNetworkWhileMining()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.mu.Lock()
@@ -1252,14 +1300,15 @@ func (a *App) stopMiner() {
 }
 func (a *App) handleMinerStart(w http.ResponseWriter, r *http.Request) {
 	var q struct {
-		Wallet  string
-		Threads int
+		Wallet     string
+		Threads    int
+		PublicNode bool
 	}
 	if err := readBody(r, &q); err != nil {
 		apiError(w, 400, err)
 		return
 	}
-	if err := a.startMiner(q.Wallet, q.Threads); err != nil {
+	if err := a.startMiner(q.Wallet, q.Threads, q.PublicNode); err != nil {
 		apiError(w, 400, err)
 		return
 	}
