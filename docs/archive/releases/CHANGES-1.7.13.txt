@@ -1,0 +1,10 @@
+AuronQ 1.7.13 Mainnet
+
+- Fixes repeated retry loops for permanently dead DNS peers.
+- Quarantines dead/repeatedly failing peers against immediate gossip/bootstrap re-addition.
+- Hardens the automated bootstrap crawler against permanent DNS failures.
+- Runs public peer discovery hourly and improves DNS infrastructure diversity grouping.
+- Auto-advertises directly assigned public VPS/server interfaces when no explicit --advertise URL is provided.
+- Keeps callback verification before a public endpoint enters gossip.
+- Adds START-PUBLIC-NODE.cmd to the Windows release package.
+- No consensus, AQM64, difficulty, Network ID, genesis, monetary-policy or transaction-validity changes.
