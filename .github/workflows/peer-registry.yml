@@ -51,7 +51,7 @@ jobs:
           echo "changed=true" >> "$GITHUB_OUTPUT"
           branch="automation/peer-registry"
           git config user.name "github-actions[bot]"
-          git config user.email "4189826+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -C "$branch"
           git add bootstrap.json bootstrap.mainnet.json
           git commit -m "Refresh verified AuronQ public peers"
