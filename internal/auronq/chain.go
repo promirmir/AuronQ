@@ -342,10 +342,31 @@ func (c *Chain) Block(height uint64) (Block, bool) {
 	}
 	return c.blocks[height], true
 }
+
+// Headers returns a bounded canonical header range beginning at start.
+func (c *Chain) Headers(start uint64, limit int) []BlockHeader {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if limit <= 0 || start >= uint64(len(c.blocks)) {
+		return nil
+	}
+	if limit > 256 {
+		limit = 256
+	}
+	end := start + uint64(limit)
+	if end > uint64(len(c.blocks)) {
+		end = uint64(len(c.blocks))
+	}
+	out := make([]BlockHeader, 0, end-start)
+	for i := start; i < end; i++ {
+		out = append(out, c.blocks[i].Header)
+	}
+	return out
+}
 func (c *Chain) NetworkID() Hash         { return c.network.NetworkID() }
 func (c *Chain) Network() *NetworkConfig { return c.network }
 
-func expectedTarget(history []Block, height uint64) (Target, error) {
+func expectedTargetHeaders(history []BlockHeader, height uint64) (Target, error) {
 	if height == 0 {
 		return PowLimit, nil
 	}
@@ -354,7 +375,7 @@ func expectedTarget(history []Block, height uint64) (Target, error) {
 	}
 	prev := history[len(history)-1]
 	if height == 1 || len(history) < 2 {
-		return prev.Header.Target, nil
+		return prev.Target, nil
 	}
 
 	// LWMA-inspired per-block adjustment. It reacts quickly to a new network's
@@ -369,7 +390,7 @@ func expectedTarget(history []Block, height uint64) (Target, error) {
 	targetSum := new(big.Int)
 	for j := 1; j <= n; j++ {
 		i := start + j
-		solve := history[i].Header.Timestamp - history[i-1].Header.Timestamp
+		solve := history[i].Timestamp - history[i-1].Timestamp
 		if solve < 1 {
 			solve = 1
 		}
@@ -379,10 +400,10 @@ func expectedTarget(history []Block, height uint64) (Target, error) {
 		w := int64(j)
 		weighted += solve * w
 		weightSum += w
-		targetSum.Add(targetSum, history[i].Header.Target.Big())
+		targetSum.Add(targetSum, history[i].Target.Big())
 	}
 	if weightSum == 0 || n == 0 {
-		return prev.Header.Target, nil
+		return prev.Target, nil
 	}
 	avgSolve := weighted / weightSum
 	if avgSolve < 1 {
@@ -393,7 +414,7 @@ func expectedTarget(history []Block, height uint64) (Target, error) {
 	next.Div(next, big.NewInt(TargetBlockSeconds))
 
 	// Prevent pathological one-block jumps and never exceed the launch pow limit.
-	prevBig := prev.Header.Target.Big()
+	prevBig := prev.Target.Big()
 	minT := new(big.Int).Div(new(big.Int).Set(prevBig), big.NewInt(4))
 	maxT := new(big.Int).Mul(new(big.Int).Set(prevBig), big.NewInt(4))
 	if next.Cmp(minT) < 0 {
@@ -411,17 +432,76 @@ func expectedTarget(history []Block, height uint64) (Target, error) {
 	return TargetFromBig(next), nil
 }
 
-func medianTimePast(history []Block) int64 {
+func expectedTarget(history []Block, height uint64) (Target, error) {
+	headers := make([]BlockHeader, len(history))
+	for i := range history {
+		headers[i] = history[i].Header
+	}
+	return expectedTargetHeaders(headers, height)
+}
+
+func medianTimePastHeaders(history []BlockHeader) int64 {
 	n := MedianTimeWindow
 	if len(history) < n {
 		n = len(history)
 	}
 	ts := make([]int64, n)
 	for i := 0; i < n; i++ {
-		ts[i] = history[len(history)-n+i].Header.Timestamp
+		ts[i] = history[len(history)-n+i].Timestamp
 	}
 	sort.Slice(ts, func(i, j int) bool { return ts[i] < ts[j] })
 	return ts[n/2]
+}
+
+func medianTimePast(history []Block) int64 {
+	headers := make([]BlockHeader, len(history))
+	for i := range history {
+		headers[i] = history[i].Header
+	}
+	return medianTimePastHeaders(headers)
+}
+
+// ValidateHeaderEnvelope validates the consensus-critical properties that can be
+// checked from headers alone. It is shared with light clients so they do not
+// need a second implementation of AuronQ difficulty/timestamp/PoW rules.
+//
+// This does not validate transactions, UTXO state, coinbase value or Merkle
+// contents and therefore is not a substitute for full-node validation.
+func ValidateHeaderEnvelope(header BlockHeader, history []BlockHeader, now int64) error {
+	if len(history) == 0 {
+		return errors.New("header history is empty")
+	}
+	prev := history[len(history)-1]
+	if header.Version != BlockVersion {
+		return errors.New("unsupported block version")
+	}
+	if header.PowAlgo != PowAlgorithmAQM64 {
+		return errors.New("unsupported proof-of-work algorithm")
+	}
+	if header.Height != prev.Height+1 {
+		return fmt.Errorf("unexpected height %d", header.Height)
+	}
+	if header.PrevHash != prev.Hash() {
+		return errors.New("previous hash mismatch")
+	}
+	target, err := expectedTargetHeaders(history, header.Height)
+	if err != nil {
+		return err
+	}
+	if header.Target != target {
+		return errors.New("incorrect target")
+	}
+	pow, err := PowHash(header)
+	if err != nil || pow.Big().Cmp(header.Target.Big()) > 0 {
+		return errors.New("insufficient proof of work")
+	}
+	if header.Timestamp <= medianTimePastHeaders(history) {
+		return errors.New("timestamp not greater than median time past")
+	}
+	if header.Timestamp > now+MaxFutureSeconds {
+		return errors.New("timestamp too far in future")
+	}
+	return nil
 }
 
 func validateApplyBlock(base map[string]UTXO, state *ChainState, b *Block, history []Block, now int64, maturity uint64) error {
