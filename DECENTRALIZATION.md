@@ -75,13 +75,20 @@ miner does.
 ## Mobile
 
 AuronQ Mobile is currently a wallet/light client, not a full consensus node. It
-keeps private keys locally, verifies the AuronQ Mainnet Network ID, remembers
-public peers learned from the P2P network and can move away from its initial
-bootstrap peers.
+keeps private keys locally and independently verifies the Mainnet header chain
+from embedded genesis, including AQM64 proof-of-work, difficulty, timestamp and
+previous-hash continuity. It remembers public peers learned from the P2P network
+and can move away from its initial bootstrap peers.
 
-The mobile client must not be described as contributing the same consensus
-validation as AuronQ Desktop until it implements independent header/proof-of-work
-verification or a full-node mode.
+Wallet balance, history and spendable UTXO state are not reconstructed locally
+from every full block. Mobile therefore accepts that state only from replaceable
+full nodes matching its independently verified header state and compares their
+responses. Conflicting canonical wallet state fails closed; ordinary asynchronous
+mempool differences are handled separately.
+
+The mobile client must not be described as contributing the same full-state
+validation as AuronQ Desktop until it implements complete block/UTXO validation
+or a full-node mode.
 
 Its bootstrap manifest is an optional freshness source. A bundled peer snapshot
 is tried independently, and learned AuronQ peers are persisted by the app.
