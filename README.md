@@ -30,9 +30,9 @@ The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 
 
 For a normal Windows user, no manual peer configuration, Tailscale, port forwarding, Go, Docker or command line setup is required.
 
-1. Download **[AuronQ-1.7.4-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.4/AuronQ-1.7.4-Windows-x64.zip)** from this repository's official Releases page.
+1. Download **[AuronQ-1.7.5-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.5/AuronQ-1.7.5-Windows-x64.zip)** from this repository's official Releases page.
 2. Verify the ZIP SHA-256 if possible:
-   `ab863dbf7eebc6f8e44c76afe6a6221079e6f0ba18f813a5c5a99fcfe28ba1a0`
+   `cb74453965d641cc699e34037f1cb66fcaf4cc40757ade84cab78b350d5ae093`
 3. Extract the **entire ZIP** to a new folder. Do not run files directly from inside the archive.
 4. Run **`START-AURONQ.cmd` once**.
 5. AuronQ Desktop will start the full node, verify the Mainnet configuration, discover the public bootstrap nodes and begin synchronization automatically.
@@ -68,30 +68,46 @@ AuronQ may be relevant to developers, miners, node operators and researchers loo
 
 ## Project status
 
-Current stable desktop/full-node release: **AuronQ 1.7.4 Mainnet**.
+Current stable desktop/full-node release: **AuronQ 1.7.5 Mainnet**.
 
-Version 1.7.4 adds a rate-limited public wallet-history endpoint for light/mobile clients and exposes an **estimated AQM64 network hashrate** derived from recent canonical block work and timestamps. AuronQ Desktop displays this as **Network power (est.)**. This value is an estimate, not a direct measurement of every miner.
+Version 1.7.5 adds a built-in **AuronQ Explorer** at `/explorer` on every full node. It can search addresses, transaction IDs, block heights and block hashes, and shows live height, peers, mempool, issued supply and estimated AQM64 network power. The explorer is read-only and does not change consensus behavior.
 
 The network is operational, but decentralization is still developing. The bootstrap manifest currently contains **two independently reachable public bootstrap endpoints**, both externally verified by the repository crawler. Bootstrap nodes have no consensus privileges; every full node validates the canonical chain itself. Additional independently operated public nodes and discovery routes are still desirable to reduce first-contact dependency further.
 
 ## Download
 
-**Windows x64:** [AuronQ-1.7.4-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.4/AuronQ-1.7.4-Windows-x64.zip)
+**Windows x64:** [AuronQ-1.7.5-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.5/AuronQ-1.7.5-Windows-x64.zip)
 
-**Linux amd64:** [AuronQ-1.7.4-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.4/AuronQ-1.7.4-Linux-amd64.tar.gz)
+**Linux amd64:** [AuronQ-1.7.5-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.5/AuronQ-1.7.5-Linux-amd64.tar.gz)
 
-Release page: [AuronQ 1.7.4 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.4)
+Release page: [AuronQ 1.7.5 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.5)
 
 SHA-256:
 
 ```text
-ab863dbf7eebc6f8e44c76afe6a6221079e6f0ba18f813a5c5a99fcfe28ba1a0  AuronQ-1.7.4-Windows-x64.zip
-8dd43dbef6c1e8eb4aaa7eb5e5dc7f3d1f3064a6555cf7788456dcfd480b5a61  AuronQ-1.7.4-Linux-amd64.tar.gz
+cb74453965d641cc699e34037f1cb66fcaf4cc40757ade84cab78b350d5ae093  AuronQ-1.7.5-Windows-x64.zip
+7cac8afd5d244cdeebbf3355c81219e2da26b91fef3e02e233052358e4bce4b5  AuronQ-1.7.5-Linux-amd64.tar.gz
 ```
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
 
 The current Windows binaries are **not Authenticode-signed**, so Windows SmartScreen may warn on first launch. Verify the SHA-256 above and download only from this repository's Releases page.
+
+## Built-in blockchain explorer
+
+AuronQ 1.7.5+ full nodes include a built-in, read-only blockchain explorer at:
+
+`/explorer`
+
+For a publicly reachable node, append `/explorer` to its HTTPS node address. The explorer provides:
+
+- live Mainnet height, peer count, mempool size, issued supply and estimated AQM64 network power;
+- the latest canonical blocks;
+- block lookup by height or block hash;
+- transaction lookup by TXID, including inputs, outputs, fees and confirmations;
+- address lookup with spendable/total balance and recent transaction history.
+
+Explorer endpoints are rate-limited. Explorer v1 reads canonical chain and mempool data directly from the full node; it has no consensus privileges and does not modify blockchain state.
 
 ## Android alpha
 
@@ -154,10 +170,10 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
 
-The current stable release is **v1.7.4**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
+The current stable release is **v1.7.5**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
 
 ## Security status
 
-AuronQ 1.7.4 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
+AuronQ 1.7.5 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
 
 See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
