@@ -71,6 +71,7 @@ type appState struct {
 	Peers           int        `json:"peers"`
 	NetworkHashrate float64    `json:"network_hashrate"`
 	PublicEndpoint  string     `json:"public_endpoint,omitempty"`
+	PublicVerified  bool       `json:"public_verified"`
 	SyncTarget      uint64     `json:"sync_target"`
 	Synchronized    bool       `json:"synchronized"`
 	GPUName         string     `json:"gpu_name,omitempty"`
@@ -95,8 +96,9 @@ type App struct {
 	nodeOwned  bool
 	nodeErr    string
 
-	portMapping *aq.PortMapping
-	publicCancel context.CancelFunc
+	portMapping   *aq.PortMapping
+	publicCancel   context.CancelFunc
+	publicVerified bool
 
 	minerCmd           *exec.Cmd
 	miner              minerState
@@ -394,6 +396,7 @@ func (a *App) state() appState {
 	gpu := a.gpuName
 	logs := append([]string(nil), a.logs...)
 	mapping := a.portMapping
+	publicVerified := a.publicVerified
 	a.mu.RUnlock()
 
 	st := appState{
@@ -406,8 +409,9 @@ func (a *App) state() appState {
 		SyncTarget:  syncTarget,
 		GPUName:     gpu,
 		Miner:       miner,
-		Settings:    cfg,
-		Logs:        logs,
+		Settings:       cfg,
+		Logs:           logs,
+		PublicVerified: publicVerified,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
@@ -594,6 +598,7 @@ func (a *App) monitorNetwork() {
 	defer ticker.Stop()
 	for {
 		a.refreshSyncTarget()
+		a.refreshPublicVerification()
 		select {
 		case <-a.exit:
 			return
@@ -978,6 +983,10 @@ func (a *App) ensurePublicPeer() {
 	}
 	a.addLog("Public node: TCP/18444 mapped to " + mapping.Advertise)
 	a.announcePublic(mapping.Advertise)
+	go func() {
+		time.Sleep(2 * time.Second)
+		a.refreshPublicVerification()
+	}()
 
 	ctxLoop, cancelLoop := context.WithCancel(context.Background())
 	a.mu.Lock()
@@ -998,6 +1007,75 @@ func (a *App) ensurePublicPeer() {
 			}
 		}
 	}()
+}
+
+func (a *App) refreshPublicVerification() {
+	endpoint := ""
+	a.mu.RLock()
+	if a.portMapping != nil {
+		endpoint = a.portMapping.Advertise
+	}
+	a.mu.RUnlock()
+
+	if endpoint == "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
+		if st, err := aq.NewClient(localNodeURL).StatusContext(ctx); err == nil &&
+			st.NetworkID == a.network.NetworkID() {
+			endpoint = strings.TrimSpace(st.PublicAdvertise)
+		}
+		cancel()
+	}
+	if endpoint == "" {
+		a.mu.Lock()
+		a.publicVerified = false
+		a.mu.Unlock()
+		return
+	}
+
+	type result struct{ seen bool }
+	ch := make(chan result, len(a.bootstrap))
+	for _, peer := range a.bootstrap {
+		peer := peer
+		go func() {
+			client := &http.Client{Timeout: 1800 * time.Millisecond}
+			resp, err := client.Get(strings.TrimRight(peer, "/") + "/p2p/hello")
+			if err != nil {
+				ch <- result{}
+				return
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				ch <- result{}
+				return
+			}
+			var h aq.Hello
+			if json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&h) != nil ||
+				h.ProtocolVersion != 1 || h.NetworkID != a.network.NetworkID() {
+				ch <- result{}
+				return
+			}
+			for _, p := range h.Peers {
+				if strings.TrimRight(strings.TrimSpace(p), "/") == strings.TrimRight(endpoint, "/") {
+					ch <- result{seen: true}
+					return
+				}
+			}
+			ch <- result{}
+		}()
+	}
+	verified := false
+	for range a.bootstrap {
+		if (<-ch).seen {
+			verified = true
+		}
+	}
+	a.mu.Lock()
+	previous := a.publicVerified
+	a.publicVerified = verified
+	a.mu.Unlock()
+	if verified && !previous {
+		a.addLog("Public node: remote peer callback verification confirmed")
+	}
 }
 
 func (a *App) announcePublic(endpoint string) {
@@ -1046,6 +1124,7 @@ func (a *App) closePublicMapping() {
 	ownedNode := a.node
 	a.portMapping = nil
 	a.publicCancel = nil
+	a.publicVerified = false
 	a.mu.Unlock()
 	if cancel != nil {
 		cancel()
