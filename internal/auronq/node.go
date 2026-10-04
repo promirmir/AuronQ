@@ -62,6 +62,7 @@ const (
 	requestRateWindowDuration    = 10 * time.Second
 	maxRequestsPerIPWindow       = 320
 	maxBlocksPerIPWindow         = 8
+	maxHistoryRequestsPerIPWindow = 12
 	maxRateEntries               = 8192
 )
 
@@ -91,6 +92,7 @@ type Status struct {
 	MaxSupply   uint64  `json:"max_supply_atoms"`
 	Mempool     int     `json:"mempool"`
 	Peers       int     `json:"peers"`
+	NetworkHashrate float64 `json:"network_hashrate"`
 }
 
 type BalanceResponse struct {
@@ -717,6 +719,11 @@ func (n *Node) allowBlockRequest(r *http.Request) bool {
 	return n.allowRate(ip+"|block", maxBlocksPerIPWindow)
 }
 
+func (n *Node) allowHistoryRequest(r *http.Request) bool {
+	ip := requestSourceIP(r.RemoteAddr)
+	return n.allowRate(ip+"|history", maxHistoryRequestsPerIPWindow)
+}
+
 func (n *Node) handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/status", func(w http.ResponseWriter, r *http.Request) {
@@ -725,7 +732,7 @@ func (n *Node) handler() http.Handler {
 			return
 		}
 		st := n.Chain.State()
-		writeJSON(w, 200, Status{Network: n.Chain.network.Name, NetworkID: n.Chain.NetworkID(), Height: st.Height, Tip: st.Tip, ChainWork: st.ChainWork, Issued: st.Issued, IssuedCoins: float64(st.Issued) / float64(Coin), MaxSupply: MaxSupplyAtoms, Mempool: n.Chain.MempoolSize(), Peers: len(n.peerList())})
+		writeJSON(w, 200, Status{Network: n.Chain.network.Name, NetworkID: n.Chain.NetworkID(), Height: st.Height, Tip: st.Tip, ChainWork: st.ChainWork, Issued: st.Issued, IssuedCoins: float64(st.Issued) / float64(Coin), MaxSupply: MaxSupplyAtoms, Mempool: n.Chain.MempoolSize(), Peers: len(n.peerList()), NetworkHashrate: n.Chain.EstimatedNetworkHashrate(DifficultyWindow)})
 	})
 	mux.HandleFunc("/v1/balance", func(w http.ResponseWriter, r *http.Request) {
 		addr := r.URL.Query().Get("address")
@@ -735,6 +742,35 @@ func (n *Node) handler() http.Handler {
 			return
 		}
 		writeJSON(w, 200, BalanceResponse{addr, sp, total})
+	})
+	mux.HandleFunc("/v1/history", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(405)
+			return
+		}
+		if !n.allowHistoryRequest(r) {
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "history request rate limit exceeded"})
+			return
+		}
+		addr := r.URL.Query().Get("address")
+		limit := 100
+		if raw := r.URL.Query().Get("limit"); raw != "" {
+			v, err := strconv.Atoi(raw)
+			if err != nil || v < 1 {
+				writeJSON(w, 400, map[string]string{"error": "invalid history limit"})
+				return
+			}
+			if v > 250 {
+				v = 250
+			}
+			limit = v
+		}
+		items, err := n.Chain.HistoryForAddress(addr, limit)
+		if err != nil {
+			writeJSON(w, 400, map[string]string{"error": err.Error()})
+			return
+		}
+		writeJSON(w, 200, map[string]any{"address": addr, "height": n.Chain.Height(), "items": items})
 	})
 	mux.HandleFunc("/v1/utxos", func(w http.ResponseWriter, r *http.Request) {
 		addr := r.URL.Query().Get("address")
