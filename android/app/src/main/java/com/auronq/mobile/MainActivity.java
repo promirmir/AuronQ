@@ -74,6 +74,7 @@ public class MainActivity extends Activity {
     private String currentScreen = "home";
     private String lastHistoryKey = "";
     private boolean liveBusy = false;
+    private boolean networkReachable = false;
 
     private FrameLayout content;
     private LinearLayout dashboardScreen;
@@ -431,6 +432,12 @@ public class MainActivity extends Activity {
         netStatus.setTextColor(MUTED);
         root.addView(netStatus, mt(16));
 
+        TextView firstSyncNote = text(tr(
+                "Pierwsze uruchomienie może potrwać dłużej, ponieważ telefon lokalnie weryfikuje łańcuch nagłówków AQM64 od genesis. Kolejne uruchomienia korzystają z zapisanego, zweryfikowanego stanu i powinny być wyraźnie szybsze.",
+                "The first launch can take longer because the phone locally verifies the AQM64 header chain from genesis. Later launches reuse the saved verified state and should be noticeably faster."), 11, false);
+        firstSyncNote.setTextColor(MUTED);
+        root.addView(firstSyncNote, mt(8));
+
         LinearLayout stats1 = row();
         netHeight = statCard(stats1, tr("WYSOKOŚĆ", "HEIGHT"), "—", tr("blok", "block"));
         netPeers = statCard(stats1, "PEERS", "0", tr("połączenia", "connections"));
@@ -501,7 +508,7 @@ public class MainActivity extends Activity {
             JSONArray a = new JSONArray(cached);
             for (int i = 0; i < a.length() && i < 32; i++) {
                 String p = a.optString(i, "").trim();
-                if (p.startsWith("https://")) candidates.add(p);
+                if (p.startsWith("https://") || p.startsWith("http://")) candidates.add(p);
             }
         } catch (Exception ignored) {
         }
@@ -526,7 +533,7 @@ public class MainActivity extends Activity {
                 JSONArray a = new JSONArray(learned);
                 for (int i = 0; i < a.length() && nodes.size() < 32; i++) {
                     String p = a.optString(i, "").trim();
-                    if (p.startsWith("https://")) nodes.add(p);
+                    if (p.startsWith("https://") || p.startsWith("http://")) nodes.add(p);
                 }
             } catch (Exception ignored) {
             }
@@ -535,7 +542,7 @@ public class MainActivity extends Activity {
                 JSONArray old = new JSONArray(prefs.getString("known_nodes", "[]"));
                 for (int i = 0; i < old.length() && nodes.size() < 32; i++) {
                     String p = old.optString(i, "").trim();
-                    if (p.startsWith("https://")) nodes.add(p);
+                    if (p.startsWith("https://") || p.startsWith("http://")) nodes.add(p);
                 }
             } catch (Exception ignored) {
             }
@@ -556,6 +563,17 @@ public class MainActivity extends Activity {
         executor.execute(() -> {
             try {
                 String knownNodes = prefs.getString("known_nodes", "[]");
+
+                // First establish reachability and show it immediately. Fresh
+                // installs may need to verify hundreds of memory-hard AQM64
+                // headers; that work must not look like "no connection".
+                try {
+                    String preview = Bridge.quorumSnapshot(knownNodes, 1);
+                    final String finalPreview = preview;
+                    runOnUiThread(() -> applyNetworkPreview(finalPreview));
+                } catch (Exception ignored) {
+                }
+
                 String snapshot = Bridge.quorumSnapshotVerified(knownNodes, headerCacheFile.getAbsolutePath(), 6);
                 JSONObject snapshotState = new JSONObject(snapshot);
                 String node = snapshotState.optString("node", "").trim();
@@ -619,7 +637,7 @@ public class MainActivity extends Activity {
                     }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> setNetworkOffline(e.getMessage()));
+                runOnUiThread(() -> handleNetworkRefreshFailure(e.getMessage()));
             } finally {
                 liveBusy = false;
             }
@@ -629,6 +647,7 @@ public class MainActivity extends Activity {
     private void applySnapshot(String raw) {
         try {
             JSONObject j = new JSONObject(raw);
+            networkReachable = true;
             verifiedTip = j.optString("verified_tip", "");
             verifiedWork = j.optString("verified_chain_work", "");
             verifiedHeight = j.has("verified_height") ? j.optLong("verified_height", -1) : -1;
@@ -695,7 +714,57 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void applyNetworkPreview(String raw) {
+        try {
+            JSONObject j = new JSONObject(raw);
+            networkReachable = true;
+            nodeUrl = j.optString("node", nodeUrl);
+            long height = j.optLong("height");
+            int peers = j.optInt("peers");
+            int mempool = j.optInt("mempool");
+
+            dashHeight.setText(String.valueOf(height));
+            dashPeers.setText(String.valueOf(peers));
+            dashMempool.setText(String.valueOf(mempool));
+            dashNode.setText(headerCacheFile != null && headerCacheFile.exists()
+                    ? tr("● Połączono • trwa weryfikacja AQM64…", "● Connected • verifying AQM64…")
+                    : tr("● Połączono • pierwsza weryfikacja AQM64 może potrwać dłużej…", "● Connected • first AQM64 verification may take longer…"));
+            dashNode.setTextColor(BLUE);
+            dashTip.setText("Tip: " + shortHash(j.optString("tip")));
+
+            netStatus.setText(tr("● Sieć osiągalna • lokalna weryfikacja nagłówków trwa", "● Network reachable • local header verification in progress"));
+            netStatus.setTextColor(BLUE);
+            netHeight.setText(String.valueOf(height));
+            netPeers.setText(String.valueOf(peers));
+            netMempool.setText(String.valueOf(mempool));
+            netNode.setText(j.optString("node", nodeUrl));
+            netTip.setText(j.optString("tip"));
+            netWork.setText(j.optString("chain_work"));
+            netObserved.setText(j.optString("observed_at"));
+            topNetworkDot.setTextColor(BLUE);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void handleNetworkRefreshFailure(String error) {
+        if (networkReachable) {
+            topNetworkDot.setTextColor(BLUE);
+            dashNode.setText(verifiedHeight >= 0
+                    ? tr("● Ostatni stan zweryfikowany • ponawiam połączenie", "● Last state verified • reconnecting")
+                    : tr("● Sieć osiągalna • weryfikacja przerwana, ponawiam", "● Network reachable • verification interrupted, retrying"));
+            dashNode.setTextColor(BLUE);
+            netStatus.setText(verifiedHeight >= 0
+                    ? tr("● Chwilowy błąd odświeżania • zachowano zweryfikowany stan", "● Temporary refresh error • verified state preserved")
+                    : tr("● Połączono z peerem • ponawiam lokalną weryfikację AQM64", "● Peer reachable • retrying local AQM64 verification"));
+            netStatus.setTextColor(BLUE);
+            netObserved.setText(error == null ? "—" : error);
+            return;
+        }
+        setNetworkOffline(error);
+    }
+
     private void setNetworkOffline(String error) {
+        networkReachable = false;
         topNetworkDot.setTextColor(DANGER);
         dashNode.setText(tr("● Brak połączenia", "● Offline"));
         dashNode.setTextColor(DANGER);

@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,7 +20,7 @@ import (
 )
 
 const (
-	mobileVersion       = "0.5.2-alpha"
+	mobileVersion       = "0.5.3-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 )
@@ -26,6 +28,9 @@ const (
 var bundledBootstrapPeers = []string{
 	"https://mir.taild63f46.ts.net",
 	"https://desktop-4nifg1j.taild63f46.ts.net",
+	"http://45.88.201.77:18444",
+	"http://54.38.81.30:18444",
+	"http://69.173.206.211:18444",
 }
 
 type bootstrapManifest struct {
@@ -52,12 +57,58 @@ type mobileNodeObservation struct {
 	Peers     int    `json:"peers"`
 }
 
+func mobileNonPublicIP(ip net.IP) bool {
+	if ip == nil || !ip.IsGlobalUnicast() || ip.IsLoopback() || ip.IsUnspecified() ||
+		ip.IsMulticast() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+		return true
+	}
+	if v4 := ip.To4(); v4 != nil {
+		if v4[0] == 100 && v4[1] >= 64 && v4[1] <= 127 {
+			return true
+		}
+		if (v4[0] == 192 && v4[1] == 0 && v4[2] == 2) ||
+			(v4[0] == 198 && v4[1] == 51 && v4[2] == 100) ||
+			(v4[0] == 203 && v4[1] == 0 && v4[2] == 113) {
+			return true
+		}
+	}
+	if v6 := ip.To16(); v6 != nil && ip.To4() == nil &&
+		v6[0] == 0x20 && v6[1] == 0x01 && v6[2] == 0x0d && v6[3] == 0xb8 {
+		return true
+	}
+	return false
+}
+
+func safeMobileDNSHost(host string) bool {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	return host != "" && strings.Contains(host, ".") &&
+		host != "localhost" &&
+		!strings.HasSuffix(host, ".localhost") &&
+		!strings.HasSuffix(host, ".local") &&
+		!strings.HasSuffix(host, ".internal") &&
+		!strings.HasSuffix(host, ".home.arpa")
+}
+
 func normalizeMobileNode(raw string) string {
-	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
-	if raw == "" || !strings.HasPrefix(raw, "https://") {
+	raw = strings.TrimSpace(strings.TrimRight(raw, "/"))
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" || u.User != nil || u.Fragment != "" || u.RawQuery != "" ||
+		(u.Path != "" && u.Path != "/") || (u.Scheme != "http" && u.Scheme != "https") {
 		return ""
 	}
-	return raw
+	host := strings.Trim(u.Hostname(), "[]")
+	if ip := net.ParseIP(host); ip != nil {
+		if mobileNonPublicIP(ip) {
+			return ""
+		}
+		return u.Scheme + "://" + u.Host
+	}
+	// Cleartext is accepted only for literal globally routable IPs. DNS peers
+	// must use HTTPS so a learned hostname cannot silently downgrade transport.
+	if u.Scheme != "https" || !safeMobileDNSHost(host) {
+		return ""
+	}
+	return "https://" + u.Host
 }
 
 func addMobileCandidate(out *[]string, seen map[string]bool, raw string) {
@@ -479,6 +530,12 @@ func verifyHeaderChain(node, cachePath string) (headerVerification, error) {
 			checked++
 			next++
 		}
+		// Persist each successfully verified batch. A flaky peer or a process
+		// restart can then resume from the last cryptographically verified height
+		// instead of replaying AQM64 from genesis again.
+		if err := saveHeaderCache(cachePath, cache); err != nil {
+			return out, err
+		}
 	}
 
 	if cache.VerifiedHeight != st.Height ||
@@ -669,8 +726,8 @@ func DiscoverNode() (string, error) {
 	seen := map[string]bool{}
 	candidates := make([]string, 0, len(bundledBootstrapPeers)+len(manifestPeers))
 	add := func(p string) {
-		p = strings.TrimRight(strings.TrimSpace(p), "/")
-		if p == "" || seen[p] || !strings.HasPrefix(p, "https://") {
+		p = normalizeMobileNode(p)
+		if p == "" || seen[p] {
 			return
 		}
 		seen[p] = true
@@ -1333,8 +1390,8 @@ func PeerCandidates(nodeURL string) (string, error) {
 	seen := map[string]bool{}
 	out := make([]string, 0, len(hello.Peers)+2)
 	add := func(p string) {
-		p = strings.TrimRight(strings.TrimSpace(p), "/")
-		if p == "" || seen[p] || !strings.HasPrefix(p, "https://") {
+		p = normalizeMobileNode(p)
+		if p == "" || seen[p] {
 			return
 		}
 		seen[p] = true

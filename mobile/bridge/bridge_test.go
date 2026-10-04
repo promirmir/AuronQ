@@ -3,6 +3,7 @@ package bridge
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 
 	aq "auronq/internal/auronq"
 	"testing"
@@ -212,5 +213,44 @@ func TestCachedTipCheckResetsOnlyOnConfirmedHistoryMismatch(t *testing.T) {
 	}
 	if !reset {
 		t.Fatal("confirmed same-height header mismatch must request a cache rebuild")
+	}
+}
+
+func TestNormalizeMobileNodeAcceptsOnlySafePublicHTTPOrHTTPS(t *testing.T) {
+	for _, raw := range []string{
+		"https://node.example",
+		"https://45.88.201.77:18444",
+		"http://45.88.201.77:18444",
+		"http://[2606:4700:4700::1111]:18444",
+	} {
+		if got := normalizeMobileNode(raw); got == "" {
+			t.Fatalf("safe public node rejected: %q", raw)
+		}
+	}
+	for _, raw := range []string{
+		"http://node.example",
+		"http://192.168.1.10:18444",
+		"http://10.0.0.2:18444",
+		"http://100.64.0.1:18444",
+		"http://127.0.0.1:18444",
+		"https://localhost:18444",
+		"https://node.local:18444",
+		"https://203.0.113.5:18444",
+	} {
+		if got := normalizeMobileNode(raw); got != "" {
+			t.Fatalf("unsafe mobile node accepted: %q -> %q", raw, got)
+		}
+	}
+}
+
+func TestBundledMobilePeersIncludeIndependentPublicIPv4Fallbacks(t *testing.T) {
+	publicHTTP := 0
+	for _, p := range bundledBootstrapPeers {
+		if strings.HasPrefix(p, "http://") && normalizeMobileNode(p) != "" {
+			publicHTTP++
+		}
+	}
+	if publicHTTP < 3 {
+		t.Fatalf("expected at least three public IPv4 fallback peers, got %d: %v", publicHTTP, bundledBootstrapPeers)
 	}
 }
