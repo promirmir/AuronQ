@@ -1,0 +1,81 @@
+name: Reproducible builds
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/reproducible-builds.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/reproducible-builds.yml'
+  schedule:
+    - cron: '11 4 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reproducible-builds-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+
+      - name: Build CLI twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CGO_ENABLED=0
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq-a ./cmd/auronq
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq-b ./cmd/auronq
+          sha256sum auronq-a auronq-b
+          cmp auronq-a auronq-b
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+
+      - name: Build Windows CLI and Desktop twice
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $env:CGO_ENABLED = "0"
+
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq-cli-a.exe ./cmd/auronq
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq-cli-b.exe ./cmd/auronq
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid= -H=windowsgui" -o auronq-desktop-a.exe ./cmd/auronq-desktop
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid= -H=windowsgui" -o auronq-desktop-b.exe ./cmd/auronq-desktop
+
+          $cliA = (Get-FileHash auronq-cli-a.exe -Algorithm SHA256).Hash
+          $cliB = (Get-FileHash auronq-cli-b.exe -Algorithm SHA256).Hash
+          $deskA = (Get-FileHash auronq-desktop-a.exe -Algorithm SHA256).Hash
+          $deskB = (Get-FileHash auronq-desktop-b.exe -Algorithm SHA256).Hash
+
+          Write-Host "CLI A     $cliA"
+          Write-Host "CLI B     $cliB"
+          Write-Host "Desktop A $deskA"
+          Write-Host "Desktop B $deskB"
+
+          if ($cliA -ne $cliB) { throw "Windows CLI build is not reproducible" }
+          if ($deskA -ne $deskB) { throw "Windows Desktop build is not reproducible" }
