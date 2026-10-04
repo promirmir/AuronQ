@@ -438,6 +438,9 @@ func QuorumBalance(knownNodesJSON, address string) (string, error) {
 			best = g
 		}
 	}
+	if len(balances) >= 2 && len(best) < 2 {
+		return "", errors.New("agreeing chain peers returned conflicting wallet balances")
+	}
 	v := best[0]
 	nodes := make([]string, 0, len(best))
 	for _, b := range best {
@@ -579,9 +582,6 @@ func SendMulti(knownNodesJSON, nodeURL, walletPath, password, to, amount string)
 
 	seen := map[string]bool{nodeURL: true}
 	candidates := mobileCandidates(knownNodesJSON)
-	for _, p := range bundledBootstrapPeers {
-		addMobileCandidate(&candidates, seen, p)
-	}
 	for _, p := range candidates {
 		p = normalizeMobileNode(p)
 		if p == "" || seen[p] {
