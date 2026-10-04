@@ -1,0 +1,6 @@
+AuronQ 1.7.7 Mainnet
+
+- Fixes the Desktop Explorer tab being blocked by Content Security Policy on some systems.
+- Allows only the local AuronQ node origin http://127.0.0.1:18444 as an iframe source.
+- Arbitrary external frame origins remain blocked.
+- No consensus, Network ID, genesis, AQM64, signature or transaction-rule changes.
