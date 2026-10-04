@@ -1,0 +1,208 @@
+package main
+
+import (
+	"bytes"
+	"flag"
+	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"time"
+
+	aq "auronq/internal/auronq"
+	"auronq/internal/argon2pure"
+)
+
+const mainnetNetworkID = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
+
+func defaultDLLPath() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return "auronq-aqm64-cuda.dll"
+	}
+	return filepath.Join(filepath.Dir(exe), "auronq-aqm64-cuda.dll")
+}
+
+func main() {
+	nodeURL := flag.String("node", "http://127.0.0.1:18444", "AuronQ full-node URL")
+	address := flag.String("address", "", "AURQ reward address")
+	device := flag.Int("device", 0, "CUDA device index")
+	batchFlag := flag.Int("batch", 0, "nonces per GPU batch (0 = automatic)")
+	dllPath := flag.String("cuda-dll", defaultDLLPath(), "path to auronq-aqm64-cuda.dll")
+	selfTest := flag.Bool("self-test", false, "compare one full AQM64 GPU result with the CPU reference")
+	flag.Parse()
+
+	if runtime.GOOS != "windows" {
+		fmt.Fprintln(os.Stderr, "AuronQ GPU Miner CUDA v0.1 currently targets Windows x64.")
+		os.Exit(2)
+	}
+
+	backend, err := openCUDABackend(*dllPath, *device)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	defer backend.Close()
+
+	batch := *batchFlag
+	if batch <= 0 {
+		batch = backend.RecommendedBatch()
+	}
+	if batch < 1 {
+		batch = 1
+	}
+	if batch > 64 {
+		batch = 64
+	}
+
+	fmt.Printf("AuronQ GPU Miner v0.1 CUDA\n")
+	fmt.Printf("GPU: %s\n", backend.Name())
+	fmt.Printf("Batch: %d nonces\n", batch)
+
+	if *selfTest {
+		fmt.Println("Running full AQM64 GPU/CPU equivalence self-test...")
+		if err := runSelfTest(backend); err != nil {
+			fmt.Fprintln(os.Stderr, "SELF-TEST FAILED:", err)
+			os.Exit(1)
+		}
+		fmt.Println("SELF-TEST OK")
+		if *address == "" {
+			return
+		}
+	}
+
+	if *address == "" {
+		fmt.Fprintln(os.Stderr, "--address is required for mining")
+		os.Exit(2)
+	}
+	netByte, _, _, err := aq.DecodeAddress(*address)
+	if err != nil || netByte != aq.MainnetNetworkByte {
+		fmt.Fprintln(os.Stderr, "--address must be a valid AuronQ Mainnet address")
+		os.Exit(2)
+	}
+
+	client := aq.NewClient(*nodeURL)
+	st, err := client.Status()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "node status:", err)
+		os.Exit(1)
+	}
+	if st.NetworkID.String() != mainnetNetworkID {
+		fmt.Fprintln(os.Stderr, "refusing to mine: node Network ID mismatch")
+		os.Exit(1)
+	}
+	fmt.Printf("Node: %s height=%d peers=%d\n", *nodeURL, st.Height, st.Peers)
+
+	if err := mineLoop(client, backend, *address, batch); err != nil {
+		fmt.Fprintln(os.Stderr, "miner stopped:", err)
+		os.Exit(1)
+	}
+}
+
+func runSelfTest(backend gpuBackend) error {
+	password := make([]byte, 64)
+	salt := make([]byte, 32)
+	for i := range password {
+		password[i] = byte(i*7 + 3)
+	}
+	for i := range salt {
+		salt[i] = byte(i*11 + 5)
+	}
+	initial, err := argon2pure.PrepareSingleLaneBlocks(
+		password, salt, aq.AQM64TimeCost, aq.AQM64MemoryKiB, 64,
+	)
+	if err != nil {
+		return err
+	}
+	gpuFinal, err := backend.Run(initial, 1)
+	if err != nil {
+		return err
+	}
+	gpuKey, err := argon2pure.ExtractSingleLaneKey(gpuFinal[:128], 64)
+	if err != nil {
+		return err
+	}
+	cpuKey := argon2pure.IDKey(
+		password, salt, aq.AQM64TimeCost, aq.AQM64MemoryKiB, aq.AQM64Parallelism, 64,
+	)
+	if !bytes.Equal(gpuKey, cpuKey) {
+		return fmt.Errorf("GPU Argon2id result does not match AuronQ CPU reference")
+	}
+	return nil
+}
+
+func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int) error {
+	var total uint64
+	start := time.Now()
+	var nextNonce uint64
+
+	for {
+		template, err := client.Template(address)
+		if err != nil {
+			return fmt.Errorf("template: %w", err)
+		}
+		if template.Header.PowAlgo != aq.PowAlgorithmAQM64 {
+			return fmt.Errorf("unsupported PoW algorithm %d", template.Header.PowAlgo)
+		}
+		nextNonce = 0
+		fmt.Printf("Mining height %d target=%s\n", template.Header.Height, template.Header.Target.String())
+
+		for {
+			st, err := client.Status()
+			if err == nil && !aq.MiningTemplateCurrent(template, st) {
+				fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
+				break
+			}
+
+			prepared, initial, err := buildBatch(template, nextNonce, batch)
+			if err != nil {
+				return err
+			}
+			finals, err := backend.Run(initial, batch)
+			if err != nil {
+				return err
+			}
+
+			total += uint64(batch)
+			for i := 0; i < batch; i++ {
+				hash, err := finishCandidate(prepared[i].pre, finals[i*128:(i+1)*128])
+				if err != nil {
+					return err
+				}
+				if !hashMeetsTarget(hash, template.Header.Target) {
+					continue
+				}
+
+				found := template
+				found.Header.Nonce = prepared[i].nonce
+				resp, err := client.SubmitBlock(found)
+				if err != nil {
+					fmt.Printf("Candidate nonce=%d rejected: %v\n", prepared[i].nonce, err)
+					break
+				}
+				elapsed := time.Since(start)
+				rate := float64(total) / elapsed.Seconds()
+				fmt.Printf("BLOCK FOUND height=%d hash=%s nonce=%d avg=%.2f H/s\n",
+					resp.Height, resp.Hash.String(), prepared[i].nonce, rate)
+				break
+			}
+
+			st, err = client.Status()
+			if err == nil && !aq.MiningTemplateCurrent(template, st) {
+				break
+			}
+			nextNonce += uint64(batch)
+			if nextNonce < uint64(batch) {
+				break
+			}
+
+			if total%uint64(batch*4) == 0 {
+				elapsed := time.Since(start)
+				if elapsed > 0 {
+					fmt.Printf("hashes=%d avg=%.2f H/s current_height=%d\n",
+						total, float64(total)/elapsed.Seconds(), template.Header.Height)
+				}
+			}
+		}
+	}
+}
