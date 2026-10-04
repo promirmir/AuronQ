@@ -144,7 +144,9 @@ func (n *Node) SetPublicAdvertise(raw string) bool {
 	}
 	n.pmu.Lock()
 	defer n.pmu.Unlock()
-	if normalizePeer(n.PublicAdvertise()) == adv {
+	// Do not call PublicAdvertise while holding the write lock: that accessor
+	// takes the same RWMutex for reading and would deadlock.
+	if normalizePeer(n.cfg.Advertise) == adv {
 		return true
 	}
 	n.cfg.Advertise = adv
