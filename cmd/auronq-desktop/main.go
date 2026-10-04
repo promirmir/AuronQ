@@ -66,6 +66,7 @@ type appState struct {
 	Height           uint64       `json:"height"`
 	Tip              string       `json:"tip,omitempty"`
 	Peers            int          `json:"peers"`
+	NetworkHashrate  float64      `json:"network_hashrate"`
 	Mempool          int          `json:"mempool"`
 	Issued           string       `json:"issued,omitempty"`
 	CoinbaseMaturity uint64       `json:"coinbase_maturity"`
@@ -434,6 +435,7 @@ func (a *App) state() appState {
 			st.Peers = x.Peers
 			st.Mempool = x.Mempool
 			st.Issued = aq.FormatAmount(x.Issued)
+			st.NetworkHashrate = x.NetworkHashrate
 		} else if st.NodeError == "" {
 			st.NodeError = err.Error()
 		}
