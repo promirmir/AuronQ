@@ -39,7 +39,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host ""
 Write-Host "[2/4] Building Go miner CLI..."
-& $go build -trimpath -o (Join-Path $dist "auronq-gpu-miner.exe") .\cmd\auronq-gpu-miner
+& $go build -trimpath -o (Join-Path $dist "auronq-gpu-worker.exe") .\cmd\auronq-gpu-miner
 if ($LASTEXITCODE -ne 0) {
     throw "Go CLI build failed with exit code $LASTEXITCODE"
 }
@@ -60,7 +60,7 @@ Write-Host ""
 Write-Host "[4/4] Running mandatory GPU/CPU AQM64 equivalence self-test..."
 Push-Location $dist
 try {
-    .\auronq-gpu-miner.exe --self-test
+    .\auronq-gpu-worker.exe --self-test
     if ($LASTEXITCODE -ne 0) {
         throw "GPU/CPU AQM64 self-test failed with exit code $LASTEXITCODE"
     }
