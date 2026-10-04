@@ -960,7 +960,8 @@ func (a *App) ensurePublicPeer() {
 	}
 
 	a.mu.Lock()
-	if a.portMapping != nil {
+	// Mining may have been stopped while UPnP discovery was in progress.
+	if a.portMapping != nil || !a.miner.Running || a.miner.Mode != "mining" {
 		a.mu.Unlock()
 		mapping.Close()
 		return
