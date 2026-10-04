@@ -1,0 +1,8 @@
+AuronQ 1.7.4 Mainnet
+
+- Adds a rate-limited /v1/history endpoint for wallet/light-client transaction history.
+- Adds recent AQM64 network-hashrate estimation from canonical block work and timestamps.
+- AuronQ Desktop shows the estimated network power as a separate indicator.
+- AuronQ Mobile 0.4.0 Alpha can display wallet transaction history through public 1.7.4+ nodes.
+- Adds Android pull-request CI that builds the gomobile AAR and APK.
+- Consensus rules, Network ID, genesis, AQM64 validation, signatures and transaction validation are unchanged.
