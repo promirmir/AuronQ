@@ -48,9 +48,10 @@ type PortMapping struct {
 	port        uint16
 	lease       uint32
 
-	mu   sync.Mutex
-	stop chan struct{}
-	done chan struct{}
+	mu     sync.Mutex
+	stop   chan struct{}
+	done   chan struct{}
+	closed bool
 }
 
 func (m *PortMapping) Close() {
@@ -58,24 +59,34 @@ func (m *PortMapping) Close() {
 		return
 	}
 	m.mu.Lock()
-	if m.stop == nil {
+	if m.closed {
 		m.mu.Unlock()
 		return
 	}
+	m.closed = true
 	stop := m.stop
 	done := m.done
 	m.stop = nil
-	close(stop)
+	m.done = nil
+	if stop != nil {
+		close(stop)
+	}
 	m.mu.Unlock()
+
 	if done != nil {
 		select {
 		case <-done:
-		case <-time.After(1500 * time.Millisecond):
+		case <-time.After(upnpHTTPTimeout + 500*time.Millisecond):
 		}
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), upnpHTTPTimeout)
-	defer cancel()
-	_ = deletePortMapping(ctx, m.client, m.controlURL, m.serviceType, m.port)
+
+	// Permanent mappings (lease == 0) do not run a renewal goroutine, but they
+	// still must be removed when the application/node shuts down.
+	if m.client != nil && m.controlURL != "" && m.serviceType != "" && m.port != 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), upnpHTTPTimeout)
+		defer cancel()
+		_ = deletePortMapping(ctx, m.client, m.controlURL, m.serviceType, m.port)
+	}
 }
 
 func (m *PortMapping) startRenewal(localIP string) {

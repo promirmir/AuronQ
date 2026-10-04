@@ -1,0 +1,84 @@
+name: Publish GPU Miner v0.2.1-alpha
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.release/gpu-miner-v0.2.1-alpha'
+
+permissions:
+  contents: write
+
+jobs:
+  publish-windows:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      GPU_VERSION: 0.2.1-alpha
+      GPU_TAG: gpu-v0.2.1-alpha
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '13.2.0'
+          method: network
+          use-github-cache: 'true'
+
+      - name: Build CUDA backend
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
+
+      - name: Build Windows application
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dist = Join-Path $PWD "dist\AuronQ-GPU-Miner-v$env:GPU_VERSION"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          go build -trimpath -o (Join-Path $dist "auronq-gpu-worker.exe") .\cmd\auronq-gpu-miner
+          if ($LASTEXITCODE -ne 0) { throw "GPU worker build failed" }
+
+          go build -trimpath -ldflags "-H=windowsgui" -o (Join-Path $dist "AuronQ-GPU-Miner.exe") .\cmd\auronq-gpu-miner-gui
+          if ($LASTEXITCODE -ne 0) { throw "GUI build failed" }
+
+          Copy-Item .\gpu\cuda\auronq-aqm64-cuda.dll $dist -Force
+          Copy-Item .\network.json $dist -Force
+          Copy-Item .\bootstrap.json $dist -Force
+          Copy-Item .\gpu\cuda\README.md (Join-Path $dist "README-GPU-MINER.md") -Force
+          if (Test-Path .\LICENSE) { Copy-Item .\LICENSE $dist -Force }
+
+          $gui = Join-Path $dist "AuronQ-GPU-Miner.exe"
+          $worker = Join-Path $dist "auronq-gpu-worker.exe"
+          if (!(Test-Path $gui)) { throw "GUI missing" }
+          if (!(Test-Path $worker)) { throw "worker missing" }
+          if ((Get-FileHash $gui -Algorithm SHA256).Hash -eq (Get-FileHash $worker -Algorithm SHA256).Hash) { throw "GUI and worker are identical - refusing release" }
+
+          $zip = Join-Path $PWD "dist\AuronQ-GPU-Miner-v$env:GPU_VERSION-Windows-x64.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zip -CompressionLevel Optimal
+
+          $sum = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          "$sum  $(Split-Path $zip -Leaf)" | Set-Content -Encoding ascii .\dist\SHA256SUMS-GPU-MINER.txt
+
+      - name: Publish GitHub prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $zip = ".\dist\AuronQ-GPU-Miner-v$env:GPU_VERSION-Windows-x64.zip"
+          $sums = ".\dist\SHA256SUMS-GPU-MINER.txt"
+          gh release view $env:GPU_TAG *> $null
+          if ($LASTEXITCODE -eq 0) { Write-Host "Release $env:GPU_TAG already exists; nothing to do."; exit 0 }
+          gh release create $env:GPU_TAG $zip $sums --target $env:GITHUB_SHA --title "AuronQ GPU Miner v0.2.1 Alpha" --notes-file ".\GPU-MINER-RELEASE-NOTES.md" --prerelease

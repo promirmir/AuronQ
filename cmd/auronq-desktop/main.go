@@ -849,6 +849,20 @@ func (a *App) startNode() error {
 	if n == nil {
 		return errors.New("najpierw zaimportuj network.json")
 	}
+
+	// Never create a second localhost full node. GPU Miner can run its own node
+	// when Desktop is absent; if it already owns 18444, Desktop must fail
+	// closed instead of binding the other address family and splitting local
+	// traffic between two independent chains.
+	ctxProbe, cancelProbe := context.WithTimeout(context.Background(), 700*time.Millisecond)
+	if st, err := aq.NewClient("http://127.0.0.1:18444").StatusContext(ctxProbe); err == nil {
+		cancelProbe()
+		if st.NetworkID != n.NetworkID() {
+			return errors.New("port 18444 jest używany przez node innej sieci")
+		}
+		return errors.New("inny lokalny node AuronQ już działa na porcie 18444; zamknij AuronQ GPU Miner albo jego node przed uruchomieniem noda Desktop")
+	}
+	cancelProbe()
 	networkNodeDir := filepath.Join(a.nodeDir, n.NetworkID().String())
 	if err := os.MkdirAll(networkNodeDir, 0700); err != nil {
 		return err

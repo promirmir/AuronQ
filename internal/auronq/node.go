@@ -144,12 +144,33 @@ func (n *Node) SetPublicAdvertise(raw string) bool {
 	}
 	n.pmu.Lock()
 	defer n.pmu.Unlock()
-	if normalizePeer(n.PublicAdvertise()) == adv {
+	// Do not call PublicAdvertise while holding the write lock: that accessor
+	// takes the same RWMutex for reading and would deadlock.
+	if normalizePeer(n.cfg.Advertise) == adv {
 		return true
 	}
 	n.cfg.Advertise = adv
 	// A previous announce may have happened before NAT traversal succeeded.
 	// Clear this cache so every connected peer gets a fresh announcement.
+	n.announced = map[string]struct{}{}
+	return true
+}
+
+// ClearPublicAdvertise removes a runtime endpoint that this process previously
+// installed (for example a temporary UPnP mapping). If expected is non-empty,
+// the endpoint is cleared only when it still matches that value.
+func (n *Node) ClearPublicAdvertise(expected string) bool {
+	want := normalizePeer(expected)
+	n.pmu.Lock()
+	defer n.pmu.Unlock()
+	current := normalizePeer(n.cfg.Advertise)
+	if want != "" && current != want {
+		return false
+	}
+	if current == "" {
+		return true
+	}
+	n.cfg.Advertise = ""
 	n.announced = map[string]struct{}{}
 	return true
 }

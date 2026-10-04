@@ -1,0 +1,69 @@
+name: GPU Miner CUDA CI
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/auronq-gpu-miner/**'
+      - 'cmd/auronq-gpu-miner-gui/**'
+      - 'gpu/cuda/**'
+      - 'internal/argon2pure/**'
+      - 'internal/auronq/node.go'
+      - 'internal/auronq/upnp.go'
+      - 'internal/auronq/*_test.go'
+      - 'build-gpu-miner-windows.ps1'
+      - 'network.json'
+      - 'bootstrap.json'
+      - '.github/workflows/gpu-miner-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cuda-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile CUDA backend without requiring a GPU
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            nvidia/cuda:12.6.3-devel-ubuntu24.04 \
+            nvcc -O3 -std=c++17 -Xcompiler -fPIC --shared \
+              gpu/cuda/aqm64_cuda.cu \
+              -o /tmp/libauronq-aqm64-cuda.so
+
+  windows-app-compile:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Test miner, node and UPnP runtime
+        shell: pwsh
+        run: |
+          go test ./cmd/auronq-gpu-miner ./cmd/auronq-gpu-miner-gui ./internal/argon2pure ./internal/auronq
+
+      - name: Build Windows CLI and Desktop-style GUI
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-ci | Out-Null
+          go build -trimpath -o dist-ci\auronq-gpu-worker.exe .\cmd\auronq-gpu-miner
+          go build -trimpath -ldflags "-H=windowsgui" -o dist-ci\AuronQ-GPU-Miner.exe .\cmd\auronq-gpu-miner-gui
+
+      - name: Verify Windows package layout
+        shell: pwsh
+        run: |
+          if (!(Test-Path .\dist-ci\AuronQ-GPU-Miner.exe)) { throw "GUI missing" }
+          if (!(Test-Path .\dist-ci\auronq-gpu-worker.exe)) { throw "worker missing" }
+          $gui = (Get-FileHash .\dist-ci\AuronQ-GPU-Miner.exe -Algorithm SHA256).Hash
+          $worker = (Get-FileHash .\dist-ci\auronq-gpu-worker.exe -Algorithm SHA256).Hash
+          if ($gui -eq $worker) { throw "GUI and worker must be distinct binaries" }
+          if (!(Test-Path .\network.json)) { throw "network.json missing" }
+          if (!(Test-Path .\bootstrap.json)) { throw "bootstrap.json missing" }
