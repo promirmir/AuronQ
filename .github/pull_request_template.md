@@ -32,3 +32,16 @@ If none, write: **No consensus or protocol impact.**
 Describe relevant security implications, or state why none are expected.
 
 ## Additional notes
+
+
+## Mainnet safety gate
+
+If this PR changes any consensus-sensitive behavior (block/transaction validity, serialization, PoW, difficulty, timestamps, chain selection, issuance, signature verification, Network ID or genesis):
+
+- [ ] This is **not** being treated as an ordinary patch release.
+- [ ] A dedicated testnet/devnet activation plan exists.
+- [ ] Compatibility / fork behavior is documented.
+- [ ] Mainnet activation requires an explicit version and activation mechanism.
+- [ ] Independent review is requested before activation.
+
+If none of the above apply, write: **No Mainnet consensus change.**
