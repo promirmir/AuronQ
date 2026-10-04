@@ -90,8 +90,10 @@ live hashrate/block statistics, node height/peer/public-endpoint status and
 technical logs. Non-secret preferences are stored under the user's Windows
 AuronQ configuration directory.
 
-The GUI launches the sibling `auronq-gpu-miner.exe` CUDA worker with its
-console hidden. Every candidate block is still submitted to and fully validated
+The GUI launches the sibling `auronq-gpu-worker.exe` CUDA worker with its
+console hidden. The distinct filename is required on Windows because paths are
+case-insensitive by default; using only `AuronQ-GPU-Miner.exe` vs
+`auronq-gpu-miner.exe` would make the GUI launch itself instead of the worker. Every candidate block is still submitted to and fully validated
 by the ordinary AuronQ full node.
 
 For a complete Windows package, run from the repository root:
