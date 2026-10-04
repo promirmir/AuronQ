@@ -29,7 +29,10 @@
       }
     ]
   },
-  "seed_peers": [],
+  "seed_peers": [
+    "https://mir.taild63f46.ts.net",
+    "https://desktop-4nifg1j.taild63f46.ts.net"
+  ],
   "coinbase_maturity": 100,
   "bootstrap_manifests": [
     "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
