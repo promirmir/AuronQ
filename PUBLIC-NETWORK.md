@@ -17,11 +17,12 @@ The official mainnet manifest is:
 
 Bootstrap metadata is **not consensus** and is excluded from Network ID. It can therefore be rotated without a hard fork.
 
-At present the manifest advertises one confirmed public endpoint:
+At present the manifest advertises two externally verified public endpoints:
 
-`https://mir.taild63f46.ts.net`
+- `https://mir.taild63f46.ts.net`
+- `https://desktop-4nifg1j.taild63f46.ts.net`
 
-This is a rendezvous path to an ordinary full node. It cannot create coins, approve invalid blocks or override cumulative-work selection.
+These are rendezvous paths to ordinary full nodes. They cannot create coins, approve invalid blocks or override cumulative-work selection.
 
 ## First-start flow
 
@@ -43,9 +44,17 @@ A completely fresh installation still needs at least one discovery route. To red
 
 The crawler never changes consensus and never makes a peer trusted for blocks: every full node still validates the chain locally. It also deliberately preserves existing manifest entries during transient outages instead of deleting the registry.
 
-At present there is still only one confirmed public endpoint, so the network is **not yet operationally independent** of that endpoint for first-time installs. Independence is achieved in practice after multiple independently operated, publicly reachable nodes have been learned/published. Existing nodes can already continue with persisted/gossiped peers when the original bootstrap is unavailable.
+At present there are two confirmed public bootstrap endpoints, but they are still operated within the same project infrastructure. The network is therefore **not yet operationally independent** for first-time installs. Independence is achieved in practice after multiple independently operated, publicly reachable nodes have been learned/published. Existing nodes can already continue with persisted/gossiped peers when the original bootstrap is unavailable.
 
 AuronQ also supports DNS seeds. Adding independently operated DNS seeds later gives a second discovery mechanism that does not depend on the repository manifest.
+
+## Public explorer
+
+A public AuronQ Explorer is currently reachable at:
+
+`https://mir.taild63f46.ts.net/explorer`
+
+It is served directly by an AuronQ full node and exposes read-only blockchain data. The explorer can be used to inspect recent blocks, block details, transactions, addresses, balances, transaction history and live network telemetry. It has no consensus privileges and cannot modify blockchain state.
 
 ## P2P behavior
 
