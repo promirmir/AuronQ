@@ -85,19 +85,30 @@ jobs:
           prerelease: false
           make_latest: true
           body: |
-            AuronQ public mainnet release.
+            ## AuronQ Mainnet
 
-            Windows: extract the Windows x64 ZIP and run `START-AURONQ.cmd`.
+            This is the current AuronQ Desktop / full-node Mainnet release.
 
-            The node performs zero-touch bootstrap from the stable GitHub manifest, then persists and gossips verified public peers. NAT/CGNAT users can participate through outbound connections.
+            ### Windows
+            Download the Windows x64 ZIP, verify its checksum, extract the entire archive and run `START-AURONQ.cmd`.
 
-            1.7.2 improves public peer discovery: verified HTTPS/DNS peer endpoints can be learned and gossiped through a resolver-filtered transport, and START-SEED-NODE.cmd can automatically advertise a Tailscale Funnel HTTPS endpoint.
+            ### Linux
+            Download the Linux amd64 archive and verify the checksum published with this release.
 
+            ### Network model
+            AuronQ full nodes independently validate the canonical chain. Seed/bootstrap endpoints are replaceable first-contact hints and have no consensus privileges. Learned public peers are persisted and exchanged through native peer gossip.
+
+            Every full node serves its own read-only blockchain Explorer from locally validated data.
+
+            ### Identity
             Network ID: `44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c`
 
             Genesis: `5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4`
 
-            Security notice: AQM64 and the complete consensus/network implementation have not received an independent professional security or cryptographic audit.
+            ### Security
+            AQM64 and the complete consensus/network implementation have not received an independent professional security or cryptographic audit. Do not use substantial value.
+
+            Full project history: https://github.com/promirmir/AuronQ/blob/main/CHANGELOG.md
           files: |
             artifacts/AuronQ-*-Windows-x64.zip
             artifacts/AuronQ-*-Linux-amd64.tar.gz

@@ -3,36 +3,83 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AuronQ — Post-Quantum Proof-of-Work Cryptocurrency</title>
-  <meta name="description" content="AuronQ is an open-source experimental cryptocurrency using ML-DSA-87 post-quantum transaction signatures, a UTXO model and AQM64 Proof-of-Work.">
-  <meta name="robots" content="index,follow">
+  <title>AuronQ (AURQ) — Decentralized Post-Quantum-Signed Proof-of-Work Network</title>
+  <meta name="description" content="AuronQ is an open-source experimental UTXO Proof-of-Work cryptocurrency network with ML-DSA-87 post-quantum transaction signatures, AQM64 mining, independent full-node validation and local blockchain explorers.">
+  <meta name="keywords" content="AuronQ,AURQ,cryptocurrency,post-quantum cryptocurrency,ML-DSA-87,AQM64,UTXO,Proof-of-Work,blockchain,full node,decentralized cryptocurrency">
+  <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://promirmir.github.io/AuronQ/">
-  <meta property="og:title" content="AuronQ — Post-Quantum Proof-of-Work Cryptocurrency">
-  <meta property="og:description" content="Open-source AuronQ Mainnet: ML-DSA-87 signatures, UTXO accounting, AQM64 Proof-of-Work, full nodes, mining and blockchain explorer.">
+  <meta property="og:title" content="AuronQ (AURQ)">
+  <meta property="og:description" content="Open-source experimental UTXO Proof-of-Work network with ML-DSA-87 transaction signatures and independent full-node validation.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://promirmir.github.io/AuronQ/">
+  <meta name="twitter:card" content="summary">
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:900px;margin:0 auto;padding:48px 20px;line-height:1.6;color:#eaf2ff;background:#07101b}
-    a{color:#75d7ff}.box{background:#0e1b2b;border:1px solid #21364f;border-radius:14px;padding:22px;margin:22px 0}
-    h1{font-size:2.6rem;margin-bottom:.25rem}.muted{color:#9bb0c8}
-    code{background:#122238;padding:.15rem .4rem;border-radius:5px}
+    :root{color-scheme:dark;--bg:#07101b;--panel:#0d1a29;--panel2:#101f31;--line:#20354c;--text:#edf5ff;--muted:#9fb3c8;--accent:#66e2c4;--accent2:#72b7ff}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#07101b 0%,#091522 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.65}
+    main{max-width:1040px;margin:auto;padding:64px 22px 90px}a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}
+    .hero{padding:44px 0 28px}.eyebrow{color:var(--accent);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:.82rem}
+    h1{font-size:clamp(3rem,8vw,5.6rem);line-height:1;margin:.18em 0 .22em;letter-spacing:-.04em}h2{margin-top:0}p.lead{max-width:800px;font-size:1.22rem;color:#c4d4e5}
+    .buttons{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-block;padding:11px 16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-weight:700}.btn.primary{background:var(--accent);color:#042019;border-color:var(--accent)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:14px;margin:24px 0}.card{background:rgba(13,26,41,.9);border:1px solid var(--line);border-radius:14px;padding:20px}
+    .card b{display:block;margin-bottom:4px}.muted{color:var(--muted)}.section{margin-top:44px}.status{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#bdd0e3;background:#0b1724}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}code{background:#122236;border-radius:6px;padding:.16em .42em}footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted)}
   </style>
 </head>
 <body>
-  <h1>AuronQ</h1>
-  <p class="muted">Open-source experimental post-quantum Proof-of-Work cryptocurrency.</p>
-  <div class="box">
-    <h2>About the network</h2>
-    <p>AuronQ uses ML-DSA-87 for transaction signatures, a UTXO accounting model and the AQM64 Proof-of-Work construction. Full nodes validate the canonical chain locally and expose a built-in blockchain explorer.</p>
-  </div>
-  <div class="box">
-    <h2>Source code and releases</h2>
-    <p><a href="https://github.com/promirmir/AuronQ/">AuronQ on GitHub</a></p>
-    <p><a href="https://github.com/promirmir/AuronQ/releases">Downloads and releases</a></p>
-  </div>
-  <div class="box">
+<main>
+  <section class="hero">
+    <div class="eyebrow">AURQ Mainnet</div>
+    <h1>AuronQ</h1>
+    <p class="lead">An open-source experimental cryptocurrency network built around independent full-node validation, a UTXO ledger, AQM64 Proof-of-Work and ML-DSA-87 post-quantum transaction signatures.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/promirmir/AuronQ/releases/latest">Download latest release</a>
+      <a class="btn" href="https://github.com/promirmir/AuronQ">Source code</a>
+      <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/PROTOCOL.md">Protocol</a>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card"><b>Full-node first</b><span class="muted">Every full node validates its own canonical chain, transactions, signatures, timestamps, difficulty and cumulative work.</span></div>
+    <div class="card"><b>Post-quantum transaction signatures</b><span class="muted">Wallet transactions use ML-DSA-87. This does not by itself imply that the entire system is quantum-proof.</span></div>
+    <div class="card"><b>AQM64 Proof-of-Work</b><span class="muted">AuronQ uses its own AQM64 PoW construction and cumulative-work chain selection.</span></div>
+    <div class="card"><b>Local Explorer</b><span class="muted">Each full node serves its own read-only blockchain Explorer from locally validated data.</span></div>
+  </section>
+
+  <section class="section">
+    <h2>Current software</h2>
+    <p><span class="status"><span class="dot"></span> Desktop / Full Node v1.7.11 Mainnet</span></p>
+    <p><span class="status"><span class="dot"></span> AuronQ Mobile 0.5.1 Alpha</span></p>
+    <p class="muted">Windows x64 and Linux amd64 full-node packages are published on GitHub Releases. The Android client is a light wallet that independently validates the header/AQM64 chain but does not reconstruct the complete UTXO state locally.</p>
+  </section>
+
+  <section class="section">
+    <h2>Decentralization model</h2>
+    <div class="grid">
+      <div class="card"><b>No privileged founder node</b><span class="muted">Seed peers are replaceable discovery hints. They do not have consensus authority and repeated failures can prune them.</span></div>
+      <div class="card"><b>Native peer discovery</b><span class="muted">Nodes persist learned peers and exchange verified public peer information through the AuronQ P2P network.</span></div>
+      <div class="card"><b>No canonical Explorer</b><span class="muted">Public Explorers are ordinary full-node views. Peer-aware Explorers can link to alternative public full-node Explorers.</span></div>
+      <div class="card"><b>Independent validation</b><span class="muted">Peer identity is not trust. Nodes validate the data they accept and choose chains by validated cumulative work.</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Engineering progress</h2>
+    <p class="muted">The project includes 20-node partition/reorg/restart convergence testing, transaction/block fuzzing, Linux race-detector CI, reproducible-build checks, public-network health monitoring, peer-netgroup diversity and a regression test in which the original bootstrap node disappears permanently.</p>
+    <p><a href="https://github.com/promirmir/AuronQ/blob/main/CHANGELOG.md">Read the changelog →</a> &nbsp; <a href="https://github.com/promirmir/AuronQ/blob/main/ROADMAP.md">View the roadmap →</a></p>
+  </section>
+
+  <section class="section">
     <h2>Security status</h2>
-    <p>AuronQ is experimental software. AQM64 and the complete consensus/network implementation have not received an independent professional security or cryptographic audit.</p>
-  </div>
+    <div class="card">
+      <b>Experimental and not independently audited</b>
+      <span class="muted">AQM64 and the complete consensus/network implementation have not received an independent professional security or cryptographic audit. Internal tests and CI are not a substitute for external review. Do not use substantial value.</span>
+    </div>
+  </section>
+
+  <footer>
+    <p>AuronQ is open-source software released under the MIT License.</p>
+    <p><a href="https://github.com/promirmir/AuronQ">GitHub</a> · <a href="https://github.com/promirmir/AuronQ/releases">Releases</a> · <a href="https://github.com/promirmir/AuronQ/blob/main/SECURITY.md">Security</a></p>
+  </footer>
+</main>
 </body>
 </html>
