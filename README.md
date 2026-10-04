@@ -30,9 +30,9 @@ The AuronQ **Mainnet is live**. Full-node software is available for Windows x64 
 
 For a normal Windows user, no manual peer configuration, Tailscale, port forwarding, Go, Docker or command line setup is required.
 
-1. Download **[AuronQ-1.7.6-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.6/AuronQ-1.7.6-Windows-x64.zip)** from this repository's official Releases page.
+1. Download **[AuronQ-1.7.8-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.8/AuronQ-1.7.8-Windows-x64.zip)** from this repository's official Releases page.
 2. Verify the ZIP SHA-256 if possible:
-   `79dbf9ba9763ffaeadb5360a320773d10504e4dcf814936bb90c73d05d477182`
+   `77fc1de0ac7729f36d4e0da312c70b42bcaebc445eaa596718f9dcd578b74d9b`
 3. Extract the **entire ZIP** to a new folder. Do not run files directly from inside the archive.
 4. Run **`START-AURONQ.cmd` once**.
 5. AuronQ Desktop will start the full node, verify the Mainnet configuration, discover the public bootstrap nodes and begin synchronization automatically.
@@ -68,25 +68,25 @@ AuronQ may be relevant to developers, miners, node operators and researchers loo
 
 ## Project status
 
-Current stable desktop/full-node release: **AuronQ 1.7.6 Mainnet**.
+Current stable desktop/full-node release: **AuronQ 1.7.8 Mainnet**.
 
-Version 1.7.6 adds a dedicated **Explorer** tab to AuronQ Desktop. The tab embeds the local full-node explorer at `http://127.0.0.1:18444/explorer`, automatically loads when the local node is available, and shows a clear offline state otherwise. The explorer itself remains read-only and does not change consensus behavior.
+Version 1.7.8 strengthens public-network resilience: verified public peers are bundled as direct bootstrap fallbacks in addition to the manifest, fork recovery completes the remaining sync batch immediately after a validated higher-work reorganization, and CI now exercises 20-node partition/reorg convergence plus transaction/block fuzzing. The Desktop Explorer tab from 1.7.6 remains available.
 
 The network is operational, but decentralization is still developing. The bootstrap manifest currently contains **two independently reachable public bootstrap endpoints**, both externally verified by the repository crawler. Bootstrap nodes have no consensus privileges; every full node validates the canonical chain itself. Additional independently operated public nodes and discovery routes are still desirable to reduce first-contact dependency further.
 
 ## Download
 
-**Windows x64:** [AuronQ-1.7.6-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.6/AuronQ-1.7.6-Windows-x64.zip)
+**Windows x64:** [AuronQ-1.7.8-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.8/AuronQ-1.7.8-Windows-x64.zip)
 
-**Linux amd64:** [AuronQ-1.7.6-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.6/AuronQ-1.7.6-Linux-amd64.tar.gz)
+**Linux amd64:** [AuronQ-1.7.8-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.8/AuronQ-1.7.8-Linux-amd64.tar.gz)
 
-Release page: [AuronQ 1.7.6 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.6)
+Release page: [AuronQ 1.7.8 Mainnet](https://github.com/promirmir/AuronQ/releases/tag/v1.7.8)
 
 SHA-256:
 
 ```text
-79dbf9ba9763ffaeadb5360a320773d10504e4dcf814936bb90c73d05d477182  AuronQ-1.7.6-Windows-x64.zip
-8b4d1ae0cb9a548f462c48bb56e4f8efaa28ae955c49643b708d4e6569538f34  AuronQ-1.7.6-Linux-amd64.tar.gz
+77fc1de0ac7729f36d4e0da312c70b42bcaebc445eaa596718f9dcd578b74d9b  AuronQ-1.7.8-Windows-x64.zip
+9414b899e1e94bdf4087e7a304f5261addf60f2248aedfc648c4f0ae561a07f0  AuronQ-1.7.8-Linux-amd64.tar.gz
 ```
 
 Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
@@ -178,10 +178,10 @@ A real two-node test synchronized the same mainnet chain through height 5 and th
 
 The complete Go source is in this repository. CI runs tests and vetting on Linux and Windows, includes the race detector on Linux, and builds the Windows CLI/Desktop plus Linux CLI.
 
-The current stable release is **v1.7.6**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
+The current stable release is **v1.7.8**. Release artifacts and SHA-256 checksums are published on the GitHub Releases page.
 
 ## Security status
 
-AuronQ 1.7.6 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
+AuronQ 1.7.8 is live mainnet software, but **AQM64 and the overall consensus/network implementation have not received an independent professional security or cryptographic audit**. Passing internal/CI tests is not equivalent to an external audit. Do not present AuronQ as production-audited financial infrastructure until independent review has occurred.
 
 See [SECURITY.md](SECURITY.md), [PROTOCOL.md](PROTOCOL.md), [AQM64.md](AQM64.md) and [MAINNET.md](MAINNET.md).
