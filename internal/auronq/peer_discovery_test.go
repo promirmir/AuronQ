@@ -487,3 +487,23 @@ func TestDiscoverDirectPublicAdvertiseRejectsPrivateListen(t *testing.T) {
 		}
 	}
 }
+
+
+func TestChoosePublicInterfaceIPPrefersIPv4(t *testing.T) {
+	got := choosePublicInterfaceIP([]string{
+		"2001:4860:4860::8888/64",
+		"192.168.1.10/24",
+		"8.8.4.4/24",
+		"1.1.1.1/24",
+	})
+	if got != "1.1.1.1" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestChoosePublicInterfaceIPRejectsNonPublicOnly(t *testing.T) {
+	got := choosePublicInterfaceIP([]string{"127.0.0.1/8", "10.0.0.2/24", "192.168.1.2/24", "100.64.0.2/10"})
+	if got != "" {
+		t.Fatalf("got %q", got)
+	}
+}
