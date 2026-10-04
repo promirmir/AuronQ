@@ -37,6 +37,7 @@ type crawler struct {
 	seen map[string]bool
 	queue []string
 	verified map[string]aq.Hello
+	permanentDead map[string]bool
 }
 
 func normalizePeer(raw string) string {
@@ -103,6 +104,11 @@ func publicGossipPeer(raw string) bool {
 		return !nonPublicIP(ip)
 	}
 	return u.Scheme == "https" && safeDNSHost(host)
+}
+
+func isPermanentLookupFailure(err error) bool {
+	var dnsErr *net.DNSError
+	return errors.As(err, &dnsErr) && dnsErr.IsNotFound
 }
 
 func safeHTTPClient() *http.Client {
@@ -288,6 +294,7 @@ func main() {
 		client: safeHTTPClient(),
 		seen: map[string]bool{},
 		verified: map[string]aq.Hello{},
+		permanentDead: map[string]bool{},
 	}
 
 	// Existing manifest entries are trusted only as initial rendezvous metadata.
@@ -303,7 +310,12 @@ func main() {
 		c.queue = c.queue[1:]
 		h, err := c.hello(p)
 		if err != nil {
-			fmt.Printf("unreachable %s: %v\n", p, err)
+			if isPermanentLookupFailure(err) {
+				c.permanentDead[p] = true
+				fmt.Printf("permanently unreachable %s: %v\n", p, err)
+			} else {
+				fmt.Printf("unreachable %s: %v\n", p, err)
+			}
 			continue
 		}
 		c.verified[p] = h
@@ -342,7 +354,7 @@ func main() {
 		out = append(out, p)
 	}
 	for _, p := range m.Peers {
-		if safeConfiguredPeer(p) {
+		if safeConfiguredPeer(p) && !c.permanentDead[normalizePeer(p)] {
 			add(p, false)
 		}
 	}
