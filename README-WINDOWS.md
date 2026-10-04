@@ -1,8 +1,8 @@
-# AuronQ 1.7.11 Mainnet — Windows
+# AuronQ 1.7.12 Mainnet — Windows
 
 ## Normalny użytkownik
 
-1. Pobierz `AuronQ-1.7.11-Windows-x64.zip` wyłącznie z GitHub Releases.
+1. Pobierz `AuronQ-1.7.12-Windows-x64.zip` wyłącznie z GitHub Releases.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
@@ -14,15 +14,15 @@ Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręc
 ## Pierwsze uruchomienie / aktualizacja
 
 1. Zamknij starszą wersję AuronQ przyciskiem **Sieć → Zamknij AuronQ**.
-2. Rozpakuj cały oficjalny ZIP 1.7.11 do nowego folderu.
+2. Rozpakuj cały oficjalny ZIP 1.7.12 do nowego folderu.
 3. Uruchom `START-AURONQ.cmd` tylko raz.
 4. Poczekaj na uruchomienie pełnego noda i synchronizację.
 5. **Nie usuwaj `%AppData%\AuronQ`** podczas zwykłej aktualizacji — znajdują się tam portfele, blockchain i zapamiętane peery.
 
-## Suma kontrolna oficjalnego v1.7.11
+## Suma kontrolna oficjalnego v1.7.12
 
 ```text
-cd1b0ff59fdaf28753758473336f2b9908c769374de5e1874dd0808ebd86f0ee  AuronQ-1.7.11-Windows-x64.zip
+f5fe001141b005fb6b993313650a9f61caa2d0893959f54017010ba15750b5a3  AuronQ-1.7.12-Windows-x64.zip
 ```
 
 Pełny `SHA256SUMS.txt` jest dołączony do wydania GitHub. Bieżące binaria Windows nie mają podpisu Authenticode, więc SmartScreen może wyświetlić ostrzeżenie.
@@ -35,7 +35,7 @@ Explorer nie jest centralną usługą projektu i nie ma uprawnień konsensusowyc
 
 ## Bootstrap i decentralizacja
 
-Seed/bootstrap jest wyłącznie adresem pierwszego kontaktu. Od hardeningu zawartego w 1.7.11 skonfigurowany seed nie jest trwałym uprzywilejowanym peerem: po wielokrotnych błędach może zostać usunięty z aktywnego zestawu. Peery poznane przez P2P są zapisywane lokalnie i mogą całkowicie zastąpić początkowe komputery.
+Seed/bootstrap jest wyłącznie adresem pierwszego kontaktu. Od hardeningu zawartego w 1.7.12 skonfigurowany seed nie jest trwałym uprzywilejowanym peerem: po wielokrotnych błędach może zostać usunięty z aktywnego zestawu. Peery poznane przez P2P są zapisywane lokalnie i mogą całkowicie zastąpić początkowe komputery.
 
 CI zawiera test rozproszony, w którym pierwotny/bootstrapowy node zostaje wyłączony na stałe, późniejsze nody dalej tworzą i synchronizują blockchain, a świeży node dołącza przez ocalałego peera niebędącego nodem założycielskim.
 
@@ -65,4 +65,4 @@ Usuwanie portfela dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; 
 
 ## Bezpieczeństwo
 
-AuronQ 1.7.11 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack **nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa**. Testy CI, fuzzing, race detector i testy sieci rozproszonej istotnie podnoszą jakość, ale nie zastępują zewnętrznego audytu.
+AuronQ 1.7.12 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack **nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa**. Testy CI, fuzzing, race detector i testy sieci rozproszonej istotnie podnoszą jakość, ale nie zastępują zewnętrznego audytu.
