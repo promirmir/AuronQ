@@ -76,7 +76,7 @@ func (m *PortMapping) Close() {
 	if done != nil {
 		select {
 		case <-done:
-		case <-time.After(1500 * time.Millisecond):
+		case <-time.After(upnpHTTPTimeout + 500*time.Millisecond):
 		}
 	}
 
