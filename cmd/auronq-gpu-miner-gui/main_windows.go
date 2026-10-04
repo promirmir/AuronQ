@@ -768,6 +768,9 @@ func (a *App) startWorker(mode string, s settings) error {
 			a.miner.LastError = err.Error()
 		}
 		a.mu.Unlock()
+		if finishedMode == "mining" {
+			a.closePublicMapping()
+		}
 		if err != nil && !stopped {
 			a.addLog("Worker stopped: " + err.Error())
 		} else {
@@ -936,6 +939,17 @@ func (a *App) ensurePublicPeer() {
 	ownedNode := a.node
 	a.mu.RUnlock()
 
+	// If the local node is already directly public (or AuronQ Desktop already
+	// configured a public endpoint), do not create a second router mapping.
+	statusCtx, statusCancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
+	if st, err := aq.NewClient(localNodeURL).StatusContext(statusCtx); err == nil &&
+		st.NetworkID == a.network.NetworkID() && strings.TrimSpace(st.PublicAdvertise) != "" {
+		statusCancel()
+		a.addLog("Public node already active: " + st.PublicAdvertise)
+		return
+	}
+	statusCancel()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
 	mapping, err := aq.TryUPnPPortMapping(ctx, 18444)
 	cancel()
@@ -1027,6 +1041,7 @@ func (a *App) closePublicMapping() {
 	a.mu.Lock()
 	mapping := a.portMapping
 	cancel := a.publicCancel
+	ownedNode := a.node
 	a.portMapping = nil
 	a.publicCancel = nil
 	a.mu.Unlock()
@@ -1034,6 +1049,9 @@ func (a *App) closePublicMapping() {
 		cancel()
 	}
 	if mapping != nil {
+		if ownedNode != nil {
+			ownedNode.ClearPublicAdvertise(mapping.Advertise)
+		}
 		mapping.Close()
 		a.addLog("Public node: TCP/18444 mapping closed")
 	}
