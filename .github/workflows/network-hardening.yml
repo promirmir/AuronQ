@@ -33,6 +33,9 @@ jobs:
       - name: Repeat twenty-node partition convergence test
         run: go test ./internal/auronq -run '^TestTwentyNodeMultiPartitionConvergence$' -count=3 -timeout=10m
 
+      - name: Repeat founder-node removal test
+        run: go test ./internal/auronq -run '^TestNetworkContinuesAfterOriginalSeedNodesDisappear$' -count=5 -timeout=8m
+
       - name: Race detector on network package
         run: go test -race ./internal/auronq -count=1 -timeout=12m
 

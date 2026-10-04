@@ -458,8 +458,8 @@ public class MainActivity extends Activity {
         root.addView(refresh, mt(14));
 
         TextView model = text(tr(
-                "AuronQ Mobile jest lekkim klientem portfela, nie pełnym nodem. Klucze pozostają lokalnie, aplikacja sprawdza Network ID, korzysta z wymiennych publicznych nodów AuronQ, zapamiętuje peery poznane z sieci P2P i nie traktuje żadnego noda startowego jako zaufanego źródła konsensusu.",
-                "AuronQ Mobile is a light wallet client, not a full node. Keys remain local, the app verifies the Network ID, uses replaceable public AuronQ nodes, remembers peers learned from the P2P network, and does not treat any startup node as a trusted consensus authority."), 12, false);
+                "AuronQ Mobile jest lekkim klientem portfela, nie pełnym nodem. Klucze pozostają lokalnie. Aplikacja porównuje stan wielu wymiennych nodów AuronQ, pokazuje zgodność peerów, zapamiętuje peery poznane z P2P i rozgłasza podpisaną transakcję do wielu nodów. Nie traktuje żadnego noda startowego jako zaufanego źródła konsensusu.",
+                "AuronQ Mobile is a light wallet client, not a full node. Keys remain local. The app compares state across replaceable AuronQ nodes, exposes peer agreement, remembers peers learned from P2P, and broadcasts signed transactions to multiple nodes. It does not treat any startup node as a trusted consensus authority."), 12, false);
         model.setTextColor(MUTED);
         root.addView(model, mt(18));
 
@@ -548,16 +548,11 @@ public class MainActivity extends Activity {
         liveBusy = true;
         executor.execute(() -> {
             try {
-                String node = nodeUrl;
-                String snapshot;
-                try {
-                    if (node == null || node.isEmpty()) node = discoverResilientNode();
-                    snapshot = Bridge.networkSnapshot(node, 6);
-                } catch (Exception first) {
-                    nodeUrl = "";
-                    node = discoverResilientNode();
-                    snapshot = Bridge.networkSnapshot(node, 6);
-                }
+                String knownNodes = prefs.getString("known_nodes", "[]");
+                String snapshot = Bridge.quorumSnapshot(knownNodes, 6);
+                JSONObject snapshotState = new JSONObject(snapshot);
+                String node = snapshotState.optString("node", "").trim();
+                if (node.isEmpty()) throw new Exception("AuronQ quorum did not select a node");
 
                 rememberNetwork(node);
 
@@ -567,9 +562,8 @@ public class MainActivity extends Activity {
                 if (walletFile.exists()) {
                     try {
                         String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
-                        balance = Bridge.balance(node, addr);
+                        balance = Bridge.quorumBalance(prefs.getString("known_nodes", "[]"), addr);
                         if ("wallet".equals(currentScreen)) {
-                            JSONObject snapshotState = new JSONObject(snapshot);
                             String historyKey = addr + ":" + snapshotState.optLong("height") + ":" + snapshotState.optInt("mempool");
                             if (!historyKey.equals(lastHistoryKey)) {
                                 try {
@@ -616,15 +610,24 @@ public class MainActivity extends Activity {
             int mempool = j.optInt("mempool");
             double issued = j.optDouble("issued_coins");
 
+            int observedPeers = Math.max(1, j.optInt("peer_observed", 1));
+            int agreeingPeers = Math.max(1, j.optInt("peer_agreement", 1));
+            boolean multiPeerConfirmed = j.optBoolean("multi_peer_confirmed", false);
+            String agreementText = agreeingPeers + "/" + observedPeers;
+
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
-            dashNode.setText(tr("● AuronQ Mainnet połączony", "● AuronQ Mainnet connected"));
-            dashNode.setTextColor(ACCENT);
+            dashNode.setText(multiPeerConfirmed
+                    ? tr("● Mainnet • zgodność peerów " + agreementText, "● Mainnet • peer agreement " + agreementText)
+                    : tr("● Mainnet • brak quorum " + agreementText, "● Mainnet • no quorum " + agreementText));
+            dashNode.setTextColor(multiPeerConfirmed ? ACCENT : BLUE);
             dashTip.setText("Tip: " + shortHash(j.optString("tip")));
 
-            netStatus.setText(tr("● Połączono z AuronQ Mainnet", "● Connected to AuronQ Mainnet"));
-            netStatus.setTextColor(ACCENT);
+            netStatus.setText(multiPeerConfirmed
+                    ? tr("● Stan potwierdzony przez wiele peerów: " + agreementText, "● State confirmed by multiple peers: " + agreementText)
+                    : tr("● Połączono, ale peery nie mają pełnej zgodności: " + agreementText, "● Connected, but peers do not fully agree: " + agreementText));
+            netStatus.setTextColor(multiPeerConfirmed ? ACCENT : BLUE);
             netHeight.setText(String.valueOf(height));
             netPeers.setText(String.valueOf(peers));
             netMempool.setText(String.valueOf(mempool));
@@ -635,7 +638,7 @@ public class MainActivity extends Activity {
             netWork.setText(j.optString("chain_work"));
             netObserved.setText(j.optString("observed_at"));
 
-            topNetworkDot.setTextColor(ACCENT);
+            topNetworkDot.setTextColor(multiPeerConfirmed ? ACCENT : BLUE);
 
             recentBlocks.removeAllViews();
             JSONArray blocks = j.optJSONArray("blocks");
@@ -854,11 +857,15 @@ public class MainActivity extends Activity {
                 .setNegativeButton(tr("Anuluj", "Cancel"), null)
                 .setPositiveButton(tr("Wyślij", "Send"), (d, w) ->
                         run(tr("Podpisywanie i wysyłanie…", "Signing and sending…"),
-                                () -> Bridge.send(nodeUrl, walletFile.getAbsolutePath(), password, to, amount),
+                                () -> Bridge.sendMulti(prefs.getString("known_nodes", "[]"), nodeUrl, walletFile.getAbsolutePath(), password, to, amount),
                                 value -> {
                                     try {
                                         JSONObject j = new JSONObject(value);
-                                        sendResult.setText("TXID:\n" + j.optString("txid") + "\nFee: " + j.optString("fee") + " AURQ");
+                                        int accepted = j.optInt("direct_accepted", 1);
+                                        int attempted = j.optInt("broadcast_attempted", 1);
+                                        sendResult.setText("TXID:\n" + j.optString("txid")
+                                                + "\nFee: " + j.optString("fee") + " AURQ"
+                                                + "\n" + tr("Rozgłoszenie bezpośrednie: ", "Direct broadcast: ") + accepted + "/" + attempted);
                                     } catch (Exception e) {
                                         sendResult.setText(value);
                                     }

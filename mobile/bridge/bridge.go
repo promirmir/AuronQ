@@ -6,17 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	aq "auronq/internal/auronq"
 )
 
 const (
-	mobileVersion       = "0.4.1-alpha"
+	mobileVersion       = "0.4.2-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 )
@@ -30,6 +33,188 @@ type bootstrapManifest struct {
 	NetworkID string   `json:"network_id"`
 	Peers     []string `json:"peers"`
 	ExpiresAt int64    `json:"expires_at,omitempty"`
+}
+
+const (
+	maxMobileKnownCandidates = 8
+	maxMobileProbeCandidates = 16
+)
+
+type mobileNodeObservation struct {
+	Node      string `json:"node"`
+	Height    uint64 `json:"height"`
+	Tip       string `json:"tip"`
+	ChainWork string `json:"chain_work"`
+	Peers     int    `json:"peers"`
+}
+
+func normalizeMobileNode(raw string) string {
+	raw = strings.TrimRight(strings.TrimSpace(raw), "/")
+	if raw == "" || !strings.HasPrefix(raw, "https://") {
+		return ""
+	}
+	return raw
+}
+
+func addMobileCandidate(out *[]string, seen map[string]bool, raw string) {
+	p := normalizeMobileNode(raw)
+	if p == "" || seen[p] {
+		return
+	}
+	seen[p] = true
+	*out = append(*out, p)
+}
+
+func mobileCandidates(knownJSON string) []string {
+	seen := map[string]bool{}
+	out := make([]string, 0, maxMobileProbeCandidates)
+	var known []string
+	_ = json.Unmarshal([]byte(strings.TrimSpace(knownJSON)), &known)
+	for i, p := range known {
+		if i >= maxMobileKnownCandidates {
+			break
+		}
+		addMobileCandidate(&out, seen, p)
+	}
+	for _, p := range bundledBootstrapPeers {
+		addMobileCandidate(&out, seen, p)
+	}
+	if len(out) > maxMobileProbeCandidates {
+		out = out[:maxMobileProbeCandidates]
+	}
+	return out
+}
+
+func mobileHTTP(timeout time.Duration) *http.Client {
+	return &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+}
+
+func statusFromNode(base string) (aq.Status, error) {
+	var zero aq.Status
+	base = normalizeMobileNode(base)
+	if base == "" {
+		return zero, errors.New("mobile wallet requires an HTTPS node")
+	}
+	cl := aq.NewClient(base)
+	cl.HTTP = mobileHTTP(6 * time.Second)
+	st, err := cl.Status()
+	if err != nil {
+		return zero, err
+	}
+	if st.NetworkID.String() != mainnetNetworkID {
+		return zero, errors.New("node Network ID mismatch")
+	}
+	return st, nil
+}
+
+func observeNodes(candidates []string) []mobileNodeObservation {
+	if len(candidates) > maxMobileProbeCandidates {
+		candidates = candidates[:maxMobileProbeCandidates]
+	}
+	type result struct {
+		obs mobileNodeObservation
+		ok  bool
+	}
+	ch := make(chan result, len(candidates))
+	var wg sync.WaitGroup
+	for _, node := range candidates {
+		node := node
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			st, err := statusFromNode(node)
+			if err != nil {
+				ch <- result{}
+				return
+			}
+			ch <- result{ok: true, obs: mobileNodeObservation{
+				Node:      node,
+				Height:    st.Height,
+				Tip:       st.Tip.String(),
+				ChainWork: st.ChainWork,
+				Peers:     st.Peers,
+			}}
+		}()
+	}
+	wg.Wait()
+	close(ch)
+	out := make([]mobileNodeObservation, 0, len(candidates))
+	for r := range ch {
+		if r.ok {
+			out = append(out, r.obs)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Node < out[j].Node })
+	return out
+}
+
+func mobileStateKey(o mobileNodeObservation) string {
+	return fmt.Sprintf("%d|%s|%s", o.Height, o.Tip, o.ChainWork)
+}
+
+func chainWorkCmp(a, b string) int {
+	aa, okA := new(big.Int).SetString(strings.TrimSpace(a), 10)
+	bb, okB := new(big.Int).SetString(strings.TrimSpace(b), 10)
+	if okA && okB {
+		return aa.Cmp(bb)
+	}
+	return strings.Compare(a, b)
+}
+
+func chooseNodeQuorum(obs []mobileNodeObservation) (mobileNodeObservation, []string, error) {
+	var zero mobileNodeObservation
+	if len(obs) == 0 {
+		return zero, nil, errors.New("no reachable AuronQ Mainnet nodes")
+	}
+	groups := map[string][]mobileNodeObservation{}
+	for _, o := range obs {
+		k := mobileStateKey(o)
+		groups[k] = append(groups[k], o)
+	}
+	var best []mobileNodeObservation
+	for _, g := range groups {
+		if len(best) == 0 ||
+			len(g) > len(best) ||
+			(len(g) == len(best) && chainWorkCmp(g[0].ChainWork, best[0].ChainWork) > 0) ||
+			(len(g) == len(best) && chainWorkCmp(g[0].ChainWork, best[0].ChainWork) == 0 && g[0].Height > best[0].Height) {
+			best = g
+		}
+	}
+	sort.Slice(best, func(i, j int) bool { return best[i].Node < best[j].Node })
+	nodes := make([]string, 0, len(best))
+	for _, o := range best {
+		nodes = append(nodes, o.Node)
+	}
+	return best[0], nodes, nil
+}
+
+func collectNodeObservations(knownJSON string) ([]mobileNodeObservation, error) {
+	candidates := mobileCandidates(knownJSON)
+	obs := observeNodes(candidates)
+	if len(obs) >= 2 {
+		return obs, nil
+	}
+	manifestPeers, manifestErr := fetchManifest()
+	seen := map[string]bool{}
+	for _, p := range candidates {
+		seen[p] = true
+	}
+	for _, p := range manifestPeers {
+		addMobileCandidate(&candidates, seen, p)
+	}
+	obs = observeNodes(candidates)
+	if len(obs) > 0 {
+		return obs, nil
+	}
+	if manifestErr != nil {
+		return nil, fmt.Errorf("no reachable AuronQ Mainnet node; optional manifest: %v", manifestErr)
+	}
+	return nil, errors.New("no reachable AuronQ Mainnet node")
 }
 
 func Version() string { return mobileVersion }
@@ -116,19 +301,8 @@ func fetchManifest() ([]string, error) {
 }
 
 func checkNode(base string) error {
-	base = strings.TrimRight(strings.TrimSpace(base), "/")
-	if !strings.HasPrefix(base, "https://") {
-		return errors.New("mobile wallet requires an HTTPS node")
-	}
-	cl := aq.NewClient(base)
-	st, err := cl.Status()
-	if err != nil {
-		return err
-	}
-	if st.NetworkID.String() != mainnetNetworkID {
-		return errors.New("node Network ID mismatch")
-	}
-	return nil
+	_, err := statusFromNode(base)
+	return err
 }
 
 func DiscoverNode() (string, error) {
@@ -181,10 +355,7 @@ func DiscoverNode() (string, error) {
 }
 
 func Status(nodeURL string) (string, error) {
-	if err := checkNode(nodeURL); err != nil {
-		return "", err
-	}
-	st, err := aq.NewClient(strings.TrimRight(nodeURL, "/")).Status()
+	st, err := statusFromNode(nodeURL)
 	if err != nil {
 		return "", err
 	}
@@ -193,10 +364,103 @@ func Status(nodeURL string) (string, error) {
 		"network_id": st.NetworkID.String(),
 		"height": st.Height,
 		"tip": st.Tip.String(),
+		"chain_work": st.ChainWork,
 		"peers": st.Peers,
 	}
 	b, _ := json.Marshal(out)
 	return string(b), nil
+}
+
+func QuorumSnapshot(knownNodesJSON string, recent int) (string, error) {
+	obs, err := collectNodeObservations(knownNodesJSON)
+	if err != nil {
+		return "", err
+	}
+	selected, agreeing, err := chooseNodeQuorum(obs)
+	if err != nil {
+		return "", err
+	}
+	raw, err := NetworkSnapshot(selected.Node, recent)
+	if err != nil {
+		return "", err
+	}
+	var out map[string]any
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return "", err
+	}
+	out["peer_observed"] = len(obs)
+	out["peer_agreement"] = len(agreeing)
+	out["multi_peer_confirmed"] = len(agreeing) >= 2
+	out["agreement_nodes"] = agreeing
+	out["observations"] = obs
+	b, _ := json.Marshal(out)
+	return string(b), nil
+}
+
+func QuorumBalance(knownNodesJSON, address string) (string, error) {
+	netByte, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
+	if err != nil || netByte != aq.MainnetNetworkByte {
+		return "", errors.New("invalid AuronQ Mainnet address")
+	}
+	obs, err := collectNodeObservations(knownNodesJSON)
+	if err != nil {
+		return "", err
+	}
+	_, agreeing, err := chooseNodeQuorum(obs)
+	if err != nil {
+		return "", err
+	}
+	type balanceObservation struct {
+		Node      string
+		Spendable uint64
+		Total     uint64
+	}
+	var balances []balanceObservation
+	for _, node := range agreeing {
+		cl := aq.NewClient(node)
+		cl.HTTP = mobileHTTP(8 * time.Second)
+		res, err := cl.Balance(address)
+		if err == nil {
+			balances = append(balances, balanceObservation{Node: node, Spendable: res.Spendable, Total: res.Total})
+		}
+	}
+	if len(balances) == 0 {
+		return "", errors.New("no agreeing peer returned wallet balance")
+	}
+	groups := map[string][]balanceObservation{}
+	for _, b := range balances {
+		k := fmt.Sprintf("%d|%d", b.Spendable, b.Total)
+		groups[k] = append(groups[k], b)
+	}
+	best := balances[:1]
+	for _, g := range groups {
+		if len(g) > len(best) {
+			best = g
+		}
+	}
+	if len(balances) >= 2 && len(best) < 2 {
+		return "", errors.New("agreeing chain peers returned conflicting wallet balances")
+	}
+	v := best[0]
+	nodes := make([]string, 0, len(best))
+	for _, b := range best {
+		nodes = append(nodes, b.Node)
+	}
+	sort.Strings(nodes)
+	out := map[string]any{
+		"address": v.Node,
+		"spendable_atoms": v.Spendable,
+		"total_atoms": v.Total,
+		"spendable": aq.FormatAmount(v.Spendable),
+		"total": aq.FormatAmount(v.Total),
+		"peer_observed": len(balances),
+		"peer_agreement": len(best),
+		"multi_peer_confirmed": len(best) >= 2,
+		"agreement_nodes": nodes,
+	}
+	out["address"] = strings.TrimSpace(address)
+	raw, _ := json.Marshal(out)
+	return string(raw), nil
 }
 
 func Balance(nodeURL, address string) (string, error) {
@@ -279,6 +543,76 @@ func Send(nodeURL, walletPath, password, to, amount string) (string, error) {
 }
 
 
+func SendMulti(knownNodesJSON, nodeURL, walletPath, password, to, amount string) (string, error) {
+	nodeURL = normalizeMobileNode(nodeURL)
+	if nodeURL == "" {
+		return "", errors.New("primary AuronQ node is missing")
+	}
+	if err := checkNode(nodeURL); err != nil {
+		return "", err
+	}
+	w, err := aq.LoadWallet(walletPath, password)
+	if err != nil {
+		return "", err
+	}
+	defer w.Close()
+	if w.File.NetworkByte != aq.MainnetNetworkByte {
+		return "", errors.New("wallet is not an AuronQ Mainnet wallet")
+	}
+	amt, err := aq.ParseAmount(strings.TrimSpace(amount))
+	if err != nil {
+		return "", err
+	}
+	primary := aq.NewClient(nodeURL)
+	primary.HTTP = mobileHTTP(12 * time.Second)
+	utxos, err := primary.UTXOs(w.Address())
+	if err != nil {
+		return "", err
+	}
+	tx, fee, err := w.BuildTransaction(utxos, strings.TrimSpace(to), amt, aq.MainnetNetworkByte)
+	if err != nil {
+		return "", err
+	}
+	res, err := primary.SubmitTx(tx)
+	if err != nil {
+		return "", err
+	}
+	accepted := []string{nodeURL}
+	attempted := 1
+
+	seen := map[string]bool{nodeURL: true}
+	candidates := mobileCandidates(knownNodesJSON)
+	for _, p := range candidates {
+		p = normalizeMobileNode(p)
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		if attempted >= 8 {
+			break
+		}
+		attempted++
+		if _, err := statusFromNode(p); err != nil {
+			continue
+		}
+		cl := aq.NewClient(p)
+		cl.HTTP = mobileHTTP(8 * time.Second)
+		if _, err := cl.SubmitTx(tx); err == nil {
+			accepted = append(accepted, p)
+		}
+	}
+	out := map[string]any{
+		"txid": res.TXID.String(),
+		"fee_atoms": fee,
+		"fee": aq.FormatAmount(fee),
+		"broadcast_attempted": attempted,
+		"direct_accepted": len(accepted),
+		"accepted_nodes": accepted,
+	}
+	b, _ := json.Marshal(out)
+	return string(b), nil
+}
+
 func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 	nodeURL = strings.TrimRight(strings.TrimSpace(nodeURL), "/")
 	if recent < 1 {
@@ -287,10 +621,7 @@ func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 	if recent > 12 {
 		recent = 12
 	}
-	if err := checkNode(nodeURL); err != nil {
-		return "", err
-	}
-	st, err := aq.NewClient(nodeURL).Status()
+	st, err := statusFromNode(nodeURL)
 	if err != nil {
 		return "", err
 	}
