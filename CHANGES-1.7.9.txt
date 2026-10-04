@@ -1,0 +1,8 @@
+AuronQ 1.7.9 Mainnet
+
+- Strengthens eclipse/Sybil resistance by grouping DNS peers by parent domain.
+- Applies per-netgroup diversity limits to peers learned from bootstrap manifests.
+- Interleaves synchronization candidates across peer network groups.
+- Adds consensus invariant tests for difficulty clamps, median-time-past, future timestamps, coinbase maturity and same-block double spends.
+- Adds reproducible-build verification for Linux CLI and Windows CLI/Desktop.
+- Consensus constants, Network ID, genesis, monetary policy, AQM64 parameters, signatures and transaction validation rules are unchanged.
