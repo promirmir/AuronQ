@@ -170,3 +170,113 @@ func TestMalformedPeerHelloCannotChangeChain(t *testing.T) {
 		t.Fatalf("malformed peer changed chain state: before=%+v after=%+v", before, after)
 	}
 }
+
+
+func TestTwentyNodeMultiPartitionConvergence(t *testing.T) {
+	easyPowForTest(t)
+
+	_, founderPub, err := GenerateMLDSA87()
+	if err != nil {
+		t.Fatal(err)
+	}
+	founder := AddressFromPub(founderPub, SchemeMLDSA87, TestnetNetworkByte)
+	g, err := CreateGenesis(founder, TestnetNetworkByte, time.Now().Unix()-20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	minedGenesis, err := MineParallel(ctx, g, 1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g = minedGenesis.Block
+
+	netCfg := &NetworkConfig{
+		Name:             "twenty-node-chaos",
+		ProtocolVersion:  1,
+		NetworkByte:      TestnetNetworkByte,
+		CoinbaseMaturity: TestnetCoinbaseMaturity,
+		FounderAddress:   founder,
+		Genesis:          g,
+	}
+
+	const nodeCount = 20
+	dirs := make([]string, nodeCount)
+	chains := make([]*Chain, nodeCount)
+	for i := range chains {
+		dirs[i] = t.TempDir()
+		chains[i], err = OpenChain(dirs[i], netCfg)
+		if err != nil {
+			t.Fatalf("open node %d: %v", i, err)
+		}
+	}
+
+	leaders := []int{0, 5, 10, 15}
+	miners := make([]string, len(leaders))
+	for i := range miners {
+		_, pub, err := GenerateMLDSA87()
+		if err != nil {
+			t.Fatal(err)
+		}
+		miners[i] = AddressFromPub(pub, SchemeMLDSA87, TestnetNetworkByte)
+	}
+
+	servers := make([]*httptest.Server, len(leaders))
+	for part, leader := range leaders {
+		mineTestBlocks(t, chains[leader], miners[part], part+1)
+		n := NewNode(chains[leader], NodeConfig{})
+		servers[part] = httptest.NewServer(n.handler())
+		defer servers[part].Close()
+
+		for i := leader + 1; i < leader+5; i++ {
+			follower := NewNode(chains[i], NodeConfig{})
+			if err := follower.syncPeer(servers[part].URL); err != nil {
+				t.Fatalf("partition %d sync node %d: %v", part, i, err)
+			}
+		}
+	}
+
+	// Four independently mined partitions must not all share the same tip.
+	distinct := map[Hash]struct{}{}
+	for _, leader := range leaders {
+		distinct[chains[leader].Tip()] = struct{}{}
+	}
+	if len(distinct) < 4 {
+		t.Fatalf("expected four distinct partition tips, got %d", len(distinct))
+	}
+
+	// Partition 3 has the most validated cumulative work (four blocks). After
+	// healing, every node must independently reorganize/converge to it.
+	winner := leaders[len(leaders)-1]
+	for i := 0; i < nodeCount; i++ {
+		if i >= winner && i < winner+5 {
+			continue
+		}
+		n := NewNode(chains[i], NodeConfig{})
+		if err := n.syncPeer(servers[len(servers)-1].URL); err != nil {
+			t.Fatalf("heal sync node %d: %v", i, err)
+		}
+	}
+
+	want := chains[winner].State()
+	for i, chain := range chains {
+		got := chain.State()
+		if got.Height != want.Height || got.Tip != want.Tip || got.ChainWork != want.ChainWork || got.Issued != want.Issued {
+			t.Fatalf("node %d did not converge: got=%+v want=%+v", i, got, want)
+		}
+	}
+
+	// Restart nodes from different former partitions. Canonical state must be
+	// reconstructed from block files without any bootstrap peer.
+	for _, i := range []int{0, 7, 13, 19} {
+		restarted, err := OpenChain(dirs[i], netCfg)
+		if err != nil {
+			t.Fatalf("restart node %d: %v", i, err)
+		}
+		got := restarted.State()
+		if got.Height != want.Height || got.Tip != want.Tip || got.ChainWork != want.ChainWork || got.Issued != want.Issued {
+			t.Fatalf("restarted node %d mismatch: got=%+v want=%+v", i, got, want)
+		}
+	}
+}

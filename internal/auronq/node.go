@@ -1381,11 +1381,18 @@ func (n *Node) syncPeer(peer string) error {
 	// Before a full UTXO replay is allowed, each downloaded block must pass header,
 	// target, timestamp, merkle and AQM64 proof-of-work validation. This prevents an
 	// untrusted peer from forcing an O(chain) replay using fabricated target values.
+	//
+	// Once the competing branch has enough validated work to justify a reorg, switch
+	// to that safe prefix and then continue downloading the rest of the current sync
+	// batch through AddBlock. This avoids waiting for another 10-second sync round
+	// just to reach a peer tip that was already selected as the better chain.
+	batchEnd := targetHeight
 	localSuffixWork := n.Chain.WorkAfter(ancestor)
 	branchWork := new(big.Int)
 	history := n.Chain.RecentBlocksThrough(ancestor, DifficultyWindow+1)
-	branch := make([]Block, 0, targetHeight-ancestor)
-	for h := ancestor + 1; h <= targetHeight; h++ {
+	branch := make([]Block, 0, batchEnd-ancestor)
+	reorgHeight := uint64(0)
+	for h := ancestor + 1; h <= batchEnd; h++ {
 		var b Block
 		if err := n.getJSON(peer, fmt.Sprintf("/p2p/getblock?height=%d", h), &b); err != nil {
 			return fmt.Errorf("getblock %d: %w", h, err)
@@ -1400,19 +1407,32 @@ func (n *Node) syncPeer(peer string) error {
 			history = append([]Block(nil), history[len(history)-(DifficultyWindow+1):]...)
 		}
 		if branchWork.Cmp(localSuffixWork) > 0 {
-			targetHeight = h
+			reorgHeight = h
 			break
 		}
 	}
-	if branchWork.Cmp(localSuffixWork) <= 0 {
+	if reorgHeight == 0 {
 		return errors.New("remote fork needs more validated work before reorganization")
 	}
 	candidate := n.Chain.BlocksThrough(ancestor)
 	candidate = append(candidate, branch...)
 	if err := n.Chain.ReplaceCanonical(candidate); err != nil {
-		return fmt.Errorf("validate downloaded fork through height %d: %w", targetHeight, err)
+		return fmt.Errorf("validate downloaded fork through height %d: %w", reorgHeight, err)
 	}
-	log.Printf("reorganized from %s to height %d", peer, targetHeight)
+	log.Printf("reorganized from %s to height %d", peer, reorgHeight)
+
+	for h := reorgHeight + 1; h <= batchEnd; h++ {
+		var b Block
+		if err := n.getJSON(peer, fmt.Sprintf("/p2p/getblock?height=%d", h), &b); err != nil {
+			return fmt.Errorf("getblock %d after reorg: %w", h, err)
+		}
+		if err := n.Chain.AddBlock(&b); err != nil {
+			return fmt.Errorf("validate extension block %d after reorg: %w", h, err)
+		}
+	}
+	if batchEnd > reorgHeight {
+		log.Printf("synced post-reorg extension from %s to height %d", peer, batchEnd)
+	}
 	return n.syncMempool(peer)
 }
 
