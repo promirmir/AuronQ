@@ -1,0 +1,9 @@
+AuronQ 1.7.8 Mainnet
+
+- Adds direct static bootstrap fallbacks for the currently verified public peers, in addition to the GitHub bootstrap manifest.
+- Improves fork recovery: after a validated higher-work reorg, the node completes the rest of the current sync batch immediately.
+- Adds a 20-node / four-partition convergence and restart test.
+- Expands fuzz testing to transaction and block JSON paths.
+- Adds hourly public Mainnet health monitoring for Network ID, height/tip agreement and Explorer availability.
+- Updates peer-registry automation to work with protected main via pull requests.
+- Consensus rules, Network ID, genesis, AQM64 parameters, signatures and transaction validation are unchanged.
