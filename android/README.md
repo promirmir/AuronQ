@@ -1,45 +1,45 @@
-# AuronQ Mobile 0.3.0 Alpha
+# AuronQ Mobile 0.4.2 Alpha
 
-Android wallet client for the same public AuronQ Mainnet used by AuronQ Desktop and full nodes.
+Android light-wallet client for the public AuronQ Mainnet.
 
-## What changed in 0.3.0
+## Multi-peer model
 
-- Polish / English language switch, saved between launches;
-- remembers previously discovered public HTTPS AuronQ nodes;
-- prefers known working nodes before falling back to the bootstrap manifest;
-- learns additional public HTTPS peers from `/p2p/hello` and keeps a bounded local cache;
-- automatic failover if the current public node becomes unavailable;
-- keeps the live Mainnet view from 0.2.0: height, peers, mempool, issued supply, tip, chain work and recent blocks;
-- retains the Desktop-style dark interface.
+Version 0.4.2 no longer silently relies on one selected node for its network view.
 
-## Independence from the original bootstrap computer
+It:
+- remembers public HTTPS AuronQ nodes learned from native P2P gossip;
+- compares Mainnet observations from multiple replaceable nodes;
+- groups peers by exact height, tip and reported chain work;
+- exposes the observed/agreement count in the UI;
+- prefers a state reported by multiple peers over a lone endpoint claiming much greater work;
+- compares wallet balances only across peers that report the same chain state;
+- refuses to present a quorum balance when same-chain peers return conflicting balances;
+- broadcasts the same locally signed transaction directly to multiple reachable AuronQ nodes.
 
-AuronQ full nodes already persist and gossip verified public peers. Existing full nodes can therefore continue operating with each other when the original bootstrap computer is offline, provided independent reachable peers exist.
-
-A fresh installation still needs at least one discovery path. AuronQ supports a mutable bootstrap manifest and DNS seeds at the network configuration level. The original operator computer can be retired safely only after the public network has multiple independent reachable nodes and at least one independent discovery route remains available to fresh users.
-
-AuronQ Mobile 0.3.0 improves this further by remembering public HTTPS nodes it has already learned. A phone that has discovered independent public nodes can reconnect to them later even if the original bootstrap node is offline.
-
-This is resilience, not a mathematical guarantee: no peer-to-peer network can remain reachable if every public node/discovery route is offline.
+Bundled bootstrap addresses and the optional GitHub manifest are **rendezvous hints**, not consensus authorities.
 
 ## Wallet model
 
-The app is intentionally a mobile wallet client, not a full Android node/miner.
+The encrypted wallet and private seed remain in Android app-private storage. The password is not stored. ML-DSA-87 transaction signing happens locally using the same portable Go implementation as the Desktop/full-node software.
 
-It:
-- creates the same encrypted `.wallet` format as AuronQ Desktop;
-- imports and exports compatible wallet files;
-- keeps the wallet file inside Android app-private storage;
-- never stores the password;
-- signs ML-DSA-87 transactions locally through the same portable Go implementation used by desktop AuronQ;
-- queries public AuronQ Mainnet nodes for status, UTXOs and balances;
-- broadcasts only the already-signed transaction;
-- verifies the exact AuronQ Mainnet Network ID before accepting a node.
+Remote nodes receive only public addresses, queries and already-signed transactions. They cannot derive or use the wallet private key.
 
-All users who connect to valid AuronQ Mainnet nodes observe the same canonical chain selected by the full nodes' consensus rules. The mobile app does not independently validate the entire blockchain like a full node.
+## What the mobile app verifies
 
-## Security model
+AuronQ Mobile verifies that contacted nodes report the exact AuronQ Mainnet Network ID and it cross-checks several peer-visible states.
 
-A remote node can misreport wallet-visible data such as balance or availability, or refuse service. It cannot sign transactions because the encrypted private seed stays on the device and signing happens locally.
+It is still a **light client, not a full node**. It does not yet independently replay every transaction or verify the complete AQM64 proof-of-work/header chain. Multi-peer agreement reduces single-endpoint dependence but must not be described as equivalent to full-node validation.
 
-This remains an alpha test build and the APK is debug-signed by GitHub Actions. Do not use substantial value before independent security review and broader network testing.
+## Independence from the original computers
+
+Previously learned public peers are cached locally. The app can therefore move away from the bootstrap addresses after it learns other reachable AuronQ nodes. A fresh installation still needs at least one reachable discovery route because an unknown peer address cannot be discovered from nothing.
+
+The long-term target remains the same as Desktop: the original project machines should be removable without affecting a network that already contains independently operated reachable nodes.
+
+## Release
+
+- APK: [AuronQ-Mobile-0.4.2-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.4.2-alpha/AuronQ-Mobile-0.4.2-alpha.apk)
+- Release: [android-v0.4.2-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.4.2-alpha)
+- SHA-256: `0224f45dca6b721577a60dc5dcd03d5734c0468c1abcac6f4c4e183b19c59736`
+
+This remains debug-signed alpha software and has not received an independent security audit. Do not use substantial value.
