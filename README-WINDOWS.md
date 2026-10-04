@@ -1,8 +1,8 @@
-# AuronQ 1.7.4 Mainnet — Windows
+# AuronQ 1.7.5 Mainnet — Windows
 
 ## Normalny użytkownik
 
-1. Pobierz `AuronQ-1.7.4-Windows-x64.zip` wyłącznie z GitHub Releases.
+1. Pobierz `AuronQ-1.7.5-Windows-x64.zip` wyłącznie z GitHub Releases.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
@@ -15,24 +15,28 @@ Użytkownik za NAT/CGNAT nadal może synchronizować, wysyłać transakcje, kopa
 ## Pierwsze uruchomienie — skrót
 
 1. Zamknij starszą wersję AuronQ przyciskiem **Sieć → Zamknij AuronQ**.
-2. Rozpakuj cały oficjalny ZIP 1.7.4 do nowego folderu.
+2. Rozpakuj cały oficjalny ZIP 1.7.5 do nowego folderu.
 3. Uruchom `START-AURONQ.cmd` tylko raz.
 4. **Poczekaj cierpliwie.** Pierwsze uruchomienie AuronQ Desktop może trwać dłużej, ponieważ aplikacja uruchamia pełny node, wczytuje lokalny blockchain, sprawdza stan sieci i rozpoczyna synchronizację. Nie uruchamiaj programu wielokrotnie tylko dlatego, że okno nie pojawiło się od razu.
 5. Poczekaj, aż node rozpocznie synchronizację i pojawi się wysokość blockchaina.
 6. Utwórz lub zaimportuj portfel i wykonaj jego backup.
 7. Dane użytkownika są przechowywane w `%AppData%\AuronQ`; nie usuwaj tego katalogu podczas zwykłej aktualizacji.
 
-## Suma kontrolna oficjalnego v1.7.4
+## Suma kontrolna oficjalnego v1.7.5
 
 Oficjalny SHA-256 pliku Windows:
 
 ```text
-ab863dbf7eebc6f8e44c76afe6a6221079e6f0ba18f813a5c5a99fcfe28ba1a0  AuronQ-1.7.4-Windows-x64.zip
+cb74453965d641cc699e34037f1cb66fcaf4cc40757ade84cab78b350d5ae093  AuronQ-1.7.5-Windows-x64.zip
 ```
 
 Pełny `SHA256SUMS.txt` jest również dołączony do wydania GitHub.
 
 Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen może więc wyświetlić ostrzeżenie przy pierwszym uruchomieniu. Weryfikuj sumę SHA-256 i źródło pobrania.
+
+## Explorer blockchaina
+
+Od wersji **1.7.5** pełny node udostępnia wbudowany, tylko-do-odczytu AuronQ Explorer pod ścieżką `/explorer`. Jeżeli node jest publicznie osiągalny przez HTTPS, otwórz jego adres i dopisz `/explorer`. Explorer pozwala sprawdzać bloki, transakcje, adresy, salda, historię oraz bieżące statystyki sieci.
 
 ## Niezależny publiczny node
 
@@ -71,10 +75,10 @@ Genesis:
 
 ## Bezpieczeństwo
 
-AuronQ 1.7.4 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa.
+AuronQ 1.7.5 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa.
 
 ## Usuwanie portfela
 
-W wersji 1.7.4 zakładka **Portfele** ma przycisk **Usuń**. Usuwanie dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; nie przenosi ani nie niszczy monet zapisanych w blockchainie.
+W wersji 1.7.5 zakładka **Portfele** ma przycisk **Usuń**. Usuwanie dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; nie przenosi ani nie niszczy monet zapisanych w blockchainie.
 
 Aplikacja wyświetla ostrzeżenie i wymaga ręcznego wpisania dokładnej nazwy portfela. Portfela używanego aktualnie przez koparkę nie można usunąć, dopóki mining nie zostanie zatrzymany. Przed usunięciem ważnego portfela wykonaj **Backup** — usunięcie ostatniej kopii pliku może oznaczać trwałą utratę dostępu do środków.
