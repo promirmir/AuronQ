@@ -1,0 +1,10 @@
+AuronQ 1.7.5 Mainnet
+
+- Built-in read-only AuronQ Explorer at /explorer.
+- Search by address, transaction ID, block height or block hash.
+- Latest blocks with block details and transaction lists.
+- Transaction details resolve previous outputs, addresses, values, fees and confirmations.
+- Live height, peers, mempool, issued supply and estimated AQM64 network power.
+- Explorer API is rate-limited.
+- Windows launcher now clearly explains that initial startup and blockchain loading may take time.
+- Consensus rules, Network ID, genesis, AQM64 validation, signatures and transaction validation are unchanged.
