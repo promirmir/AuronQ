@@ -58,3 +58,16 @@ func TestNetgroup(t *testing.T) {
 		t.Fatalf("different IPv4 /16 should differ: %q", a)
 	}
 }
+
+
+func TestDNSNetgroupUsesParentDomain(t *testing.T) {
+	if a, b := netgroup("https://a.example.com"), netgroup("https://b.example.com"); a == "" || a != b {
+		t.Fatalf("same parent DNS domain should share netgroup: %q %q", a, b)
+	}
+	if a, b := netgroup("https://one.example.com"), netgroup("https://two.other.net"); a == b {
+		t.Fatalf("different parent DNS domains should differ: %q", a)
+	}
+	if a, b := netgroup("https://node-a.example.co.uk"), netgroup("https://node-b.example.co.uk"); a == "" || a != b {
+		t.Fatalf("same ccTLD parent DNS domain should share netgroup: %q %q", a, b)
+	}
+}
