@@ -47,3 +47,21 @@ func TestDesktopCSPAllowsOnlyLocalExplorerFrame(t *testing.T) {
 		t.Fatalf("unexpected frame-src directive: %q (full CSP: %q)", frameDirective, csp)
 	}
 }
+
+func TestDesktopShowsPublicNodeReadiness(t *testing.T) {
+	b, err := webFS.ReadFile("web/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := string(b)
+	for _, want := range []string{
+		`id="publicNodeBadge"`,
+		`id="publicNodeEndpoint"`,
+		`state.public_endpoint`,
+		`TCP/18444`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Fatalf("public-node readiness UI missing %q", want)
+		}
+	}
+}
