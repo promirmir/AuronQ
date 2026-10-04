@@ -1,0 +1,35 @@
+name: Public network health
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'cmd/auronq-healthcheck/**'
+      - 'bootstrap.json'
+      - '.github/workflows/network-health.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auronq-public-network-health
+  cancel-in-progress: true
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+
+      - name: Test health checker
+        run: go test ./cmd/auronq-healthcheck
+
+      - name: Verify public Mainnet peers and Explorer
+        run: go run ./cmd/auronq-healthcheck -manifest bootstrap.json
