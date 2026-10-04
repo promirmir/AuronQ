@@ -93,3 +93,10 @@ Discovery metadata can be changed without changing Network ID.
 ## Mainnet security status
 
 AuronQ 1.7.0 is live mainnet software. It is **not independently audited**. AQM64, consensus/reorg logic, wallet handling and the P2P layer should receive independent review before meaningful real-world value depends on the network.
+
+
+### Automatic direct-public advertisement
+
+When `--advertise` is not supplied and the node is listening on a public interface, AuronQ now attempts to advertise that directly assigned public IP and listening port automatically. The receiving peer still callback-verifies the endpoint before admitting it to gossip, so detection alone does not make an endpoint trusted.
+
+This primarily helps VPS/server operators whose public IP is assigned directly to a network interface. Nodes behind home NAT/CGNAT still need port forwarding plus an explicit `--advertise` URL, or another public relay mechanism.
