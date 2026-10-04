@@ -561,6 +561,16 @@ public class MainActivity extends Activity {
                 String node = snapshotState.optString("node", "").trim();
                 if (node.isEmpty()) throw new Exception("AuronQ quorum did not select a node");
 
+                // Show a successfully verified network snapshot immediately. Wallet
+                // quorum/history refreshes can be slower and must not leave the UI stuck
+                // on "Connecting…" after the chain itself is already verified.
+                final String connectedNode = node;
+                final String connectedSnapshot = snapshot;
+                runOnUiThread(() -> {
+                    nodeUrl = connectedNode;
+                    applySnapshot(connectedSnapshot);
+                });
+
                 rememberNetwork(node);
 
                 String balance = null;
@@ -596,14 +606,10 @@ public class MainActivity extends Activity {
                     }
                 }
 
-                final String finalNode = node;
-                final String finalSnapshot = snapshot;
                 final String finalBalance = balance;
                 final String finalHistory = history;
                 final String finalHistoryError = historyError;
                 runOnUiThread(() -> {
-                    nodeUrl = finalNode;
-                    applySnapshot(finalSnapshot);
                     if (finalBalance != null) applyBalance(finalBalance);
                     if (finalHistory != null) {
                         applyHistory(finalHistory);
