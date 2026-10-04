@@ -125,15 +125,15 @@ Explorer endpoints are rate-limited. Explorer v1 reads canonical chain and mempo
 
 ## Android alpha
 
-For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.4.2 Alpha**:
+For Android 8.0+ on ARM64, the current test wallet is **AuronQ Mobile 0.5.1 Alpha**:
 
-- [AuronQ-Mobile-0.4.2-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.4.2-alpha/AuronQ-Mobile-0.4.2-alpha.apk)
-- Release page: [android-v0.4.2-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.4.2-alpha)
-- SHA-256: `0224f45dca6b721577a60dc5dcd03d5734c0468c1abcac6f4c4e183b19c59736`
+- [AuronQ-Mobile-0.5.1-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.1-alpha/AuronQ-Mobile-0.5.1-alpha.apk)
+- Release page: [android-v0.5.1-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.1-alpha)
+- SHA-256: `c224dd9f94d52132d71e7f781dfadcbbc3a7bc92c2c07bf32d38dc4929328c73`
 
-AuronQ Mobile remains a **light wallet client, not a full node**. Private keys and ML-DSA-87 signing stay local on the phone. Version 0.4.2 compares Mainnet state across multiple replaceable HTTPS AuronQ nodes, exposes peer agreement, compares wallet balances only across peers reporting the same chain state, fails closed on conflicting same-chain balance responses, remembers P2P-learned nodes and directly fans the same signed transaction out to multiple reachable nodes.
+AuronQ Mobile remains a **light wallet client, not a full node**. Private keys and ML-DSA-87 signing stay local on the phone. Version 0.5.1 independently validates the AuronQ Mainnet header chain from the embedded genesis header, including AQM64 proof-of-work, difficulty, timestamp and previous-hash continuity. It then accepts balance/history/UTXO state only from peers matching that locally verified header state, compares wallet state across those peers and fails closed on conflicting canonical state. Normal asynchronous mempool differences are tolerated by requiring agreement on canonical history while merging pending observations from agreeing peers.
 
-Multi-peer agreement reduces dependence on a single endpoint, but it is **not equivalent to independently validating the complete AQM64 chain**. The APK is debug-signed alpha software and has not received an independent security audit; do not use substantial value.
+This is materially stronger than trusting one API node, but it is still **not equivalent to a full node** because the phone does not reconstruct and validate the complete UTXO/block state locally. The APK is debug-signed alpha software and has not received an independent security audit; do not use substantial value.
 
 ## Mainnet identity
 
