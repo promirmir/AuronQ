@@ -245,7 +245,10 @@ func DecryptSeed(salt, nonce, ciphertext []byte, password string) ([]byte, error
 }
 
 func AddressFromPub(pub []byte, scheme uint16, network byte) string {
-	kh := Hash256(pub)
+	return AddressFromKeyHash(Hash256(pub), scheme, network)
+}
+
+func AddressFromKeyHash(kh KeyHash, scheme uint16, network byte) string {
 	payload := make([]byte, 0, 41)
 	payload = append(payload, network, byte(scheme>>8), byte(scheme))
 	payload = append(payload, kh[:]...)

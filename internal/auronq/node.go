@@ -63,6 +63,7 @@ const (
 	maxRequestsPerIPWindow       = 320
 	maxBlocksPerIPWindow         = 8
 	maxHistoryRequestsPerIPWindow = 12
+	maxExplorerRequestsPerIPWindow = 60
 	maxRateEntries               = 8192
 )
 
@@ -724,8 +725,100 @@ func (n *Node) allowHistoryRequest(r *http.Request) bool {
 	return n.allowRate(ip+"|history", maxHistoryRequestsPerIPWindow)
 }
 
+func (n *Node) allowExplorerRequest(r *http.Request) bool {
+	ip := requestSourceIP(r.RemoteAddr)
+	return n.allowRate(ip+"|explorer", maxExplorerRequestsPerIPWindow)
+}
+
 func (n *Node) handler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/explorer", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, explorerIndexHTML)
+	})
+	mux.HandleFunc("/explorer/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, explorerIndexHTML)
+	})
+	mux.HandleFunc("/v1/explorer/blocks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if !n.allowExplorerRequest(r) {
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "explorer request rate limit exceeded"})
+			return
+		}
+		limit := 20
+		if raw := r.URL.Query().Get("limit"); raw != "" {
+			v, err := strconv.Atoi(raw)
+			if err != nil || v < 1 || v > 100 {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid block limit"})
+				return
+			}
+			limit = v
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"blocks": n.Chain.ExplorerRecentBlocks(limit)})
+	})
+	mux.HandleFunc("/v1/explorer/block", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if !n.allowExplorerRequest(r) {
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "explorer request rate limit exceeded"})
+			return
+		}
+		var height *uint64
+		if raw := r.URL.Query().Get("height"); raw != "" {
+			h, err := strconv.ParseUint(raw, 10, 64)
+			if err != nil {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid block height"})
+				return
+			}
+			height = &h
+		}
+		view, ok, err := n.Chain.ExplorerBlock(height, r.URL.Query().Get("hash"))
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		if !ok {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "block not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, view)
+	})
+	mux.HandleFunc("/v1/explorer/tx", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if !n.allowExplorerRequest(r) {
+			writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": "explorer request rate limit exceeded"})
+			return
+		}
+		view, ok, err := n.Chain.ExplorerTransaction(r.URL.Query().Get("txid"))
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		if !ok {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "transaction not found"})
+			return
+		}
+		writeJSON(w, http.StatusOK, view)
+	})
 	mux.HandleFunc("/v1/status", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			w.WriteHeader(405)
