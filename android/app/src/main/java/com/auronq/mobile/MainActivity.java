@@ -432,6 +432,12 @@ public class MainActivity extends Activity {
         netStatus.setTextColor(MUTED);
         root.addView(netStatus, mt(16));
 
+        TextView firstSyncNote = text(tr(
+                "Pierwsze uruchomienie może potrwać dłużej, ponieważ telefon lokalnie weryfikuje łańcuch nagłówków AQM64 od genesis. Kolejne uruchomienia korzystają z zapisanego, zweryfikowanego stanu i powinny być wyraźnie szybsze.",
+                "The first launch can take longer because the phone locally verifies the AQM64 header chain from genesis. Later launches reuse the saved verified state and should be noticeably faster."), 11, false);
+        firstSyncNote.setTextColor(MUTED);
+        root.addView(firstSyncNote, mt(8));
+
         LinearLayout stats1 = row();
         netHeight = statCard(stats1, tr("WYSOKOŚĆ", "HEIGHT"), "—", tr("blok", "block"));
         netPeers = statCard(stats1, "PEERS", "0", tr("połączenia", "connections"));
@@ -720,7 +726,9 @@ public class MainActivity extends Activity {
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
-            dashNode.setText(tr("● Połączono • trwa weryfikacja AQM64…", "● Connected • verifying AQM64…"));
+            dashNode.setText(headerCacheFile != null && headerCacheFile.exists()
+                    ? tr("● Połączono • trwa weryfikacja AQM64…", "● Connected • verifying AQM64…")
+                    : tr("● Połączono • pierwsza weryfikacja AQM64 może potrwać dłużej…", "● Connected • first AQM64 verification may take longer…"));
             dashNode.setTextColor(BLUE);
             dashTip.setText("Tip: " + shortHash(j.optString("tip")));
 
