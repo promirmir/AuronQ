@@ -119,6 +119,7 @@ $args = @(
     "-O3",
     "-std=c++17",
     "-shared",
+    "--cudart", "static",
     "-Xcompiler", "/O2 /MD",
     "-gencode", "arch=compute_75,code=sm_75",
     "-gencode", "arch=compute_86,code=sm_86",
