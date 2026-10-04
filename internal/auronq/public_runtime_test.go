@@ -33,6 +33,12 @@ func TestSetPublicAdvertiseDoesNotDeadlock(t *testing.T) {
 	if len(n.announced) != 0 {
 		t.Fatal("announce cache was not cleared")
 	}
+	if !n.ClearPublicAdvertise("http://8.8.8.8:18444") {
+		t.Fatal("temporary public advertise was not cleared")
+	}
+	if got := n.PublicAdvertise(); got != "" {
+		t.Fatalf("PublicAdvertise after clear=%q", got)
+	}
 }
 
 func TestPermanentPortMappingCloseDeletesOnce(t *testing.T) {
