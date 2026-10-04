@@ -100,6 +100,7 @@ func main() {
 }
 
 func runSelfTest(backend gpuBackend) error {
+	// First verify the raw Argon2id accelerator boundary.
 	password := make([]byte, 64)
 	salt := make([]byte, 32)
 	for i := range password {
@@ -127,6 +128,43 @@ func runSelfTest(backend gpuBackend) error {
 	)
 	if !bytes.Equal(gpuKey, cpuKey) {
 		return fmt.Errorf("GPU Argon2id result does not match AuronQ CPU reference")
+	}
+
+	// Then verify the complete AQM64 pipeline on a deterministic synthetic
+	// header: header serialization + SHAKE256 PRE + salt + GPU Argon2id +
+	// SHAKE256 FINAL must match the canonical CPU PowHash byte-for-byte.
+	header := aq.BlockHeader{
+		Version:   aq.BlockVersion,
+		PowAlgo:   aq.PowAlgorithmAQM64,
+		Height:    12345,
+		Timestamp: 1790951480,
+		Target:    aq.PowLimit,
+		Nonce:     0x0123456789abcdef,
+	}
+	for i := range header.PrevHash {
+		header.PrevHash[i] = byte(i*3 + 1)
+	}
+	for i := range header.MerkleRoot {
+		header.MerkleRoot[i] = byte(i*5 + 7)
+	}
+	p, err := prepareCandidate(header)
+	if err != nil {
+		return err
+	}
+	final, err := backend.Run(p.initial, 1)
+	if err != nil {
+		return err
+	}
+	gpuHash, err := finishCandidate(p.pre, final[:128])
+	if err != nil {
+		return err
+	}
+	cpuHash, err := aq.PowHash(header)
+	if err != nil {
+		return err
+	}
+	if gpuHash != cpuHash {
+		return fmt.Errorf("full AQM64 GPU result does not match canonical CPU PowHash")
 	}
 	return nil
 }
