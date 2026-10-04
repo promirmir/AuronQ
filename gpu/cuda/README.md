@@ -8,6 +8,10 @@ not change Mainnet consensus.
 
 Prototype / review stage. Do not treat it as a finished release yet.
 
+Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
+with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
+result between the CUDA backend and the canonical CPU PowHash implementation.
+
 The heavy Argon2id memory graph runs on CUDA. SHAKE256 domain separation,
 Argon2 initialization/final extraction, target comparison, template handling
 and block submission stay in the Go miner so they reuse AuronQ's existing
@@ -70,6 +74,8 @@ Optional flags:
 - --batch N: candidates processed concurrently; 0 = automatic
 - --cuda-dll PATH: explicit path to auronq-aqm64-cuda.dll
 - --self-test: GPU/CPU equivalence test before mining
+- --benchmark: offline end-to-end AQM64 throughput benchmark; does not connect to a node or submit blocks
+- --benchmark-seconds N: approximate benchmark duration (default 20 seconds)
 
 The miner obtains a block template from the local full node, searches nonces on
 the GPU, detects canonical-tip changes between batches, and submits a candidate
@@ -80,5 +86,5 @@ block only after the final AQM64 digest satisfies the template target.
 - The full node remains the authority that validates submitted blocks.
 - No privileged mining endpoint or consensus shortcut is introduced.
 - The CUDA code is new and has not received an independent audit.
-- Real-device equivalence testing is required before publishing binaries.
-- Performance numbers should not be advertised until measured on actual GPUs.
+- Real-device equivalence testing has passed on RTX 4050 Laptop GPU; more GPU models still need coverage.
+- Performance numbers should not be advertised until measured with the offline benchmark on actual GPUs.
