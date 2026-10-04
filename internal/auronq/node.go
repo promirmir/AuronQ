@@ -278,6 +278,25 @@ func (n *Node) clientForPeer(peer string) *http.Client {
 	return n.client
 }
 
+func dnsPeerGroup(host string) string {
+	host = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(host), "."))
+	parts := strings.Split(host, ".")
+	if len(parts) < 2 {
+		return host
+	}
+	// Conservative registrable-domain approximation used only for peer diversity,
+	// never for trust or consensus. Common second-level ccTLD forms keep one extra
+	// label (example.co.uk); ordinary DNS names group at example.com / ts.net.
+	n := 2
+	if len(parts) >= 3 && len(parts[len(parts)-1]) == 2 {
+		switch parts[len(parts)-2] {
+		case "co", "com", "net", "org", "gov", "ac":
+			n = 3
+		}
+	}
+	return strings.Join(parts[len(parts)-n:], ".")
+}
+
 func peerNetgroup(p string) string {
 	p = normalizePeer(p)
 	u, err := url.Parse(p)
@@ -288,7 +307,7 @@ func peerNetgroup(p string) string {
 	ip := net.ParseIP(host)
 	if ip == nil {
 		if u.Scheme == "https" && safePublicDNSHost(host) {
-			return "dns:" + strings.ToLower(strings.TrimSuffix(host, "."))
+			return "dns:" + dnsPeerGroup(host)
 		}
 		return ""
 	}
@@ -300,6 +319,41 @@ func peerNetgroup(p string) string {
 		return ""
 	}
 	return fmt.Sprintf("v6:%02x%02x:%02x%02x", v6[0], v6[1], v6[2], v6[3])
+}
+
+func diversePeerOrder(peers []string) []string {
+	if len(peers) < 2 {
+		return append([]string(nil), peers...)
+	}
+	buckets := map[string][]string{}
+	for _, p := range peers {
+		g := peerNetgroup(p)
+		if g == "" {
+			g = "peer:" + normalizePeer(p)
+		}
+		buckets[g] = append(buckets[g], p)
+	}
+	groups := make([]string, 0, len(buckets))
+	for g := range buckets {
+		groups = append(groups, g)
+		sort.Strings(buckets[g])
+	}
+	sort.Strings(groups)
+
+	out := make([]string, 0, len(peers))
+	for round := 0; len(out) < len(peers); round++ {
+		added := false
+		for _, g := range groups {
+			if round < len(buckets[g]) {
+				out = append(out, buckets[g][round])
+				added = true
+			}
+		}
+		if !added {
+			break
+		}
+	}
+	return out
 }
 
 func (n *Node) addPeer(p string) {
@@ -451,9 +505,22 @@ func (n *Node) addManifestPeer(raw string) bool {
 	if p == "" || p == normalizePeer(n.cfg.Advertise) {
 		return false
 	}
+	group := peerNetgroup(p)
+	if group == "" {
+		return false
+	}
 	n.pmu.Lock()
 	defer n.pmu.Unlock()
 	if _, exists := n.peers[p]; exists || len(n.peers) >= maxKnownPeers {
+		return false
+	}
+	groupCount := 0
+	for existing := range n.peers {
+		if peerNetgroup(existing) == group {
+			groupCount++
+		}
+	}
+	if groupCount >= maxPeersPerNetgroup {
 		return false
 	}
 	n.peers[p] = struct{}{}
@@ -1150,7 +1217,10 @@ func (n *Node) syncLoop(ctx context.Context) {
 	}
 }
 func (n *Node) syncAll() {
-	peers := n.peerList()
+	// Interleave netgroups before applying the rotating cursor. A collection of
+	// peers from one subnet/provider/domain therefore cannot crowd every slot in
+	// a sync round merely by sorting next to each other.
+	peers := diversePeerOrder(n.peerList())
 	if len(peers) == 0 {
 		return
 	}

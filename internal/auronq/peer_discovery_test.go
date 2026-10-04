@@ -2,6 +2,7 @@ package auronq
 
 import (
 	"context"
+	"fmt"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -301,5 +302,70 @@ func TestBootstrapManifestMetadataDoesNotChangeNetworkID(t *testing.T) {
 	netCfg.BootstrapManifests = []string{"https://example.com/bootstrap.json"}
 	if got := netCfg.NetworkID(); got != before {
 		t.Fatalf("bootstrap manifest metadata changed network id: before=%s after=%s", before, got)
+	}
+}
+
+
+func TestDNSPeerNetgroupUsesParentDomain(t *testing.T) {
+	cases := map[string]string{
+		"https://a.example.com":        "dns:example.com",
+		"https://b.c.example.com":      "dns:example.com",
+		"https://node.example.co.uk":   "dns:example.co.uk",
+		"https://mir.taild63f46.ts.net": "dns:ts.net",
+	}
+	for peer, want := range cases {
+		if got := peerNetgroup(peer); got != want {
+			t.Fatalf("peerNetgroup(%q)=%q want %q", peer, got, want)
+		}
+	}
+}
+
+func TestDiscoveredDNSParentDomainDiversityCap(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	n := NewNode(c, NodeConfig{})
+	for i := 0; i < maxPeersPerNetgroup+3; i++ {
+		n.addDiscoveredPeer(fmt.Sprintf("https://node-%d.example.com", i))
+	}
+	got := n.peerList()
+	if len(got) != maxPeersPerNetgroup {
+		t.Fatalf("same-domain DNS peers=%v; got %d want %d", got, len(got), maxPeersPerNetgroup)
+	}
+}
+
+func TestManifestPeersRespectNetgroupDiversityCap(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	n := NewNode(c, NodeConfig{})
+	accepted := 0
+	for i := 0; i < maxPeersPerNetgroup+3; i++ {
+		if n.addManifestPeer(fmt.Sprintf("https://manifest-%d.example.com", i)) {
+			accepted++
+		}
+	}
+	if accepted != maxPeersPerNetgroup {
+		t.Fatalf("manifest accepted=%d want=%d peers=%v", accepted, maxPeersPerNetgroup, n.peerList())
+	}
+}
+
+func TestDiversePeerOrderInterleavesNetgroups(t *testing.T) {
+	in := []string{
+		"http://1.1.1.1:18444",
+		"http://1.1.2.2:18444",
+		"http://1.1.3.3:18444",
+		"http://8.8.8.8:18444",
+		"http://8.8.4.4:18444",
+		"http://8.8.5.5:18444",
+		"https://a.example.com",
+		"https://b.example.com",
+	}
+	out := diversePeerOrder(in)
+	if len(out) != len(in) {
+		t.Fatalf("ordered peers=%v", out)
+	}
+	firstGroups := map[string]bool{}
+	for i := 0; i < 3; i++ {
+		firstGroups[peerNetgroup(out[i])] = true
+	}
+	if len(firstGroups) != 3 {
+		t.Fatalf("first sync candidates are not netgroup-diverse: %v", out[:3])
 	}
 }
