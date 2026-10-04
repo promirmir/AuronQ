@@ -65,6 +65,7 @@ public class MainActivity extends Activity {
 
     private File walletDir;
     private File walletFile;
+    private File headerCacheFile;
     private String nodeUrl = "";
     private String walletAddress = "";
     private String currentScreen = "home";
@@ -141,6 +142,9 @@ public class MainActivity extends Activity {
         walletDir = new File(getFilesDir(), "wallets");
         if (!walletDir.exists()) walletDir.mkdirs();
         walletFile = new File(walletDir, "main.wallet");
+        File headerDir = new File(getFilesDir(), "headers");
+        if (!headerDir.exists()) headerDir.mkdirs();
+        headerCacheFile = new File(headerDir, "mainnet-v1.json");
 
         setContentView(buildUi());
         loadWalletState();
@@ -458,8 +462,8 @@ public class MainActivity extends Activity {
         root.addView(refresh, mt(14));
 
         TextView model = text(tr(
-                "AuronQ Mobile jest lekkim klientem portfela, nie pełnym nodem. Klucze pozostają lokalnie. Aplikacja porównuje stan wielu wymiennych nodów AuronQ, pokazuje zgodność peerów, zapamiętuje peery poznane z P2P i rozgłasza podpisaną transakcję do wielu nodów. Nie traktuje żadnego noda startowego jako zaufanego źródła konsensusu.",
-                "AuronQ Mobile is a light wallet client, not a full node. Keys remain local. The app compares state across replaceable AuronQ nodes, exposes peer agreement, remembers peers learned from P2P, and broadcasts signed transactions to multiple nodes. It does not treat any startup node as a trusted consensus authority."), 12, false);
+                "AuronQ Mobile jest klientem weryfikującym nagłówki, nie pełnym nodem. Klucze pozostają lokalnie. Telefon utrzymuje własny cache zweryfikowanych nagłówków od genesis, sam sprawdza AQM64 PoW, difficulty, ciągłość hashy i reguły czasu, porównuje wiele peerów oraz rozgłasza podpisaną transakcję do wielu nodów. Pełna walidacja transakcji i UTXO nadal należy do full nodów.",
+                "AuronQ Mobile is a header-verifying light client, not a full node. Keys remain local. The phone keeps its own verified header cache from genesis and independently checks AQM64 PoW, difficulty, hash continuity and timestamp rules, compares multiple peers, and broadcasts signed transactions to multiple nodes. Full transaction and UTXO validation still belongs to full nodes."), 12, false);
         model.setTextColor(MUTED);
         root.addView(model, mt(18));
 
@@ -549,7 +553,7 @@ public class MainActivity extends Activity {
         executor.execute(() -> {
             try {
                 String knownNodes = prefs.getString("known_nodes", "[]");
-                String snapshot = Bridge.quorumSnapshot(knownNodes, 6);
+                String snapshot = Bridge.quorumSnapshotVerified(knownNodes, headerCacheFile.getAbsolutePath(), 6);
                 JSONObject snapshotState = new JSONObject(snapshot);
                 String node = snapshotState.optString("node", "").trim();
                 if (node.isEmpty()) throw new Exception("AuronQ quorum did not select a node");
@@ -562,7 +566,12 @@ public class MainActivity extends Activity {
                 if (walletFile.exists()) {
                     try {
                         String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
-                        balance = Bridge.quorumBalance(prefs.getString("known_nodes", "[]"), addr);
+                        balance = Bridge.quorumBalanceVerified(
+                                prefs.getString("known_nodes", "[]"),
+                                addr,
+                                snapshotState.optString("verified_tip"),
+                                snapshotState.optString("verified_chain_work"),
+                                snapshotState.optLong("verified_height"));
                         if ("wallet".equals(currentScreen)) {
                             String historyKey = addr + ":" + snapshotState.optLong("height") + ":" + snapshotState.optInt("mempool");
                             if (!historyKey.equals(lastHistoryKey)) {
@@ -613,21 +622,27 @@ public class MainActivity extends Activity {
             int observedPeers = Math.max(1, j.optInt("peer_observed", 1));
             int agreeingPeers = Math.max(1, j.optInt("peer_agreement", 1));
             boolean multiPeerConfirmed = j.optBoolean("multi_peer_confirmed", false);
+            boolean headerVerified = j.optBoolean("header_verified", false);
+            long headersCheckedNow = j.optLong("headers_checked_now", 0);
             String agreementText = agreeingPeers + "/" + observedPeers;
 
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
-            dashNode.setText(multiPeerConfirmed
-                    ? tr("● Mainnet • zgodność peerów " + agreementText, "● Mainnet • peer agreement " + agreementText)
-                    : tr("● Mainnet • brak quorum " + agreementText, "● Mainnet • no quorum " + agreementText));
-            dashNode.setTextColor(multiPeerConfirmed ? ACCENT : BLUE);
+            dashNode.setText(headerVerified
+                    ? tr("● AQM64 zweryfikowane • peery " + agreementText, "● AQM64 verified • peers " + agreementText)
+                    : tr("● Nagłówki niezweryfikowane", "● Headers unverified"));
+            dashNode.setTextColor(headerVerified ? ACCENT : DANGER);
             dashTip.setText("Tip: " + shortHash(j.optString("tip")));
 
-            netStatus.setText(multiPeerConfirmed
-                    ? tr("● Stan potwierdzony przez wiele peerów: " + agreementText, "● State confirmed by multiple peers: " + agreementText)
-                    : tr("● Połączono, ale peery nie mają pełnej zgodności: " + agreementText, "● Connected, but peers do not fully agree: " + agreementText));
-            netStatus.setTextColor(multiPeerConfirmed ? ACCENT : BLUE);
+            String verifyDetail = headersCheckedNow > 0
+                    ? tr(" • nowych nagłówków: ", " • new headers: ") + headersCheckedNow
+                    : "";
+            netStatus.setText(headerVerified
+                    ? tr("● Lokalnie zweryfikowano PoW/difficulty • zgodność peerów ", "● PoW/difficulty verified locally • peer agreement ")
+                        + agreementText + verifyDetail
+                    : tr("● Brak niezależnej weryfikacji nagłówków", "● No independent header verification"));
+            netStatus.setTextColor(headerVerified ? ACCENT : DANGER);
             netHeight.setText(String.valueOf(height));
             netPeers.setText(String.valueOf(peers));
             netMempool.setText(String.valueOf(mempool));
@@ -638,7 +653,7 @@ public class MainActivity extends Activity {
             netWork.setText(j.optString("chain_work"));
             netObserved.setText(j.optString("observed_at"));
 
-            topNetworkDot.setTextColor(multiPeerConfirmed ? ACCENT : BLUE);
+            topNetworkDot.setTextColor(headerVerified ? ACCENT : DANGER);
 
             recentBlocks.removeAllViews();
             JSONArray blocks = j.optJSONArray("blocks");
