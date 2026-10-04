@@ -30,9 +30,11 @@ import (
 )
 
 const (
-	guiVersion       = "0.2.0-alpha"
+	guiVersion       = "0.2.1-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
+	localNodeURLv6   = "http://[::1]:18444"
+	desktopGUIURL    = "http://127.0.0.1:18445"
 	mainnetNetworkID = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 )
 
@@ -452,7 +454,56 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true})
 }
 
+func probeNodeStatus(base string, timeout time.Duration) (aq.Status, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	st, err := aq.NewClient(base).StatusContext(ctx)
+	if err != nil {
+		return aq.Status{}, false
+	}
+	return st, true
+}
+
+func desktopBackendState(timeout time.Duration) (running bool, nodeRunning bool, networkID string) {
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Get(desktopGUIURL + "/api/state")
+	if err != nil {
+		return false, false, ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false, false, ""
+	}
+	var st struct {
+		NodeRunning bool   `json:"node_running"`
+		NetworkID   string `json:"network_id"`
+	}
+	if json.NewDecoder(io.LimitReader(resp.Body, 128<<10)).Decode(&st) != nil {
+		return false, false, ""
+	}
+	return true, st.NodeRunning, strings.TrimSpace(st.NetworkID)
+}
+
+func checkLocalNodeSplit() error {
+	v4, ok4 := probeNodeStatus(localNodeURL, 700*time.Millisecond)
+	v6, ok6 := probeNodeStatus(localNodeURLv6, 700*time.Millisecond)
+	if !ok4 || !ok6 {
+		return nil
+	}
+	if v4.NetworkID != v6.NetworkID {
+		return errors.New("critical local-node conflict: IPv4 and IPv6 port 18444 belong to different AuronQ networks")
+	}
+	if v4.Height != v6.Height || v4.Tip != v6.Tip || v4.ChainWork != v6.ChainWork {
+		return fmt.Errorf("critical local-node conflict: two local AuronQ nodes are serving different chains (IPv4 height %d, IPv6 height %d)", v4.Height, v6.Height)
+	}
+	return nil
+}
+
 func (a *App) ensureNode() error {
+	if err := checkLocalNodeSplit(); err != nil {
+		return err
+	}
+
 	a.mu.RLock()
 	trackedRun := a.nodeRun
 	trackedOwned := a.nodeOwned
@@ -461,10 +512,7 @@ func (a *App) ensureNode() error {
 		return nil
 	}
 	if trackedRun && !trackedOwned {
-		ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
-		st, err := aq.NewClient(localNodeURL).StatusContext(ctx)
-		cancel()
-		if err == nil && st.NetworkID == a.network.NetworkID() {
+		if st, ok := probeNodeStatus(localNodeURL, 900*time.Millisecond); ok && st.NetworkID == a.network.NetworkID() {
 			return nil
 		}
 		a.mu.Lock()
@@ -473,10 +521,37 @@ func (a *App) ensureNode() error {
 		a.mu.Unlock()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1200*time.Millisecond)
-	st, err := aq.NewClient(localNodeURL).StatusContext(ctx)
-	cancel()
-	if err == nil {
+	// AuronQ Desktop intentionally keeps its backend/node alive even when the
+	// app window is closed. If its backend exists, GPU Miner must never create
+	// a second full node on another address family. It either reuses Desktop's
+	// node or asks the user to start/close Desktop first.
+	if desktopRunning, desktopNodeRunning, desktopNetworkID := desktopBackendState(800 * time.Millisecond); desktopRunning {
+		if desktopNetworkID != "" && desktopNetworkID != a.network.NetworkID().String() {
+			return errors.New("AuronQ Desktop is running with a different network")
+		}
+		if !desktopNodeRunning {
+			return errors.New("AuronQ Desktop is running but its full node is stopped; start the node in Desktop or close Desktop before GPU mining")
+		}
+		deadline := time.Now().Add(5 * time.Second)
+		for time.Now().Before(deadline) {
+			if st, ok := probeNodeStatus(localNodeURL, 700*time.Millisecond); ok {
+				if st.NetworkID != a.network.NetworkID() {
+					return errors.New("local port 18444 belongs to a different network")
+				}
+				a.mu.Lock()
+				a.nodeRun = true
+				a.nodeOwned = false
+				a.nodeErr = ""
+				a.mu.Unlock()
+				a.addLog(fmt.Sprintf("Using AuronQ Desktop full node at height %d", st.Height))
+				return checkLocalNodeSplit()
+			}
+			time.Sleep(150 * time.Millisecond)
+		}
+		return errors.New("AuronQ Desktop reports its node as running, but Mainnet node on 127.0.0.1:18444 is not reachable")
+	}
+
+	if st, ok := probeNodeStatus(localNodeURL, 1200*time.Millisecond); ok {
 		if st.NetworkID != a.network.NetworkID() {
 			return errors.New("port 18444 is used by a different network")
 		}
@@ -486,7 +561,13 @@ func (a *App) ensureNode() error {
 		a.nodeErr = ""
 		a.mu.Unlock()
 		a.addLog(fmt.Sprintf("Using existing local AuronQ full node at height %d", st.Height))
-		return nil
+		return checkLocalNodeSplit()
+	}
+	if st, ok := probeNodeStatus(localNodeURLv6, 1200*time.Millisecond); ok {
+		if st.NetworkID != a.network.NetworkID() {
+			return errors.New("IPv6 port 18444 is used by a different network")
+		}
+		return errors.New("an AuronQ node is already bound on IPv6 port 18444 but is not reachable on IPv4; refusing to start a second local node")
 	}
 
 	networkNodeDir := filepath.Join(a.nodeDir, a.network.NetworkID().String())
@@ -498,7 +579,10 @@ func (a *App) ensureNode() error {
 		return err
 	}
 	node := aq.NewNode(chain, aq.NodeConfig{
-		Listen:        "0.0.0.0:18444",
+		// Match AuronQ Desktop's listener exactly. Using 0.0.0.0 here allowed a
+		// second IPv4 node to coexist with Desktop's IPv6 listener on Windows,
+		// which could split localhost traffic between two independent chains.
+		Listen:        "[::]:18444",
 		Peers:         append([]string(nil), a.bootstrap...),
 		PeerStorePath: filepath.Join(networkNodeDir, "public-peers.json"),
 	})
@@ -536,10 +620,11 @@ func (a *App) ensureNode() error {
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
 		time.Sleep(120 * time.Millisecond)
-		cctx, ccancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-		ns, e := aq.NewClient(localNodeURL).StatusContext(cctx)
-		ccancel()
-		if e == nil && ns.NetworkID == a.network.NetworkID() {
+		if ns, ok := probeNodeStatus(localNodeURL, 500*time.Millisecond); ok && ns.NetworkID == a.network.NetworkID() {
+			if err := checkLocalNodeSplit(); err != nil {
+				nodeCancel()
+				return err
+			}
 			a.addLog(fmt.Sprintf("Embedded full node ready at height %d", ns.Height))
 			return nil
 		}
@@ -551,6 +636,7 @@ func (a *App) ensureNode() error {
 			return errors.New(nodeErr)
 		}
 	}
+	nodeCancel()
 	return errors.New("full node did not become ready on TCP/18444")
 }
 
