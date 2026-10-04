@@ -1,0 +1,5 @@
+AuronQ 1.7.11 Mainnet
+
+- Built-in Explorer lists alternative HTTPS full-node Explorers learned through native AuronQ P2P gossip.
+- No Explorer is canonical or trusted; each full node serves data from its own locally validated chain.
+- No consensus, Network ID, genesis, monetary-policy, AQM64, signature or transaction-rule changes.
