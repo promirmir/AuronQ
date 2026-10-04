@@ -19,7 +19,7 @@ import (
 	aq "auronq/internal/auronq"
 )
 
-const version = "1.7.1"
+const version = "1.7.12"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)

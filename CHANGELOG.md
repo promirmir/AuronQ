@@ -4,7 +4,17 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
-### Desktop / Full Node v1.7.11 — Mainnet
+### Desktop / Full Node v1.7.12 — Mainnet
+
+- Fixed stale mining templates in CLI and Desktop mining.
+- Miners now watch the connected node's canonical tip while hashing.
+- If another miner advances the chain, obsolete work is cancelled and a fresh template is fetched promptly.
+- A same-height reorganization also invalidates the current template through PrevHash comparison.
+- Added regression coverage for tip advances, same-height reorgs and caller cancellation.
+- Corrected the CLI-reported software version to 1.7.12.
+- Consensus, AQM64, difficulty, Network ID, genesis, monetary policy and transaction rules are unchanged.
+
+### Desktop / Full Node v1.7.11 — Previous Mainnet patch
 
 - Built-in Explorer lists alternative HTTPS full-node Explorers learned through native AuronQ P2P gossip.
 - No Explorer is canonical or trusted; each full node serves data from its own locally validated chain.
