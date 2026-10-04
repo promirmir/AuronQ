@@ -16,11 +16,15 @@ import (
 )
 
 const (
-	mobileVersion       = "0.4.0-alpha"
+	mobileVersion       = "0.4.1-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
-	fallbackBootstrap    = "https://mir.taild63f46.ts.net"
 )
+
+var bundledBootstrapPeers = []string{
+	"https://mir.taild63f46.ts.net",
+	"https://desktop-4nifg1j.taild63f46.ts.net",
+}
 
 type bootstrapManifest struct {
 	NetworkID string   `json:"network_id"`
@@ -128,19 +132,37 @@ func checkNode(base string) error {
 }
 
 func DiscoverNode() (string, error) {
-	peers, manifestErr := fetchManifest()
+	// Fresh installs first use the peer snapshot bundled into the APK. The GitHub
+	// manifest is only an optional freshness source, not a runtime authority.
+	// After the first successful contact, Android persists peers learned directly
+	// from AuronQ /p2p/hello and tries those cached network peers before calling
+	// this function again.
+	manifestPeers, manifestErr := fetchManifest()
 	seen := map[string]bool{}
-	candidates := make([]string, 0, len(peers)+1)
-	for _, p := range peers {
+	candidates := make([]string, 0, len(bundledBootstrapPeers)+len(manifestPeers))
+	add := func(p string) {
 		p = strings.TrimRight(strings.TrimSpace(p), "/")
-		if p != "" && !seen[p] {
-			seen[p] = true
-			candidates = append(candidates, p)
+		if p == "" || seen[p] || !strings.HasPrefix(p, "https://") {
+			return
 		}
+		seen[p] = true
+		candidates = append(candidates, p)
 	}
-	if !seen[fallbackBootstrap] {
-		candidates = append(candidates, fallbackBootstrap)
+	for _, p := range bundledBootstrapPeers {
+		add(p)
 	}
+	for _, p := range manifestPeers {
+		add(p)
+	}
+
+	// Rotate the starting point so one bundled address is not permanently favored.
+	if len(candidates) > 1 {
+		start := int(time.Now().UnixNano() % int64(len(candidates)))
+		rotated := append([]string(nil), candidates[start:]...)
+		rotated = append(rotated, candidates[:start]...)
+		candidates = rotated
+	}
+
 	var lastErr error
 	for _, p := range candidates {
 		if err := checkNode(p); err == nil {
@@ -150,7 +172,7 @@ func DiscoverNode() (string, error) {
 		}
 	}
 	if manifestErr != nil {
-		return "", fmt.Errorf("no reachable AuronQ Mainnet node; manifest: %v; last node: %v", manifestErr, lastErr)
+		return "", fmt.Errorf("no reachable AuronQ Mainnet node; optional manifest: %v; last node: %v", manifestErr, lastErr)
 	}
 	if lastErr != nil {
 		return "", fmt.Errorf("no reachable AuronQ Mainnet node: %v", lastErr)
