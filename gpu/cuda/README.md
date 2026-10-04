@@ -1,4 +1,4 @@
-# AuronQ GPU Miner — CUDA prototype
+# AuronQ GPU Miner — NVIDIA CUDA
 
 This directory contains the first standalone NVIDIA/CUDA miner for AuronQ's
 AQM64 proof-of-work. It is intentionally separate from AuronQ Desktop and does
@@ -6,7 +6,7 @@ not change Mainnet consensus.
 
 ## Status
 
-Prototype / review stage. Do not treat it as a finished release yet.
+**v0.2.1-alpha release candidate.** The miner has passed AQM64 GPU/CPU equivalence testing and real Mainnet mining on an RTX 4050 Laptop GPU. It remains alpha software and the CUDA implementation has not received an independent professional audit.
 
 Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
 with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
@@ -38,7 +38,7 @@ conservative batch from free VRAM and the GPU SM count.
 - Windows x64
 - NVIDIA GPU with CUDA Compute Capability 7.5+
 - NVIDIA driver
-- CUDA Toolkit 13.4.x (or another compatible CUDA 13.x toolkit) to build the DLL from source
+- CUDA Toolkit is **not required to run the packaged release**; the CUDA runtime is linked statically. A Toolkit 13.x installation is only required when building from source
 - a running AuronQ full node, normally http://127.0.0.1:18444
 
 RTX 20/30/40-class cards are the initial target. RTX 4050 Laptop GPU is supported by the current sm_89 build target. The first implementation is
@@ -104,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File .\build-gpu-miner-windows.ps1
 
 The script builds the CUDA DLL, CLI worker and Windows app, copies the immutable
 Mainnet configuration/bootstrap metadata, performs the mandatory GPU/CPU AQM64
-self-test, and creates `AuronQ-GPU-Miner-v0.2.0-alpha-Windows-x64.zip` under
+self-test, and creates `AuronQ-GPU-Miner-v0.2.1-alpha-Windows-x64.zip` under
 `dist`.
 
 ## Mandatory device self-test before mining
@@ -112,7 +112,7 @@ self-test, and creates `AuronQ-GPU-Miner-v0.2.0-alpha-Windows-x64.zip` under
 Run:
 
 ~~~powershell
-.\auronq-gpu-miner.exe --self-test
+.\auronq-gpu-worker.exe --self-test
 ~~~
 
 The self-test performs one full 64 MiB / time-cost-2 Argon2id calculation on
@@ -125,7 +125,7 @@ bit from AQM64 can never produce a valid Mainnet block.
 ## Mine
 
 ~~~powershell
-.\auronq-gpu-miner.exe --node http://127.0.0.1:18444 --address aurq1... --device 0
+.\auronq-gpu-worker.exe --node http://127.0.0.1:18444 --address aurq1... --device 0
 ~~~
 
 Optional flags:
