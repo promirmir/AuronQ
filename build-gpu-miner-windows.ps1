@@ -33,6 +33,9 @@ New-Item -ItemType Directory -Force -Path $dist | Out-Null
 Write-Host ""
 Write-Host "[1/3] Building CUDA backend..."
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "gpu\cuda\build-windows.ps1")
+if ($LASTEXITCODE -ne 0) {
+    throw "CUDA backend build failed with exit code $LASTEXITCODE"
+}
 
 Write-Host ""
 Write-Host "[2/3] Building Go miner..."
