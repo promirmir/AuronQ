@@ -1,0 +1,9 @@
+AuronQ 1.7.6 Mainnet
+
+- Adds a dedicated Explorer tab to AuronQ Desktop.
+- Explorer is embedded from the local full node at http://127.0.0.1:18444/explorer.
+- Shows a clear offline state when the node is stopped.
+- Loads automatically when the local node becomes available.
+- Adds manual Explorer refresh and Ctrl+7 navigation shortcut.
+- Adds PL/EN text for the Desktop Explorer view.
+- Consensus rules, Network ID, genesis, AQM64 validation, signatures and transaction validation are unchanged.
