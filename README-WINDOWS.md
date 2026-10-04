@@ -1,67 +1,53 @@
-# AuronQ 1.7.8 Mainnet — Windows
+# AuronQ 1.7.10 Mainnet — Windows
 
 ## Normalny użytkownik
 
-1. Pobierz `AuronQ-1.7.8-Windows-x64.zip` wyłącznie z GitHub Releases.
+1. Pobierz `AuronQ-1.7.10-Windows-x64.zip` wyłącznie z GitHub Releases.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
-5. AuronQ Desktop uruchomi pełny node, zweryfikuje `network.json`, pobierze oficjalny manifest bootstrap i sam rozpocznie synchronizację.
+5. AuronQ Desktop uruchomi własny pełny node, zweryfikuje `network.json`, odnajdzie peery i rozpocznie synchronizację.
+6. Utwórz lub zaimportuj portfel i wykonaj backup.
 
-Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręcznego wpisywania peerów ani przekierowania portu.
+Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręcznego wpisywania peerów ani przekierowania portu. Użytkownik za NAT/CGNAT nadal jest pełnym nodem: sam waliduje blockchain, utrzymuje mempool i relayuje dane przez połączenia wychodzące. NAT może jedynie ograniczyć możliwość przyjmowania nowych połączeń przychodzących.
 
-Użytkownik za NAT/CGNAT nadal może synchronizować, wysyłać transakcje, kopać i relayować dane przez połączenia wychodzące.
-
-## Pierwsze uruchomienie — skrót
+## Pierwsze uruchomienie / aktualizacja
 
 1. Zamknij starszą wersję AuronQ przyciskiem **Sieć → Zamknij AuronQ**.
-2. Rozpakuj cały oficjalny ZIP 1.7.8 do nowego folderu.
+2. Rozpakuj cały oficjalny ZIP 1.7.10 do nowego folderu.
 3. Uruchom `START-AURONQ.cmd` tylko raz.
-4. **Poczekaj cierpliwie.** Pierwsze uruchomienie AuronQ Desktop może trwać dłużej, ponieważ aplikacja uruchamia pełny node, wczytuje lokalny blockchain, sprawdza stan sieci i rozpoczyna synchronizację. Nie uruchamiaj programu wielokrotnie tylko dlatego, że okno nie pojawiło się od razu.
-5. Poczekaj, aż node rozpocznie synchronizację i pojawi się wysokość blockchaina.
-6. Utwórz lub zaimportuj portfel i wykonaj jego backup.
-7. Dane użytkownika są przechowywane w `%AppData%\AuronQ`; nie usuwaj tego katalogu podczas zwykłej aktualizacji.
+4. Poczekaj na uruchomienie pełnego noda i synchronizację.
+5. **Nie usuwaj `%AppData%\AuronQ`** podczas zwykłej aktualizacji — znajdują się tam portfele, blockchain i zapamiętane peery.
 
-## Suma kontrolna oficjalnego v1.7.8
-
-Oficjalny SHA-256 pliku Windows:
+## Suma kontrolna oficjalnego v1.7.10
 
 ```text
-cb74453965d641cc699e34037f1cb66fcaf4cc40757ade84cab78b350d5ae093  AuronQ-1.7.5-Windows-x64.zip
+e573c3a605fc66c33f6681d51a8c1544b4200fd207463ec8893971ebd20a134c  AuronQ-1.7.10-Windows-x64.zip
 ```
 
-Pełny `SHA256SUMS.txt` jest również dołączony do wydania GitHub.
-
-Bieżące binaria Windows nie mają podpisu Authenticode. Windows SmartScreen może więc wyświetlić ostrzeżenie przy pierwszym uruchomieniu. Weryfikuj sumę SHA-256 i źródło pobrania.
+Pełny `SHA256SUMS.txt` jest dołączony do wydania GitHub. Bieżące binaria Windows nie mają podpisu Authenticode, więc SmartScreen może wyświetlić ostrzeżenie.
 
 ## Explorer blockchaina
 
-Od wersji **1.7.5** pełny node udostępnia wbudowany, tylko-do-odczytu AuronQ Explorer pod ścieżką `/explorer`. Od **1.7.6** AuronQ Desktop ma osobną zakładkę **Explorer**, która osadza lokalny explorer z `http://127.0.0.1:18444/explorer`. W **1.7.8** wzmocniono bootstrap i synchronizację sieci; Explorer pozostaje tylko-do-odczytu. Jeżeli node jest publicznie osiągalny przez HTTPS, możesz też otworzyć jego adres i dopisać `/explorer`.
+Każdy pełny node ma **własny** Explorer pod `/explorer`. W AuronQ Desktop zakładka **Explorer** otwiera lokalny `http://127.0.0.1:18444/explorer`.
 
-## Niezależny publiczny node
+Explorer nie jest centralną usługą projektu i nie ma uprawnień konsensusowych. Wyświetla blockchain, który **ten konkretny pełny node sam zweryfikował**. Publiczny adres jednego noda może zniknąć bez wpływu na Explorera i blockchain innych użytkowników.
 
-Zwykły użytkownik nie musi wystawiać publicznego portu i powinien uruchamiać `START-AURONQ.cmd`.
+## Bootstrap i decentralizacja
 
-Jeżeli operator świadomie chce udostępnić publicznie osiągalny pełny node/bootstrap, może użyć `START-SEED-NODE.cmd`. W aktualnym wydaniu skrypt korzysta z Tailscale Funnel, odczytuje publiczną nazwę `*.ts.net`, ustawia `AURONQ_ADVERTISE` i uruchamia AuronQ Desktop.
+Seed/bootstrap jest wyłącznie adresem pierwszego kontaktu. Od hardeningu zawartego w 1.7.10 skonfigurowany seed nie jest trwałym uprzywilejowanym peerem: po wielokrotnych błędach może zostać usunięty z aktywnego zestawu. Peery poznane przez P2P są zapisywane lokalnie i mogą całkowicie zastąpić początkowe komputery.
 
-Publiczne nody są wymieniane przez peer gossip i zapisywane lokalnie. Repozytorium ma też automatyczny crawler, który okresowo sprawdza osiągalne publiczne peery AuronQ i dopisuje zweryfikowane adresy do `bootstrap.json`.
+CI zawiera test rozproszony, w którym pierwotny/bootstrapowy node zostaje wyłączony na stałe, późniejsze nody dalej tworzą i synchronizują blockchain, a świeży node dołącza przez ocalałego peera niebędącego nodem założycielskim.
 
-## Operator publicznego bootstrap noda
+To nie oznacza, że sieć może działać bez **jakichkolwiek** komputerów. Tak jak każda sieć P2P potrzebuje działających uczestników. Celem jest brak zależności od **konkretnego** komputera lub operatora.
 
-`START-SEED-NODE.cmd` jest przeznaczony wyłącznie dla operatora noda, który ma być publicznym punktem pierwszego kontaktu. Skrypt uruchamia AuronQ oraz, jeśli Tailscale jest zainstalowany i Funnel wcześniej autoryzowany, wystawia lokalny port AuronQ przez Funnel w tle.
+## Publiczny node
 
-Zwykły użytkownik uruchamia `START-AURONQ.cmd`, nie `START-SEED-NODE.cmd`.
+Zwykły użytkownik powinien uruchamiać `START-AURONQ.cmd`. Jeżeli świadomie chce wystawić publicznie osiągalny full node/bootstrap, może użyć `START-SEED-NODE.cmd`. Aktualny skrypt wykorzystuje Tailscale Funnel jako opcjonalny sposób publikacji noda.
 
-Aktualne bootstrapy są publikowane w:
+Publiczne peery są wymieniane przez gossip i zapisywane lokalnie. Automatyczny crawler repozytorium okresowo sprawdza osiągalne publiczne peery AuronQ i aktualizuje rejestr przez chroniony proces PR/CI.
 
-`https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
-
-Na moment aktualizacji dokumentu crawler potwierdza dwa publiczne bootstrapy:
-
-- `https://mir.taild63f46.ts.net`
-- `https://desktop-4nifg1j.taild63f46.ts.net`
-
-Bootstrapy nie mają żadnych dodatkowych uprawnień konsensusowych.
+Aktualne bootstrapy są publikowane w `bootstrap.json`; bootstrap nie może zatwierdzić nieważnego bloku ani zmienić Network ID.
 
 ## Tożsamość sieci
 
@@ -73,12 +59,10 @@ Genesis:
 
 `5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4`
 
+## Portfele
+
+Usuwanie portfela dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; nie przenosi ani nie niszczy monet zapisanych w blockchainie. Przed usunięciem ostatniej kopii portfela wykonaj **Backup**.
+
 ## Bezpieczeństwo
 
-AuronQ 1.7.8 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa.
-
-## Usuwanie portfela
-
-W wersji 1.7.8 zakładka **Portfele** ma przycisk **Usuń**. Usuwanie dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; nie przenosi ani nie niszczy monet zapisanych w blockchainie.
-
-Aplikacja wyświetla ostrzeżenie i wymaga ręcznego wpisania dokładnej nazwy portfela. Portfela używanego aktualnie przez koparkę nie można usunąć, dopóki mining nie zostanie zatrzymany. Przed usunięciem ważnego portfela wykonaj **Backup** — usunięcie ostatniej kopii pliku może oznaczać trwałą utratę dostępu do środków.
+AuronQ 1.7.10 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack **nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa**. Testy CI, fuzzing, race detector i testy sieci rozproszonej istotnie podnoszą jakość, ale nie zastępują zewnętrznego audytu.
