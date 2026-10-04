@@ -677,6 +677,29 @@ func workerPath() string {
 	return filepath.Join(filepath.Dir(exe), "auronq-gpu-worker.exe")
 }
 
+func validateWorkerExecutable() error {
+	guiPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolve GUI executable: %w", err)
+	}
+	worker := workerPath()
+	guiInfo, err := os.Stat(guiPath)
+	if err != nil {
+		return fmt.Errorf("stat GUI executable: %w", err)
+	}
+	workerInfo, err := os.Stat(worker)
+	if err != nil {
+		return fmt.Errorf("GPU worker missing: %s", worker)
+	}
+	if os.SameFile(guiInfo, workerInfo) || strings.EqualFold(filepath.Clean(guiPath), filepath.Clean(worker)) {
+		return errors.New("invalid package: GUI and GPU worker resolve to the same executable")
+	}
+	if !strings.EqualFold(filepath.Base(worker), "auronq-gpu-worker.exe") {
+		return fmt.Errorf("unexpected GPU worker filename: %s", filepath.Base(worker))
+	}
+	return nil
+}
+
 func (a *App) isWorkerRunning() bool {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
@@ -684,6 +707,9 @@ func (a *App) isWorkerRunning() bool {
 }
 
 func (a *App) startWorker(mode string, s settings) error {
+	if err := validateWorkerExecutable(); err != nil {
+		return err
+	}
 	a.mu.Lock()
 	if a.miner.Running {
 		a.mu.Unlock()
