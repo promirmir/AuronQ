@@ -93,6 +93,14 @@ Windows users: extract the whole ZIP and run `START-AURONQ.cmd`.
 
 The current Windows binaries are **not Authenticode-signed**, so Windows SmartScreen may warn on first launch. Verify the SHA-256 above and download only from this repository's Releases page.
 
+## Public blockchain explorer
+
+A live public Mainnet explorer is available at:
+
+`https://mir.taild63f46.ts.net/explorer`
+
+It is served by an AuronQ full node and is read-only.
+
 ## Built-in blockchain explorer
 
 AuronQ 1.7.5+ full nodes include a built-in, read-only blockchain explorer at:
