@@ -2,6 +2,7 @@ package auronq
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,8 +20,12 @@ type Client struct {
 func NewClient(base string) *Client {
 	return &Client{Base: strings.TrimRight(base, "/"), HTTP: &http.Client{Timeout: 30 * time.Second}}
 }
-func (c *Client) get(path string, out any) error {
-	r, err := c.HTTP.Get(c.Base + path)
+func (c *Client) getContext(ctx context.Context, path string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.Base+path, nil)
+	if err != nil {
+		return err
+	}
+	r, err := c.HTTP.Do(req)
 	if err != nil {
 		return err
 	}
@@ -29,6 +34,10 @@ func (c *Client) get(path string, out any) error {
 		return decodeHTTPError(r)
 	}
 	return json.NewDecoder(r.Body).Decode(out)
+}
+
+func (c *Client) get(path string, out any) error {
+	return c.getContext(context.Background(), path, out)
 }
 func (c *Client) post(path string, in, out any) error {
 	b, _ := json.Marshal(in)
@@ -52,10 +61,14 @@ func decodeHTTPError(r *http.Response) error {
 	}
 	return fmt.Errorf("node HTTP %s: %s", r.Status, strings.TrimSpace(string(b)))
 }
-func (c *Client) Status() (Status, error) {
+func (c *Client) StatusContext(ctx context.Context) (Status, error) {
 	var x Status
-	err := c.get("/v1/status", &x)
+	err := c.getContext(ctx, "/v1/status", &x)
 	return x, err
+}
+
+func (c *Client) Status() (Status, error) {
+	return c.StatusContext(context.Background())
 }
 func (c *Client) Balance(addr string) (BalanceResponse, error) {
 	var x BalanceResponse
