@@ -1,0 +1,23 @@
+name: GPU Miner CUDA CI
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/auronq-gpu-miner/**'
+      - 'gpu/cuda/**'
+      - 'internal/argon2pure/**'
+      - '.github/workflows/gpu-miner-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cuda-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile CUDA backend without requiring a GPU
+        shell: bash
+        run: |
+          docker run --rm             -v "$PWD:/src"             -w /src             nvidia/cuda:12.6.3-devel-ubuntu24.04             nvcc -O3 -std=c++17 -Xcompiler -fPIC --shared               gpu/cuda/aqm64_cuda.cu               -o /tmp/libauronq-aqm64-cuda.so
