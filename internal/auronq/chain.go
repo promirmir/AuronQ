@@ -191,29 +191,32 @@ func OpenChain(dir string, network *NetworkConfig) (*Chain, error) {
 // EstimatedNetworkHashrate estimates recent AQM64 work per second from canonical blocks.
 // It is an observed rolling estimate, not a direct measurement of every miner.
 func (c *Chain) EstimatedNetworkHashrate(window int) float64 {
-	c.mu.RLock()
-	blocks := append([]Block(nil), c.blocks...)
-	c.mu.RUnlock()
-	if len(blocks) < 2 {
-		return 0
-	}
 	if window <= 0 {
 		window = DifficultyWindow
 	}
 	if window > 240 {
 		window = 240
 	}
+	c.mu.RLock()
+	count := len(c.blocks)
+	if count < 2 {
+		c.mu.RUnlock()
+		return 0
+	}
 	intervals := window
-	if max := len(blocks) - 1; intervals > max {
+	if max := count - 1; intervals > max {
 		intervals = max
 	}
-	start := len(blocks) - 1 - intervals
-	elapsed := blocks[len(blocks)-1].Header.Timestamp - blocks[start].Header.Timestamp
+	start := count - 1 - intervals
+	blocks := append([]Block(nil), c.blocks[start:]...)
+	c.mu.RUnlock()
+
+	elapsed := blocks[len(blocks)-1].Header.Timestamp - blocks[0].Header.Timestamp
 	if elapsed <= 0 {
 		return 0
 	}
 	work := new(big.Int)
-	for i := start + 1; i < len(blocks); i++ {
+	for i := 1; i < len(blocks); i++ {
 		work.Add(work, WorkForTarget(blocks[i].Header.Target))
 	}
 	if work.Sign() <= 0 {
