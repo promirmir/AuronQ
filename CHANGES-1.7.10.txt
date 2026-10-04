@@ -1,0 +1,8 @@
+AuronQ 1.7.10 Mainnet
+
+- Configured seed/manual peers are replaceable startup hints, not permanent runtime authorities.
+- Repeatedly failing seed peers are pruned from the live peer set.
+- Learned public peers remain persisted independently of the original seed computers.
+- Explorer is explicitly a local full-node view of that node's own validated canonical chain.
+- Adds a distributed regression test where the original bootstrap node disappears permanently and a fresh node joins through surviving non-founder peers.
+- Consensus constants, Network ID, genesis, monetary policy, AQM64 parameters, signatures and transaction validation rules are unchanged.

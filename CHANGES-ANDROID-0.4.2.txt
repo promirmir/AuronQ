@@ -1,0 +1,9 @@
+AuronQ Mobile 0.4.2 Alpha
+
+- Multi-peer Mainnet state agreement instead of silent single-node trust.
+- Exact height/tip/chain-work peer grouping with visible agreement state.
+- Wallet balance comparison across peers that agree on the same chain state.
+- Fail-closed behavior if same-chain peers return conflicting balances.
+- Direct transaction fanout to multiple reachable AuronQ nodes after local signing.
+- Learned P2P peers remain cached; bundled bootstrap nodes are replaceable hints.
+- Still a light client: it does not yet independently validate the complete AQM64 chain.
