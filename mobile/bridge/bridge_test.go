@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	"errors"
 	"path/filepath"
 
 	aq "auronq/internal/auronq"
@@ -163,5 +164,53 @@ func TestMergeHistoryPendingUnionsAcrossAgreeingPeers(t *testing.T) {
 	got := mergeHistoryPending(group)
 	if len(got) != 3 || got[0].TXID != "p2" || got[1].TXID != "p1" || got[2].TXID != "confirmed" {
 		t.Fatalf("unexpected merged history: %+v", got)
+	}
+}
+
+func TestCachedTipCheckDoesNotResetForLaggingPeer(t *testing.T) {
+	cache, err := freshHeaderCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cache.VerifiedHeight = 10
+	st := aq.Status{Height: 9}
+	reset, err := cachedTipCheck(cache, st, nil, nil)
+	if err == nil {
+		t.Fatal("lagging peer should be rejected")
+	}
+	if reset {
+		t.Fatal("lagging peer must not reset a valid local header cache")
+	}
+}
+
+func TestCachedTipCheckDoesNotResetOnTransportFailure(t *testing.T) {
+	cache, err := freshHeaderCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := aq.Status{Height: cache.VerifiedHeight}
+	reset, err := cachedTipCheck(cache, st, nil, errors.New("temporary timeout"))
+	if err == nil {
+		t.Fatal("transport failure should be returned")
+	}
+	if reset {
+		t.Fatal("temporary transport failure must not reset the local header cache")
+	}
+}
+
+func TestCachedTipCheckResetsOnlyOnConfirmedHistoryMismatch(t *testing.T) {
+	cache, err := freshHeaderCache()
+	if err != nil {
+		t.Fatal(err)
+	}
+	st := aq.Status{Height: cache.VerifiedHeight}
+	other := cache.History[0]
+	other.Nonce++
+	reset, err := cachedTipCheck(cache, st, []aq.BlockHeader{other}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reset {
+		t.Fatal("confirmed same-height header mismatch must request a cache rebuild")
 	}
 }

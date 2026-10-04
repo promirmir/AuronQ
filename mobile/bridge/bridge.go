@@ -12,14 +12,13 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
 	aq "auronq/internal/auronq"
 )
 
 const (
-	mobileVersion       = "0.5.1-alpha"
+	mobileVersion       = "0.5.2-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 )
@@ -126,12 +125,9 @@ func observeNodes(candidates []string) []mobileNodeObservation {
 		ok  bool
 	}
 	ch := make(chan result, len(candidates))
-	var wg sync.WaitGroup
 	for _, node := range candidates {
 		node := node
-		wg.Add(1)
 		go func() {
-			defer wg.Done()
 			st, err := statusFromNode(node)
 			if err != nil {
 				ch <- result{}
@@ -146,16 +142,47 @@ func observeNodes(candidates []string) []mobileNodeObservation {
 			}}
 		}()
 	}
-	wg.Wait()
-	close(ch)
+
+	// Do not make the mobile UI wait for every stale/dead endpoint once at least
+	// one Mainnet peer answered. Keep a short grace window to collect a second
+	// peer for quorum while preserving a six-second cold-start ceiling.
+	deadline := time.NewTimer(6 * time.Second)
+	defer deadline.Stop()
+	var grace *time.Timer
+	var graceC <-chan time.Time
 	out := make([]mobileNodeObservation, 0, len(candidates))
-	for r := range ch {
-		if r.ok {
-			out = append(out, r.obs)
+	pending := len(candidates)
+	finish := func() []mobileNodeObservation {
+		sort.Slice(out, func(i, j int) bool { return out[i].Node < out[j].Node })
+		return out
+	}
+	for pending > 0 {
+		select {
+		case r := <-ch:
+			pending--
+			if r.ok {
+				out = append(out, r.obs)
+				if len(out) == 1 && pending > 0 {
+					grace = time.NewTimer(750 * time.Millisecond)
+					graceC = grace.C
+				}
+			}
+			if pending == 0 {
+				if grace != nil {
+					grace.Stop()
+				}
+				return finish()
+			}
+		case <-graceC:
+			return finish()
+		case <-deadline.C:
+			if grace != nil {
+				grace.Stop()
+			}
+			return finish()
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Node < out[j].Node })
-	return out
+	return finish()
 }
 
 func mobileStateKey(o mobileNodeObservation) string {
@@ -202,7 +229,7 @@ func chooseNodeQuorum(obs []mobileNodeObservation) (mobileNodeObservation, []str
 func collectNodeObservations(knownJSON string) ([]mobileNodeObservation, error) {
 	candidates := mobileCandidates(knownJSON)
 	obs := observeNodes(candidates)
-	if len(obs) >= 2 {
+	if len(obs) > 0 {
 		return obs, nil
 	}
 	manifestPeers, manifestErr := fetchManifest()
@@ -346,6 +373,22 @@ func fetchHeaderBatch(node string, start uint64, limit int) ([]aq.BlockHeader, e
 	return body.Headers, nil
 }
 
+func cachedTipCheck(cache headerCache, st aq.Status, at []aq.BlockHeader, fetchErr error) (bool, error) {
+	if cache.VerifiedHeight > st.Height {
+		return false, fmt.Errorf("peer is behind locally verified headers: peer=%d verified=%d", st.Height, cache.VerifiedHeight)
+	}
+	if fetchErr != nil {
+		return false, fmt.Errorf("cannot confirm locally verified tip from this peer: %w", fetchErr)
+	}
+	if len(at) != 1 {
+		return false, errors.New("peer did not return the locally verified tip header")
+	}
+	if at[0].Hash().String() != cache.VerifiedTip {
+		return true, nil
+	}
+	return false, nil
+}
+
 func verifyHeaderChain(node, cachePath string) (headerVerification, error) {
 	var out headerVerification
 	node = normalizeMobileNode(node)
@@ -372,16 +415,19 @@ func verifyHeaderChain(node, cachePath string) (headerVerification, error) {
 	// Confirm that the remote chain still contains our locally verified tip.
 	// Any reorg behind the cached tip triggers a full header replay from embedded
 	// Mainnet genesis rather than trusting the remote rollback point.
-	if cache.VerifiedHeight > st.Height {
+	at, fetchErr := fetchHeaderBatch(node, cache.VerifiedHeight, 1)
+	shouldReset, checkErr := cachedTipCheck(cache, st, at, fetchErr)
+	if checkErr != nil {
+		// A slow, temporarily unreachable, or lagging peer must never destroy a
+		// valid local verification cache. The caller can immediately try another
+		// observed peer instead of replaying hundreds of expensive AQM64 headers.
+		return out, checkErr
+	}
+	if shouldReset {
+		// A successfully fetched header at the same height disagrees with our
+		// verified tip: this is a genuine chain-history mismatch/reorg signal.
 		if err := reset(); err != nil {
 			return out, err
-		}
-	} else {
-		at, err := fetchHeaderBatch(node, cache.VerifiedHeight, 1)
-		if err != nil || len(at) != 1 || at[0].Hash().String() != cache.VerifiedTip {
-			if err := reset(); err != nil {
-				return out, err
-			}
 		}
 	}
 
