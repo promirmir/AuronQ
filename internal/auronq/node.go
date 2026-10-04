@@ -84,17 +84,18 @@ type Hello struct {
 }
 
 type Status struct {
-	Network     string  `json:"network"`
-	NetworkID   Hash    `json:"network_id"`
-	Height      uint64  `json:"height"`
-	Tip         Hash    `json:"tip"`
-	ChainWork   string  `json:"chain_work"`
-	Issued      uint64  `json:"issued_atoms"`
-	IssuedCoins float64 `json:"issued_coins"`
-	MaxSupply   uint64  `json:"max_supply_atoms"`
-	Mempool     int     `json:"mempool"`
-	Peers       int     `json:"peers"`
-	NetworkHashrate float64 `json:"network_hashrate"`
+	Network          string  `json:"network"`
+	NetworkID        Hash    `json:"network_id"`
+	Height           uint64  `json:"height"`
+	Tip              Hash    `json:"tip"`
+	ChainWork        string  `json:"chain_work"`
+	Issued           uint64  `json:"issued_atoms"`
+	IssuedCoins      float64 `json:"issued_coins"`
+	MaxSupply        uint64  `json:"max_supply_atoms"`
+	Mempool          int     `json:"mempool"`
+	Peers            int     `json:"peers"`
+	NetworkHashrate  float64 `json:"network_hashrate"`
+	PublicAdvertise  string  `json:"public_advertise,omitempty"`
 }
 
 type BalanceResponse struct {
@@ -985,7 +986,7 @@ func (n *Node) handler() http.Handler {
 			return
 		}
 		st := n.Chain.State()
-		writeJSON(w, 200, Status{Network: n.Chain.network.Name, NetworkID: n.Chain.NetworkID(), Height: st.Height, Tip: st.Tip, ChainWork: st.ChainWork, Issued: st.Issued, IssuedCoins: float64(st.Issued) / float64(Coin), MaxSupply: MaxSupplyAtoms, Mempool: n.Chain.MempoolSize(), Peers: len(n.peerList()), NetworkHashrate: n.Chain.EstimatedNetworkHashrate(DifficultyWindow)})
+		writeJSON(w, 200, Status{Network: n.Chain.network.Name, NetworkID: n.Chain.NetworkID(), Height: st.Height, Tip: st.Tip, ChainWork: st.ChainWork, Issued: st.Issued, IssuedCoins: float64(st.Issued) / float64(Coin), MaxSupply: MaxSupplyAtoms, Mempool: n.Chain.MempoolSize(), Peers: len(n.peerList()), NetworkHashrate: n.Chain.EstimatedNetworkHashrate(DifficultyWindow), PublicAdvertise: n.cfg.Advertise})
 	})
 	mux.HandleFunc("/v1/balance", func(w http.ResponseWriter, r *http.Request) {
 		addr := r.URL.Query().Get("address")
