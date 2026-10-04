@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,11 +12,11 @@ import (
 
 func TestCheckPeerAcceptsMainnetHelloAndExplorer(t *testing.T) {
 	var id aq.Hash
-	b, err := hexHash(mainnetNetworkID)
+	raw, err := hex.DecodeString(mainnetNetworkID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	id = b
+	copy(id[:], raw)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -54,30 +55,3 @@ func TestCheckPeerRejectsWrongNetwork(t *testing.T) {
 	}
 }
 
-func hexHash(s string) (aq.Hash, error) {
-	var h aq.Hash
-	b := make([]byte, len(h))
-	for i := range b {
-		var v byte
-		for j := 0; j < 2; j++ {
-			c := s[i*2+j]
-			v <<= 4
-			switch {
-			case c >= '0' && c <= '9':
-				v |= c - '0'
-			case c >= 'a' && c <= 'f':
-				v |= c - 'a' + 10
-			case c >= 'A' && c <= 'F':
-				v |= c - 'A' + 10
-			default:
-				return h, &hexError{c}
-			}
-		}
-		b[i] = v
-	}
-	copy(h[:], b)
-	return h, nil
-}
-
-type hexError struct{ c byte }
-func (e *hexError) Error() string { return "invalid hex character" }
