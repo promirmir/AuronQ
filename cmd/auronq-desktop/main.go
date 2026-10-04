@@ -1191,7 +1191,7 @@ func (a *App) miningLoop(ctx context.Context, address string, threads int) {
 		a.miner.Height = tpl.Header.Height
 		a.miner.Hashrate = 0
 		a.mu.Unlock()
-		res, err := aq.MineParallel(ctx, tpl, threads, func(h uint64, d time.Duration) {
+		res, err := aq.MineRemoteTemplate(ctx, cl, tpl, threads, time.Second, func(h uint64, d time.Duration) {
 			if d > 0 {
 				a.mu.Lock()
 				a.miner.Hashrate = float64(h) / d.Seconds()
@@ -1202,6 +1202,10 @@ func (a *App) miningLoop(ctx context.Context, address string, threads int) {
 			if ctx.Err() != nil {
 				a.finishMiner("")
 				return
+			}
+			if errors.Is(err, aq.ErrMiningTemplateStale) {
+				a.addLog("Tip sieci zmienił się; odświeżam template kopania")
+				continue
 			}
 			a.finishMiner(err.Error())
 			return
