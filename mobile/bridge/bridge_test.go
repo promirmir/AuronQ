@@ -119,8 +119,8 @@ func TestUTXOFingerprintIgnoresPeerOrdering(t *testing.T) {
 	h1[63] = 1
 	h2[63] = 2
 	a := []aq.UTXORecord{
-		{OutPoint: aq.OutPoint{PrevTx: h2, PrevIndex: 1}, UTXO: aq.UTXO{Height: 2}},
-		{OutPoint: aq.OutPoint{PrevTx: h1, PrevIndex: 0}, UTXO: aq.UTXO{Height: 1}},
+		{OutPoint: aq.OutPoint{TxID: h2, Index: 1}, UTXO: aq.UTXO{Height: 2}},
+		{OutPoint: aq.OutPoint{TxID: h1, Index: 0}, UTXO: aq.UTXO{Height: 1}},
 	}
 	b := []aq.UTXORecord{a[1], a[0]}
 	if utxoFingerprint(a) != utxoFingerprint(b) {
@@ -131,8 +131,8 @@ func TestUTXOFingerprintIgnoresPeerOrdering(t *testing.T) {
 func TestUTXOFingerprintDetectsStateConflict(t *testing.T) {
 	var h aq.Hash
 	h[63] = 1
-	a := []aq.UTXORecord{{OutPoint: aq.OutPoint{PrevTx: h, PrevIndex: 0}, UTXO: aq.UTXO{Height: 1, Out: aq.TxOutput{Value: 100}}}}
-	b := []aq.UTXORecord{{OutPoint: aq.OutPoint{PrevTx: h, PrevIndex: 0}, UTXO: aq.UTXO{Height: 1, Out: aq.TxOutput{Value: 101}}}}
+	a := []aq.UTXORecord{{OutPoint: aq.OutPoint{TxID: h, Index: 0}, UTXO: aq.UTXO{Height: 1, Out: aq.TxOutput{Value: 100}}}}
+	b := []aq.UTXORecord{{OutPoint: aq.OutPoint{TxID: h, Index: 0}, UTXO: aq.UTXO{Height: 1, Out: aq.TxOutput{Value: 101}}}}
 	if utxoFingerprint(a) == utxoFingerprint(b) {
 		t.Fatalf("conflicting UTXO sets produced the same fingerprint")
 	}
