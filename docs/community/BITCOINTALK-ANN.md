@@ -12,6 +12,8 @@ Suggested title:
 
 [b]Mainnet is live • Windows / Linux full node • Android wallet • Source code public[/b][/center]
 
+[i]Disclosure: This announcement was prepared with AI assistance, then reviewed and approved by the project author. Technical parameters and claims were checked against the project's public documentation and source code.[/i]
+
 Hi everyone.
 
 I have been working on a new cryptocurrency project called [b]AuronQ[/b], ticker [b]AURQ[/b].
