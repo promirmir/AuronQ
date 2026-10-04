@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	mobileVersion       = "0.4.2-alpha"
+	mobileVersion       = "0.5.0-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 )
@@ -38,6 +38,11 @@ type bootstrapManifest struct {
 const (
 	maxMobileKnownCandidates = 8
 	maxMobileProbeCandidates = 16
+	headerCacheVersion       = 1
+	headerCacheKeep          = 128
+	headerBatchLimit         = 64
+	mainnetGenesisHash       = "5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4"
+	mainnetGenesisHeaderJSON = `{"version":2,"pow_algo":1,"height":0,"prev_hash":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","merkle_root":"4ec627ff8d4b6ec5957fd476d60d0b5cbc533476206983bdda1dcea08554198e84a987036fd223aca6b330a926fcba54365e98008a154061f35b46f49bff60be","timestamp":1790951480,"target":"003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","nonce":169}`
 )
 
 type mobileNodeObservation struct {
@@ -158,8 +163,9 @@ func mobileStateKey(o mobileNodeObservation) string {
 }
 
 func chainWorkCmp(a, b string) int {
-	aa, okA := new(big.Int).SetString(strings.TrimSpace(a), 10)
-	bb, okB := new(big.Int).SetString(strings.TrimSpace(b), 10)
+	// Full-node ChainState serializes cumulative work as hexadecimal.
+	aa, okA := new(big.Int).SetString(strings.TrimSpace(a), 16)
+	bb, okB := new(big.Int).SetString(strings.TrimSpace(b), 16)
 	if okA && okB {
 		return aa.Cmp(bb)
 	}
@@ -215,6 +221,308 @@ func collectNodeObservations(knownJSON string) ([]mobileNodeObservation, error) 
 		return nil, fmt.Errorf("no reachable AuronQ Mainnet node; optional manifest: %v", manifestErr)
 	}
 	return nil, errors.New("no reachable AuronQ Mainnet node")
+}
+
+type headerCache struct {
+	Version       int              `json:"version"`
+	NetworkID     string           `json:"network_id"`
+	VerifiedHeight uint64          `json:"verified_height"`
+	VerifiedTip   string           `json:"verified_tip"`
+	ChainWork     string           `json:"chain_work"`
+	History       []aq.BlockHeader `json:"history"`
+}
+
+type headerVerification struct {
+	Node      string `json:"node"`
+	Height    uint64 `json:"height"`
+	Tip       string `json:"tip"`
+	ChainWork string `json:"chain_work"`
+	HeadersChecked uint64 `json:"headers_checked"`
+	Rebuilt   bool   `json:"rebuilt"`
+}
+
+func mainnetGenesisHeader() (aq.BlockHeader, error) {
+	var h aq.BlockHeader
+	if err := json.Unmarshal([]byte(mainnetGenesisHeaderJSON), &h); err != nil {
+		return h, err
+	}
+	if h.Hash().String() != mainnetGenesisHash {
+		return aq.BlockHeader{}, errors.New("embedded Mainnet genesis header mismatch")
+	}
+	return h, nil
+}
+
+func freshHeaderCache() (headerCache, error) {
+	g, err := mainnetGenesisHeader()
+	if err != nil {
+		return headerCache{}, err
+	}
+	return headerCache{
+		Version:        headerCacheVersion,
+		NetworkID:      mainnetNetworkID,
+		VerifiedHeight: 0,
+		VerifiedTip:    g.Hash().String(),
+		ChainWork:      aq.WorkForTarget(g.Target).Text(16),
+		History:        []aq.BlockHeader{g},
+	}, nil
+}
+
+func loadHeaderCache(path string) (headerCache, error) {
+	fresh, err := freshHeaderCache()
+	if err != nil {
+		return headerCache{}, err
+	}
+	if strings.TrimSpace(path) == "" {
+		return fresh, nil
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fresh, nil
+		}
+		return headerCache{}, err
+	}
+	var h headerCache
+	if json.Unmarshal(b, &h) != nil ||
+		h.Version != headerCacheVersion ||
+		h.NetworkID != mainnetNetworkID ||
+		len(h.History) == 0 ||
+		h.History[len(h.History)-1].Height != h.VerifiedHeight ||
+		h.History[len(h.History)-1].Hash().String() != h.VerifiedTip {
+		return fresh, nil
+	}
+	if _, ok := new(big.Int).SetString(h.ChainWork, 16); !ok {
+		return fresh, nil
+	}
+	return h, nil
+}
+
+func saveHeaderCache(path string, h headerCache) error {
+	if strings.TrimSpace(path) == "" {
+		return nil
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	b, err := json.Marshal(h)
+	if err != nil {
+		return err
+	}
+	tmp := path + ".tmp"
+	if err := os.WriteFile(tmp, b, 0600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func fetchHeaderBatch(node string, start uint64, limit int) ([]aq.BlockHeader, error) {
+	node = normalizeMobileNode(node)
+	if node == "" {
+		return nil, errors.New("invalid HTTPS AuronQ node")
+	}
+	if limit < 1 || limit > 256 {
+		return nil, errors.New("invalid header batch limit")
+	}
+	req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/p2p/headers?start=%d&limit=%d", node, start, limit), nil)
+	req.Header.Set("User-Agent", "AuronQ-Mobile/"+mobileVersion)
+	resp, err := mobileHTTP(30 * time.Second).Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("headers HTTP %s", resp.Status)
+	}
+	var body struct {
+		Start   uint64           `json:"start"`
+		Headers []aq.BlockHeader `json:"headers"`
+	}
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 2<<20)).Decode(&body); err != nil {
+		return nil, err
+	}
+	if body.Start != start || len(body.Headers) > limit {
+		return nil, errors.New("invalid header batch response")
+	}
+	return body.Headers, nil
+}
+
+func verifyHeaderChain(node, cachePath string) (headerVerification, error) {
+	var out headerVerification
+	node = normalizeMobileNode(node)
+	st, err := statusFromNode(node)
+	if err != nil {
+		return out, err
+	}
+	cache, err := loadHeaderCache(cachePath)
+	if err != nil {
+		return out, err
+	}
+	rebuilt := false
+
+	reset := func() error {
+		fresh, err := freshHeaderCache()
+		if err != nil {
+			return err
+		}
+		cache = fresh
+		rebuilt = true
+		return nil
+	}
+
+	// Confirm that the remote chain still contains our locally verified tip.
+	// Any reorg behind the cached tip triggers a full header replay from embedded
+	// Mainnet genesis rather than trusting the remote rollback point.
+	if cache.VerifiedHeight > st.Height {
+		if err := reset(); err != nil {
+			return out, err
+		}
+	} else {
+		at, err := fetchHeaderBatch(node, cache.VerifiedHeight, 1)
+		if err != nil || len(at) != 1 || at[0].Hash().String() != cache.VerifiedTip {
+			if err := reset(); err != nil {
+				return out, err
+			}
+		}
+	}
+
+	// A remote endpoint cannot replace the embedded genesis even if it lies in
+	// /v1/status about Network ID.
+	if cache.VerifiedHeight == 0 {
+		gen, err := fetchHeaderBatch(node, 0, 1)
+		if err != nil {
+			return out, err
+		}
+		if len(gen) != 1 || gen[0].Hash().String() != mainnetGenesisHash {
+			return out, errors.New("node does not serve the embedded AuronQ Mainnet genesis")
+		}
+	}
+
+	work, ok := new(big.Int).SetString(cache.ChainWork, 16)
+	if !ok {
+		return out, errors.New("invalid local verified chain work")
+	}
+	checked := uint64(0)
+	for next := cache.VerifiedHeight + 1; next <= st.Height; {
+		remaining := st.Height - next + 1
+		limit := headerBatchLimit
+		if remaining < uint64(limit) {
+			limit = int(remaining)
+		}
+		headers, err := fetchHeaderBatch(node, next, limit)
+		if err != nil {
+			return out, err
+		}
+		if len(headers) == 0 {
+			return out, fmt.Errorf("node returned no headers at height %d", next)
+		}
+		for _, h := range headers {
+			if h.Height != next {
+				return out, fmt.Errorf("unexpected header height %d, expected %d", h.Height, next)
+			}
+			if err := aq.ValidateHeaderEnvelope(h, cache.History, time.Now().Unix()); err != nil {
+				return out, fmt.Errorf("invalid AuronQ header %d: %w", h.Height, err)
+			}
+			work.Add(work, aq.WorkForTarget(h.Target))
+			cache.History = append(cache.History, h)
+			if len(cache.History) > headerCacheKeep {
+				cache.History = append([]aq.BlockHeader(nil), cache.History[len(cache.History)-headerCacheKeep:]...)
+			}
+			cache.VerifiedHeight = h.Height
+			cache.VerifiedTip = h.Hash().String()
+			cache.ChainWork = work.Text(16)
+			checked++
+			next++
+		}
+	}
+
+	if cache.VerifiedHeight != st.Height ||
+		cache.VerifiedTip != st.Tip.String() ||
+		!strings.EqualFold(cache.ChainWork, strings.TrimSpace(st.ChainWork)) {
+		return out, errors.New("independently verified header chain does not match node status")
+	}
+	if err := saveHeaderCache(cachePath, cache); err != nil {
+		return out, err
+	}
+	return headerVerification{
+		Node: node, Height: cache.VerifiedHeight, Tip: cache.VerifiedTip,
+		ChainWork: cache.ChainWork, HeadersChecked: checked, Rebuilt: rebuilt,
+	}, nil
+}
+
+func QuorumSnapshotVerified(knownNodesJSON, headerCachePath string, recent int) (string, error) {
+	obs, err := collectNodeObservations(knownNodesJSON)
+	if err != nil {
+		return "", err
+	}
+	selected, agreeing, err := chooseNodeQuorum(obs)
+	if err != nil {
+		return "", err
+	}
+
+	ordered := append([]string(nil), agreeing...)
+	seen := map[string]bool{}
+	for _, p := range ordered {
+		seen[p] = true
+	}
+	// If the peer majority is invalid, independently try other observed chains.
+	// Valid AQM64 headers outrank an unverified majority claim.
+	sort.Slice(obs, func(i, j int) bool {
+		cmp := chainWorkCmp(obs[i].ChainWork, obs[j].ChainWork)
+		if cmp != 0 {
+			return cmp > 0
+		}
+		return obs[i].Height > obs[j].Height
+	})
+	for _, o := range obs {
+		if !seen[o.Node] {
+			ordered = append(ordered, o.Node)
+			seen[o.Node] = true
+		}
+	}
+
+	var verified headerVerification
+	var lastErr error
+	for _, node := range ordered {
+		verified, err = verifyHeaderChain(node, headerCachePath)
+		if err == nil {
+			break
+		}
+		lastErr = err
+	}
+	if err != nil {
+		return "", fmt.Errorf("no observed peer supplied a valid independently verified AuronQ header chain: %v", lastErr)
+	}
+
+	// Agreement is recalculated against the chain we actually verified.
+	agreeing = agreeing[:0]
+	for _, o := range obs {
+		if o.Height == verified.Height && o.Tip == verified.Tip && strings.EqualFold(o.ChainWork, verified.ChainWork) {
+			agreeing = append(agreeing, o.Node)
+		}
+	}
+	sort.Strings(agreeing)
+	selected.Node = verified.Node
+	raw, err := NetworkSnapshot(verified.Node, recent)
+	if err != nil {
+		return "", err
+	}
+	var snapshot map[string]any
+	if err := json.Unmarshal([]byte(raw), &snapshot); err != nil {
+		return "", err
+	}
+	snapshot["peer_observed"] = len(obs)
+	snapshot["peer_agreement"] = len(agreeing)
+	snapshot["multi_peer_confirmed"] = len(agreeing) >= 2
+	snapshot["agreement_nodes"] = agreeing
+	snapshot["observations"] = obs
+	snapshot["header_verified"] = true
+	snapshot["verified_height"] = verified.Height
+	snapshot["verified_tip"] = verified.Tip
+	snapshot["verified_chain_work"] = verified.ChainWork
+	snapshot["headers_checked_now"] = verified.HeadersChecked
+	snapshot["header_cache_rebuilt"] = verified.Rebuilt
+	b, _ := json.Marshal(snapshot)
+	return string(b), nil
 }
 
 func Version() string { return mobileVersion }
@@ -397,18 +705,34 @@ func QuorumSnapshot(knownNodesJSON string, recent int) (string, error) {
 	return string(b), nil
 }
 
-func QuorumBalance(knownNodesJSON, address string) (string, error) {
-	netByte, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
-	if err != nil || netByte != aq.MainnetNetworkByte {
-		return "", errors.New("invalid AuronQ Mainnet address")
+func QuorumBalanceVerified(knownNodesJSON, address string, verifiedTip, verifiedWork string, verifiedHeight int64) (string, error) {
+	if verifiedHeight < 0 || strings.TrimSpace(verifiedTip) == "" || strings.TrimSpace(verifiedWork) == "" {
+		return "", errors.New("verified header state is missing")
 	}
 	obs, err := collectNodeObservations(knownNodesJSON)
 	if err != nil {
 		return "", err
 	}
-	_, agreeing, err := chooseNodeQuorum(obs)
-	if err != nil {
-		return "", err
+	filtered := make([]mobileNodeObservation, 0, len(obs))
+	for _, o := range obs {
+		if o.Height == uint64(verifiedHeight) && o.Tip == verifiedTip && strings.EqualFold(o.ChainWork, verifiedWork) {
+			filtered = append(filtered, o)
+		}
+	}
+	if len(filtered) == 0 {
+		return "", errors.New("no reachable peer matches the independently verified header chain")
+	}
+	nodes := make([]string, 0, len(filtered))
+	for _, o := range filtered {
+		nodes = append(nodes, o.Node)
+	}
+	return quorumBalanceFromNodes(nodes, address)
+}
+
+func quorumBalanceFromNodes(nodes []string, address string) (string, error) {
+	netByte, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
+	if err != nil || netByte != aq.MainnetNetworkByte {
+		return "", errors.New("invalid AuronQ Mainnet address")
 	}
 	type balanceObservation struct {
 		Node      string
@@ -416,7 +740,7 @@ func QuorumBalance(knownNodesJSON, address string) (string, error) {
 		Total     uint64
 	}
 	var balances []balanceObservation
-	for _, node := range agreeing {
+	for _, node := range nodes {
 		cl := aq.NewClient(node)
 		cl.HTTP = mobileHTTP(8 * time.Second)
 		res, err := cl.Balance(address)
@@ -442,13 +766,13 @@ func QuorumBalance(knownNodesJSON, address string) (string, error) {
 		return "", errors.New("agreeing chain peers returned conflicting wallet balances")
 	}
 	v := best[0]
-	nodes := make([]string, 0, len(best))
+	agreeingNodes := make([]string, 0, len(best))
 	for _, b := range best {
-		nodes = append(nodes, b.Node)
+		agreeingNodes = append(agreeingNodes, b.Node)
 	}
-	sort.Strings(nodes)
+	sort.Strings(agreeingNodes)
 	out := map[string]any{
-		"address": v.Node,
+		"address": strings.TrimSpace(address),
 		"spendable_atoms": v.Spendable,
 		"total_atoms": v.Total,
 		"spendable": aq.FormatAmount(v.Spendable),
@@ -456,11 +780,22 @@ func QuorumBalance(knownNodesJSON, address string) (string, error) {
 		"peer_observed": len(balances),
 		"peer_agreement": len(best),
 		"multi_peer_confirmed": len(best) >= 2,
-		"agreement_nodes": nodes,
+		"agreement_nodes": agreeingNodes,
 	}
-	out["address"] = strings.TrimSpace(address)
 	raw, _ := json.Marshal(out)
 	return string(raw), nil
+}
+
+func QuorumBalance(knownNodesJSON, address string) (string, error) {
+	obs, err := collectNodeObservations(knownNodesJSON)
+	if err != nil {
+		return "", err
+	}
+	_, agreeing, err := chooseNodeQuorum(obs)
+	if err != nil {
+		return "", err
+	}
+	return quorumBalanceFromNodes(agreeing, address)
 }
 
 func Balance(nodeURL, address string) (string, error) {
