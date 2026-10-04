@@ -21,7 +21,11 @@ Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręc
 
 ## Suma kontrolna oficjalnego v1.7.13
 
-Zweryfikuj SHA-256 pobranego archiwum względem pliku `SHA256SUMS.txt` opublikowanego razem z wydaniem GitHub v1.7.13. Nie używaj sum kontrolnych skopiowanych ze starszych wydań.
+```text
+7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
+```
+
+Zweryfikuj SHA-256 pobranego archiwum również względem pliku `SHA256SUMS.txt` opublikowanego razem z wydaniem GitHub v1.7.13.
 
 Bieżące binaria Windows nie mają podpisu Authenticode, więc SmartScreen może wyświetlić ostrzeżenie.
 
@@ -33,7 +37,7 @@ Explorer nie jest centralną usługą projektu i nie ma uprawnień konsensusowyc
 
 ## Bootstrap i decentralizacja
 
-Seed/bootstrap jest wyłącznie adresem pierwszego kontaktu. Od hardeningu zawartego w 1.7.13 skonfigurowany seed nie jest trwałym uprzywilejowanym peerem: po wielokrotnych błędach może zostać usunięty z aktywnego zestawu. Peery poznane przez P2P są zapisywane lokalnie i mogą całkowicie zastąpić początkowe komputery.
+Seed/bootstrap jest wyłącznie adresem pierwszego kontaktu. Od hardeningu wprowadzonego w v1.7.10 skonfigurowany seed nie jest trwałym uprzywilejowanym peerem: po wielokrotnych błędach może zostać usunięty z aktywnego zestawu. Peery poznane przez P2P są zapisywane lokalnie i mogą całkowicie zastąpić początkowe komputery.
 
 CI zawiera test rozproszony, w którym pierwotny/bootstrapowy node zostaje wyłączony na stałe, późniejsze nody dalej tworzą i synchronizują blockchain, a świeży node dołącza przez ocalałego peera niebędącego nodem założycielskim.
 
