@@ -6,18 +6,46 @@ function Import-MSVCEnvironment {
     }
 
     $vswhere = Join-Path ${env:ProgramFiles(x86)} "Microsoft Visual Studio\Installer\vswhere.exe"
-    if (-not (Test-Path $vswhere)) {
-        throw "Visual Studio Installer/vswhere.exe not found. Install 'Desktop development with C++' in Visual Studio."
+    $vsPath = $null
+
+    if (Test-Path $vswhere) {
+        $raw = & $vswhere -latest -products * -property installationPath
+        if ($raw) {
+            $vsPath = ($raw | Select-Object -First 1).Trim()
+        }
     }
 
-    $vsPath = (& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath).Trim()
     if (-not $vsPath) {
-        throw "MSVC C++ build tools were not found. Open Visual Studio Installer and add 'Desktop development with C++'."
+        $roots = @(
+            "C:\Program Files\Microsoft Visual Studio",
+            "C:\Program Files (x86)\Microsoft Visual Studio"
+        )
+        foreach ($root in $roots) {
+            if (-not (Test-Path $root)) { continue }
+            $candidate = Get-ChildItem $root -Filter VsDevCmd.bat -File -Recurse -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            if ($candidate) {
+                $vsPath = Split-Path -Parent (Split-Path -Parent $candidate.FullName)
+                break
+            }
+        }
+    }
+
+    if (-not $vsPath) {
+        throw "Visual Studio installation was not found. Open Visual Studio Installer and install 'Desktop development with C++'."
     }
 
     $devCmd = Join-Path $vsPath "Common7\Tools\VsDevCmd.bat"
     if (-not (Test-Path $devCmd)) {
-        throw "VsDevCmd.bat not found under $vsPath"
+        $candidate = Get-ChildItem $vsPath -Filter VsDevCmd.bat -File -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ($candidate) {
+            $devCmd = $candidate.FullName
+        }
+    }
+
+    if (-not (Test-Path $devCmd)) {
+        throw "VsDevCmd.bat was not found in Visual Studio at: $vsPath"
     }
 
     Write-Host "Loading MSVC environment from:"
@@ -27,6 +55,7 @@ function Import-MSVCEnvironment {
     if ($LASTEXITCODE -ne 0) {
         throw "Failed to initialize Visual Studio C++ build environment."
     }
+
     foreach ($line in $envLines) {
         $idx = $line.IndexOf("=")
         if ($idx -gt 0) {
@@ -37,7 +66,16 @@ function Import-MSVCEnvironment {
     }
 
     if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
-        throw "cl.exe is still not available after loading the Visual Studio C++ environment."
+        $clCandidate = Get-ChildItem $vsPath -Filter cl.exe -File -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "Hostx64\\x64\\cl\.exe$" } |
+            Select-Object -First 1
+        if ($clCandidate) {
+            $env:PATH = "$($clCandidate.Directory.FullName);$env:PATH"
+        }
+    }
+
+    if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) {
+        throw "cl.exe was not found. In Visual Studio Installer add 'Desktop development with C++' (MSVC x64/x86 build tools + Windows SDK)."
     }
 }
 
