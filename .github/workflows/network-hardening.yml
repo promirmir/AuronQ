@@ -31,16 +31,7 @@ jobs:
         run: go test ./internal/auronq -run 'TestFiveNodePartitionReorgAndRestartConvergence|TestRestartWithoutBootstrapKeepsPersistedPublicPeers|TestMalformedPeerHelloCannotChangeChain' -count=10 -timeout=8m
 
       - name: Repeat twenty-node partition convergence test
-        run: go test ./internal/auronq -run '^TestTwentyNodeMultiPartitionConvergence
-      - name: Race detector on network package
-        run: go test -race ./internal/auronq -count=1 -timeout=12m
-
-      - name: Fuzz address parser
-        run: go test ./internal/auronq -run='^$' -fuzz=FuzzDecodeAddressNeverPanics -fuzztime=20s -timeout=2m
-
-      - name: Fuzz amount parser
-        run: go test ./internal/auronq -run='^$' -fuzz=FuzzParseAmountNeverPanics -fuzztime=20s -timeout=2m
- -count=3 -timeout=10m
+        run: go test ./internal/auronq -run '^TestTwentyNodeMultiPartitionConvergence$' -count=3 -timeout=10m
 
       - name: Race detector on network package
         run: go test -race ./internal/auronq -count=1 -timeout=12m
