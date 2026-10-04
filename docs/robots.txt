@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://promirmir.github.io/AuronQ/sitemap.xml
