@@ -55,7 +55,7 @@ https://promirmir.github.io/AuronQ/
 https://github.com/promirmir/AuronQ
 
 [b]Latest Desktop / Full Node release:[/b]
-https://github.com/promirmir/AuronQ/releases/tag/v1.7.12
+https://github.com/promirmir/AuronQ/releases/tag/v1.7.13
 
 [b]Public Explorer:[/b]
 https://mir.taild63f46.ts.net/explorer
@@ -161,17 +161,17 @@ I mention this because I would rather show real bugs and real fixes than pretend
 
 [size=16pt][b]Downloads[/b][/size]
 
-[b]Windows x64 — AuronQ 1.7.12[/b]
-https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Windows-x64.zip
+[b]Windows x64 — AuronQ 1.7.13[/b]
+https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip
 
 SHA-256:
-[code]f5fe001141b005fb6b993313650a9f61caa2d0893959f54017010ba15750b5a3[/code]
+[code]7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1[/code]
 
-[b]Linux amd64 — AuronQ 1.7.12[/b]
-https://github.com/promirmir/AuronQ/releases/download/v1.7.12/AuronQ-1.7.12-Linux-amd64.tar.gz
+[b]Linux amd64 — AuronQ 1.7.13[/b]
+https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz
 
 SHA-256:
-[code]c2690e5948468d30e7eff939ba4430e735ed755cc0c249fc26fdba8305e42ce3[/code]
+[code]2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6[/code]
 
 [b]Android — AuronQ Mobile 0.5.1 Alpha[/b]
 https://github.com/promirmir/AuronQ/releases/download/android-v0.5.1-alpha/AuronQ-Mobile-0.5.1-alpha.apk
