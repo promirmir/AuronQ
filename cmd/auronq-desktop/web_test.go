@@ -35,10 +35,15 @@ func TestDesktopCSPAllowsOnlyLocalExplorerFrame(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	csp := rec.Header().Get("Content-Security-Policy")
-	if !strings.Contains(csp, "frame-src http://127.0.0.1:18444") {
-		t.Fatalf("local explorer frame source missing from CSP: %q", csp)
+	var frameDirective string
+	for _, part := range strings.Split(csp, ";") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "frame-src ") {
+			frameDirective = part
+			break
+		}
 	}
-	if strings.Contains(csp, "frame-src *") || strings.Contains(csp, "frame-src http:") || strings.Contains(csp, "frame-src https:") {
-		t.Fatalf("CSP frame source is too broad: %q", csp)
+	if frameDirective != "frame-src http://127.0.0.1:18444" {
+		t.Fatalf("unexpected frame-src directive: %q (full CSP: %q)", frameDirective, csp)
 	}
 }
