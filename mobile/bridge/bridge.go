@@ -200,6 +200,24 @@ func Balance(nodeURL, address string) (string, error) {
 	return string(b), nil
 }
 
+func History(nodeURL, address string, limit int) (string, error) {
+	net, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
+	if err != nil || net != aq.MainnetNetworkByte {
+		return "", errors.New("invalid AuronQ Mainnet address")
+	}
+	if err := checkNode(nodeURL); err != nil {
+		return "", err
+	}
+	items, err := aq.NewClient(strings.TrimRight(nodeURL, "/")).History(address, limit)
+	if err != nil {
+		return "", err
+	}
+	out := map[string]any{"address": address, "items": items}
+	b, _ := json.Marshal(out)
+	return string(b), nil
+}
+
+
 func Send(nodeURL, walletPath, password, to, amount string) (string, error) {
 	if err := checkNode(nodeURL); err != nil {
 		return "", err
@@ -298,6 +316,7 @@ func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 		"height":       st.Height,
 		"tip":          st.Tip.String(),
 		"chain_work":   st.ChainWork,
+		"network_hashrate": st.NetworkHashrate,
 		"issued_atoms": st.Issued,
 		"issued_coins": st.IssuedCoins,
 		"mempool":      st.Mempool,
