@@ -30,6 +30,18 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 
 **Release archive:** [GitHub Releases](https://github.com/promirmir/AuronQ/releases) · **History:** [CHANGELOG.md](CHANGELOG.md)
 
+## ⛏️ Mine AURQ
+
+Independent third-party mining options are already available:
+
+- **MeshPool:** https://meshpool.net/pool/auronq-main
+- **RPlant:** https://pool.rplant.xyz/#auronq#connect
+- **MeshMiner 0.8.35:** https://github.com/totom9000/meshminer/releases/tag/v0.8.35 — published AURQ support for CPU and NVIDIA GPUs
+- **Official AuronQ GPU Miner v0.2.1 Alpha:** https://github.com/promirmir/AuronQ/releases/tag/gpu-v0.2.1-alpha
+
+Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
+
+
 ### Current checksums
 
 ```text
