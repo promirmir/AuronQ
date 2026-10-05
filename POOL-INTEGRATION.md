@@ -29,6 +29,18 @@ Canonical references:
 - [MAINNET.md](MAINNET.md)
 - [MAINNET-CHANGE-POLICY.md](MAINNET-CHANGE-POLICY.md)
 
+## Current third-party mining ecosystem
+
+The following independently operated services/tools have publicly reported AURQ support:
+
+- **MeshPool:** https://meshpool.net/pool/auronq-main
+- **RPlant:** https://pool.rplant.xyz/#auronq#connect
+- **MeshMiner 0.8.35:** https://github.com/totom9000/meshminer/releases/tag/v0.8.35 — published AURQ support on CPU and NVIDIA GPUs.
+
+These are third-party implementations. Their availability, fees, payout rules, binaries and hardware support are controlled by their respective operators, not by the AuronQ project.
+
+Their existence is useful for decentralization and interoperability testing, but it does not make any third-party pool or miner part of Mainnet consensus.
+
 ## Current node integration surface
 
 AuronQ does **not** currently expose Bitcoin-style JSON-RPC `getblocktemplate` / `submitblock` and does **not** include a native Stratum server.

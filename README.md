@@ -96,20 +96,37 @@ Windows binaries are not currently Authenticode-signed, so SmartScreen may warn 
 
 Detailed guide: [README-WINDOWS.md](README-WINDOWS.md)
 
-## Third-party mining pool
+## Third-party mining pools and miners
 
-AURQ is beginning to appear in independent mining infrastructure and public mining trackers.
+AURQ is now available through multiple independently operated mining services. These services and miners are **third-party infrastructure** and are not controlled, operated or endorsed by the AuronQ project.
 
-**RPlant (third-party / community pool):** https://pool.rplant.xyz/
+### MeshPool
 
+- AuronQ pool: https://meshpool.net/pool/auronq-main
 - Coin: **AuronQ (AURQ)**
 - Proof-of-Work: **AQM64**
-- The pool is independently operated and is **not controlled by the AuronQ project**.
-- Before mining, verify the pool's current connection parameters, fees, payout policy and miner compatibility directly with the pool operator.
+- Independent pool operator.
+
+### RPlant
+
+- AuronQ connection page: https://pool.rplant.xyz/#auronq#connect
+- Coin: **AuronQ (AURQ)**
+- Proof-of-Work: **AQM64**
+- Independent pool operator.
+
+### MeshMiner
+
+A third-party AURQ implementation is also available in **MeshMiner 0.8.35**:
+
+https://github.com/totom9000/meshminer/releases/tag/v0.8.35
+
+The published release announcement reports AURQ support on **CPU and NVIDIA GPUs**. Hardware support, binaries and tuning are maintained independently from the AuronQ project.
+
+Third-party availability can change. Before mining with any external service or binary, independently verify its current connection parameters, fees, payout policy, download source and miner compatibility.
 
 Public mining/network tracking: https://cpu-mining.info/
 
-**Pool operators:** see [POOL-INTEGRATION.md](POOL-INTEGRATION.md) for the current HTTP/JSON mining interface, AQM64 share-validation requirements, stale-work handling and the recommended independent-pool architecture. Public coordination for additional pool operators is tracked in [issue #66](https://github.com/promirmir/AuronQ/issues/66).
+**Pool operators:** see [POOL-INTEGRATION.md](POOL-INTEGRATION.md) for the current HTTP/JSON mining interface, AQM64 share-validation requirements, stale-work handling and the recommended independent-pool architecture. Public decentralization coordination remains tracked in [issue #66](https://github.com/promirmir/AuronQ/issues/66).
 
 Solo CPU mining through an AuronQ full node remains supported and does not depend on any pool.
 
