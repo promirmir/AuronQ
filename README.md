@@ -94,6 +94,21 @@ Windows binaries are not currently Authenticode-signed, so SmartScreen may warn 
 
 Detailed guide: [README-WINDOWS.md](README-WINDOWS.md)
 
+## Third-party mining pool
+
+AURQ is beginning to appear in independent mining infrastructure and public mining trackers.
+
+**RPlant (third-party / community pool):** https://pool.rplant.xyz/
+
+- Coin: **AuronQ (AURQ)**
+- Proof-of-Work: **AQM64**
+- The pool is independently operated and is **not controlled by the AuronQ project**.
+- Before mining, verify the pool's current connection parameters, fees, payout policy and miner compatibility directly with the pool operator.
+
+Public mining/network tracking: https://cpu-mining.info/
+
+Solo CPU mining through an AuronQ full node remains supported and does not depend on any pool.
+
 ## Mainnet identity
 
 | Parameter | Value |
