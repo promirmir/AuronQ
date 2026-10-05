@@ -184,11 +184,13 @@ Detailed history: [CHANGELOG.md](CHANGELOG.md)
 
 ## Roadmap
 
-### Planned consensus freeze
+### Stabilization and finalization gate
 
-Once the Mainnet has operated stably for a sustained period, there are no unresolved reports of consensus or network-critical failures, and the current implementation has passed the project's required compatibility and safety checks, AuronQ plans to enter a **consensus freeze** phase.
+AuronQ Mainnet consensus rules are already frozen for ordinary patch releases under [MAINNET-CHANGE-POLICY.md](MAINNET-CHANGE-POLICY.md). The current priority is therefore **stability, independent operation and observation**, not further consensus development.
 
-The goal of that phase is to make the Mainnet's core rules — including genesis, Network ID, AQM64 consensus behavior, difficulty rules and monetary policy — as difficult to change as reasonably possible, using protected tags/releases and repository rules. Security and compatibility fixes that do not alter consensus may still be maintained.
+After a sustained period of stable Mainnet operation, no unresolved consensus or network-critical failures, and successful compatibility/safety checks, the project may enter a **finalization hardening** phase. That phase should strengthen protection of published tags/releases and repository rules while continuing to allow security and compatibility fixes that do not alter consensus.
+
+The finalization criteria are tracked in [STABILIZATION.md](STABILIZATION.md).
 
 The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The highest-value items are:
 
@@ -204,6 +206,7 @@ The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The hig
 | Topic | Document |
 |---|---|
 | Mainnet specification | [MAINNET.md](MAINNET.md) |
+| Stabilization / finalization gate | [STABILIZATION.md](STABILIZATION.md) |
 | Protocol | [PROTOCOL.md](PROTOCOL.md) |
 | AQM64 Proof-of-Work | [AQM64.md](AQM64.md) |
 | Decentralization model | [DECENTRALIZATION.md](DECENTRALIZATION.md) |
