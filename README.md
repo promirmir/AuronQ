@@ -184,6 +184,12 @@ Detailed history: [CHANGELOG.md](CHANGELOG.md)
 
 ## Roadmap
 
+### Planned consensus freeze
+
+Once the Mainnet has operated stably for a sustained period, there are no unresolved reports of consensus or network-critical failures, and the current implementation has passed the project's required compatibility and safety checks, AuronQ plans to enter a **consensus freeze** phase.
+
+The goal of that phase is to make the Mainnet's core rules — including genesis, Network ID, AQM64 consensus behavior, difficulty rules and monetary policy — as difficult to change as reasonably possible, using protected tags/releases and repository rules. Security and compatibility fixes that do not alter consensus may still be maintained.
+
 The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The highest-value items are:
 
 1. more independently operated public full nodes and miners;
