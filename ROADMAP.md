@@ -21,6 +21,12 @@ This roadmap lists engineering priorities, not promises or investment claims. Se
 - Founder-bootstrap-removal regression testing.
 - Android light wallet with local header/AQM64 verification and verified-chain wallet-state quorum.
 
+## Stabilization / finalization gate
+
+The live Mainnet should now prioritize observation, independent operation and compatibility over feature velocity. The concrete exit criteria for final hardening are tracked in [STABILIZATION.md](STABILIZATION.md).
+
+Until those criteria are satisfied, avoid discretionary consensus changes. Security, compatibility, monitoring, packaging and decentralization work that preserves consensus remains appropriate.
+
 ## Near-term priorities
 
 ### Network decentralization
