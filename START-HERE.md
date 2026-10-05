@@ -1,25 +1,39 @@
-# Start here — AuronQ 1.7.1 Mainnet
+# Start here — AuronQ Mainnet
 
 ## Windows
 
-1. Open the official release: https://github.com/promirmir/AuronQ/releases/tag/v1.7.1
-2. Download `AuronQ-1.7.1-Windows-x64.zip`.
-3. Verify SHA-256: `50a1b2d321117549d7ceab81aa5dfaa0bb072544915fb5e921eb9b2a24d68d8d`.
-4. Extract the complete ZIP.
+1. Open the official latest release: https://github.com/promirmir/AuronQ/releases/latest
+2. Download the current `AuronQ-<version>-Windows-x64.zip` archive.
+3. Download `SHA256SUMS.txt` from the same release and verify the archive SHA-256 before running it.
+4. Extract the complete ZIP to a new folder.
 5. Run `START-AURONQ.cmd`.
+
+PowerShell checksum example:
+
+```powershell
+Get-FileHash .\AuronQ-<version>-Windows-x64.zip -Algorithm SHA256
+```
+
+Compare the result with the matching entry in `SHA256SUMS.txt` from the same GitHub Release.
 
 A normal participant does not need Tailscale, Cloudflare, manual peer addresses, Go or Docker.
 
-The client validates the bundled mainnet definition, consults the stable GitHub bootstrap manifest, connects to available peers, validates the chain locally, learns additional public peers and stores them for future restarts.
+The client validates the bundled Mainnet definition, consults the public bootstrap manifest, connects to available peers, validates the chain locally, learns additional public peers and stores them for future restarts.
 
 ## Current bootstrap state
 
-The stable manifest is:
+The public bootstrap manifest is:
 
 `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
 
-It currently contains one confirmed public rendezvous endpoint, `https://mir.taild63f46.ts.net`. It is not a trusted consensus server; it only gives a fresh node its first contact.
+The manifest can contain multiple currently verified public rendezvous peers and may change over time. It is discovery metadata only: bootstrap peers do not determine consensus, cannot make an invalid block valid and are excluded from the immutable Mainnet identity.
+
+After first contact, nodes learn and persist additional peers through native AuronQ peer gossip.
 
 ## Security
 
-AuronQ 1.7.1 is live mainnet software but has not received an independent professional consensus/cryptographic security audit. See `SECURITY.md`.
+AuronQ Mainnet is live experimental financial software and has not received an independent professional consensus, networking or cryptographic security audit.
+
+Verify release checksums, back up wallets before use and do not use substantial value while the project remains in the stabilization phase.
+
+See [SECURITY.md](SECURITY.md), [MAINNET-CHANGE-POLICY.md](MAINNET-CHANGE-POLICY.md) and [STABILIZATION.md](STABILIZATION.md).
