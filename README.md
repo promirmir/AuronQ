@@ -109,6 +109,8 @@ AURQ is beginning to appear in independent mining infrastructure and public mini
 
 Public mining/network tracking: https://cpu-mining.info/
 
+**Pool operators:** see [POOL-INTEGRATION.md](POOL-INTEGRATION.md) for the current HTTP/JSON mining interface, AQM64 share-validation requirements, stale-work handling and the recommended independent-pool architecture. Public coordination for additional pool operators is tracked in [issue #66](https://github.com/promirmir/AuronQ/issues/66).
+
 Solo CPU mining through an AuronQ full node remains supported and does not depend on any pool.
 
 ## Mainnet identity
@@ -209,6 +211,7 @@ The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The hig
 | Stabilization / finalization gate | [STABILIZATION.md](STABILIZATION.md) |
 | Protocol | [PROTOCOL.md](PROTOCOL.md) |
 | AQM64 Proof-of-Work | [AQM64.md](AQM64.md) |
+| Mining pool integration | [POOL-INTEGRATION.md](POOL-INTEGRATION.md) |
 | Decentralization model | [DECENTRALIZATION.md](DECENTRALIZATION.md) |
 | Network independence | [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md) |
 | Public networking | [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md) |
