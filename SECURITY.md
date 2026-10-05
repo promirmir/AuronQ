@@ -1,6 +1,20 @@
 # AuronQ Security Policy and Threat Model
 
-AuronQ 1.7.0 is live mainnet software. It is security-sensitive financial infrastructure, but it has **not** received an independent professional security or cryptographic audit. Passing tests is not equivalent to an audit.
+AuronQ Mainnet is live experimental financial software. It is security-sensitive infrastructure, but it has **not** received an independent professional security or cryptographic audit. Passing tests is not equivalent to an audit.
+
+## Reporting a vulnerability
+
+Do **not** disclose exploitable vulnerability details in a public GitHub issue, pull request, Discord message or forum post.
+
+Preferred reporting path:
+
+1. Open the repository's **Security** tab.
+2. Use **Report a vulnerability** / GitHub Private Vulnerability Reporting if that option is available.
+3. Include affected versions, reproduction steps, expected impact and any minimal proof-of-concept needed to verify the issue.
+
+If private vulnerability reporting is temporarily unavailable, open only a minimal public issue requesting a private security contact channel. Do not include exploit details, private keys, wallet material, credentials or sensitive logs in that public issue.
+
+Security reports should be handled before public technical disclosure whenever the issue could put Mainnet users, wallets or nodes at risk.
 
 ## Cryptographic boundary
 
