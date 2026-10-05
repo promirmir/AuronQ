@@ -122,7 +122,7 @@ https://github.com/totom9000/meshminer/releases/tag/v0.8.35
 
 The published release announcement reports AURQ support on **CPU and NVIDIA GPUs**. Hardware support, binaries and tuning are maintained independently from the AuronQ project.
 
-Before mining with any third-party service or binary, independently verify its current connection parameters, fees, payout policy, download source and miner compatibility.
+Third-party availability can change. Before mining with any external service or binary, independently verify its current connection parameters, fees, payout policy, download source and miner compatibility.
 
 Public mining/network tracking: https://cpu-mining.info/
 
