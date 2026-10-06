@@ -353,7 +353,7 @@ func maintainCLIPublicNode(ctx context.Context, node *aq.Node, listen string) {
 	for {
 		if strings.TrimSpace(node.PublicAdvertise()) == "" && mapping == nil {
 			mctx, cancel := context.WithTimeout(ctx, 6*time.Second)
-			m, mapErr := aq.TryUPnPPortMapping(mctx, port)
+			m, mapErr := aq.TryUPnPPortMapping(mctx, uint16(port))
 			cancel()
 			if mapErr != nil {
 				log.Printf("public node: auto-public unavailable: %v; staying outbound-only", mapErr)
