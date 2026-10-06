@@ -51,8 +51,8 @@ func TestCPUBackendMatchesCanonicalAQM64(t *testing.T) {
 
 func TestSafeCPUThreads(t *testing.T) {
 	got := safeCPUThreads(0)
-	if got < 1 || got > 4 {
-		t.Fatalf("automatic safe CPU threads = %d, want 1..4", got)
+	if got < 1 || got > 2 {
+		t.Fatalf("automatic safe CPU threads = %d, want 1..2", got)
 	}
 	if got := safeCPUThreads(999); got < 1 || got > 16 {
 		t.Fatalf("explicit CPU thread cap = %d, want 1..16", got)
