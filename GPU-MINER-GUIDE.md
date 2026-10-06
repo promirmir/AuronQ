@@ -135,6 +135,8 @@ catastrophic fail-safe: 82 °C
 
 No manual restart is normally required after an ordinary thermal excursion.
 
+v0.4.3 further reduces thermal oscillation: Pool mode begins regulation before the target, limits each duty-cycle change to small steps, refuses to release throttling while temperature is flat/rising near target, and uses a 20-second conservative stabilization hold after an emergency cooldown. This is designed to avoid repeated full-load → hard-pause → full-load cycles on laptop GPUs.
+
 On Linux, driver telemetry can also be watched with:
 
 ~~~bash
