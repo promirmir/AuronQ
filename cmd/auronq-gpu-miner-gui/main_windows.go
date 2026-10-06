@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.2.1-alpha"
+	guiVersion       = "0.3.0-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -42,12 +42,22 @@ const (
 var webFS embed.FS
 
 type settings struct {
-	Address    string `json:"address"`
-	Device     int    `json:"device"`
-	Batch      int    `json:"batch"`
-	AutoPublic bool   `json:"auto_public"`
-	SelfTest   bool   `json:"self_test"`
-	Language   string `json:"language"`
+	Address         string `json:"address"`
+	Device          int    `json:"device"` // legacy single-device setting
+	Devices         []int  `json:"devices,omitempty"`
+	UseAllDevices   bool   `json:"use_all_devices"`
+	Batch           int    `json:"batch"`
+	AutoTune        bool   `json:"auto_tune"`
+	AutoTuneSeconds int    `json:"auto_tune_seconds"`
+	ThermalStopC    int    `json:"thermal_stop_c"`
+	AutoPublic      bool   `json:"auto_public"`
+	SelfTest        bool   `json:"self_test"`
+	MiningMode      string `json:"mining_mode"`
+	PoolURL         string `json:"pool_url"`
+	PoolWorker      string `json:"pool_worker"`
+	PoolMinerPath   string `json:"pool_miner_path"`
+	PoolBackend     string `json:"pool_backend"`
+	Language        string `json:"language"`
 }
 
 type minerState struct {
@@ -77,6 +87,8 @@ type appState struct {
 	SyncTarget      uint64     `json:"sync_target"`
 	Synchronized    bool       `json:"synchronized"`
 	GPUName         string     `json:"gpu_name,omitempty"`
+	GPUs            []gpuInfo  `json:"gpus,omitempty"`
+	GPUError        string     `json:"gpu_error,omitempty"`
 	Miner           minerState `json:"miner"`
 	Settings        settings   `json:"settings"`
 	Logs            []string   `json:"logs"`
@@ -106,6 +118,8 @@ type App struct {
 	miner              minerState
 	minerStopRequested bool
 	gpuName            string
+	gpus               []gpuInfo
+	gpuTelemetryErr    string
 
 	cfg        settings
 	syncTarget uint64
@@ -151,6 +165,7 @@ func main() {
 		}
 		app.monitorNetwork()
 	}()
+	go app.monitorGPUs()
 
 	if err := openDesktopWindow("http://" + guiListen + "/"); err != nil {
 		app.addLog("UI: " + err.Error())
@@ -181,7 +196,7 @@ func newApp() (*App, error) {
 	if err := os.MkdirAll(a.nodeDir, 0700); err != nil {
 		return nil, err
 	}
-	a.cfg = settings{Device: 0, Batch: 60, AutoPublic: true, SelfTest: true, Language: "pl"}
+	a.cfg = defaultSettings()
 	a.loadSettings()
 
 	exeDir, err := executableDir()
@@ -250,24 +265,76 @@ func loadBootstrap(path string, n *aq.NetworkConfig) []string {
 	return mergePeers(nil, m.Peers)
 }
 
-func (a *App) loadSettings() {
-	b, err := os.ReadFile(a.settingsPath)
-	if err != nil {
-		return
+func defaultSettings() settings {
+	return settings{
+		Device:          0,
+		UseAllDevices:   true,
+		Batch:           60,
+		AutoTune:        true,
+		AutoTuneSeconds: 1,
+		ThermalStopC:    85,
+		AutoPublic:      true,
+		SelfTest:        true,
+		MiningMode:      "solo",
+		PoolURL:         "pool.meshpool.net:3359",
+		PoolWorker:      "rig1",
+		PoolBackend:     "cuda",
+		Language:        "pl",
 	}
-	var s settings
-	if json.Unmarshal(b, &s) != nil {
-		return
-	}
+}
+
+func normalizeSettings(s *settings) {
 	if s.Device < 0 {
 		s.Device = 0
 	}
 	if s.Batch < 1 || s.Batch > 64 {
 		s.Batch = 60
 	}
+	if s.AutoTuneSeconds < 1 || s.AutoTuneSeconds > 10 {
+		s.AutoTuneSeconds = 1
+	}
+	if s.ThermalStopC < 60 || s.ThermalStopC > 95 {
+		s.ThermalStopC = 85
+	}
+	if s.MiningMode != "pool" {
+		s.MiningMode = "solo"
+	}
+	if strings.TrimSpace(s.PoolURL) == "" {
+		s.PoolURL = "pool.meshpool.net:3359"
+	}
+	if strings.TrimSpace(s.PoolWorker) == "" {
+		s.PoolWorker = "rig1"
+	}
+	if s.PoolBackend != "both" {
+		s.PoolBackend = "cuda"
+	}
 	if s.Language != "en" {
 		s.Language = "pl"
 	}
+	seen := map[int]bool{}
+	devices := make([]int, 0, len(s.Devices))
+	for _, d := range s.Devices {
+		if d >= 0 && !seen[d] {
+			seen[d] = true
+			devices = append(devices, d)
+		}
+	}
+	s.Devices = devices
+	if len(s.Devices) > 0 {
+		s.Device = s.Devices[0]
+	}
+}
+
+func (a *App) loadSettings() {
+	b, err := os.ReadFile(a.settingsPath)
+	if err != nil {
+		return
+	}
+	s := defaultSettings()
+	if json.Unmarshal(b, &s) != nil {
+		return
+	}
+	normalizeSettings(&s)
 	a.cfg = s
 }
 
@@ -275,12 +342,38 @@ func (a *App) saveSettings(s settings) error {
 	if s.Device < 0 {
 		return errors.New("CUDA device must be 0 or greater")
 	}
+	for _, d := range s.Devices {
+		if d < 0 {
+			return errors.New("CUDA device must be 0 or greater")
+		}
+	}
+	if !s.UseAllDevices && len(s.Devices) == 0 {
+		s.Devices = []int{s.Device}
+	}
 	if s.Batch < 1 || s.Batch > 64 {
 		return errors.New("batch must be between 1 and 64")
 	}
-	if s.Language != "en" {
-		s.Language = "pl"
+	if s.AutoTuneSeconds < 1 || s.AutoTuneSeconds > 10 {
+		return errors.New("autotune seconds must be between 1 and 10")
 	}
+	if s.ThermalStopC < 60 || s.ThermalStopC > 95 {
+		return errors.New("thermal stop must be between 60 and 95 C")
+	}
+	if s.MiningMode != "solo" && s.MiningMode != "pool" {
+		return errors.New("mining mode must be solo or pool")
+	}
+	if s.PoolBackend != "cuda" && s.PoolBackend != "both" {
+		return errors.New("pool backend must be cuda or both")
+	}
+	if s.MiningMode == "pool" {
+		if _, err := normalizePoolEndpoint(s.PoolURL); err != nil {
+			return err
+		}
+		if strings.TrimSpace(s.PoolWorker) == "" {
+			return errors.New("pool worker name is required")
+		}
+	}
+	normalizeSettings(&s)
 	b, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
