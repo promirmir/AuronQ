@@ -56,6 +56,7 @@ func queryNVIDIAGPUs() ([]gpuInfo, error) {
 		"--query-gpu=index,name,temperature.gpu,fan.speed,utilization.gpu,memory.used,memory.total,power.draw,power.limit",
 		"--format=csv,noheader,nounits",
 	)
+	cmd.SysProcAttr = &syscallSysProcAttr
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("nvidia-smi: %w", err)
