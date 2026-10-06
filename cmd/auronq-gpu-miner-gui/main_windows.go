@@ -1785,6 +1785,11 @@ func (a *App) refreshPublicVerification() {
 	a.mu.Lock()
 	previous := a.publicVerified
 	a.publicVerified = verified
+	if verified {
+		a.publicError = ""
+	} else if endpoint != "" && a.cfg.AutoPublic {
+		a.publicError = "Endpoint został ogłoszony, ale zdalny callback nie jest jeszcze potwierdzony. Jeśli ten stan się utrzymuje, sprawdź Windows Firewall i ruch przychodzący TCP/18444."
+	}
 	a.mu.Unlock()
 	if verified && !previous {
 		a.addLog("Public node: remote peer callback verification confirmed")
