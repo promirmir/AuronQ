@@ -14,6 +14,26 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 > [!WARNING]
 > AuronQ is experimental financial software. AQM64 and the complete consensus/network implementation have **not** received an independent professional security or cryptographic audit. Do not use substantial value.
 
+## Long-term direction
+
+AuronQ Mainnet is intended to be a **persistent public cryptocurrency network**, not a disposable test chain. The project is being developed with a long time horizon: preserve a stable consensus foundation, reduce dependence on privileged infrastructure, and let the network prove itself through real operation rather than frequent protocol redesign.
+
+A core motivation is that computing hardware continues to become more capable. AuronQ therefore avoids simply copying an older mining design unchanged. Its **AQM64** Proof-of-Work deliberately uses a heavier compute-and-memory construction, while transaction authorization uses the standardized **ML-DSA-87** post-quantum signature scheme.
+
+The goal is not to claim that any design is permanently future-proof. The goal is to give AuronQ a foundation that can remain useful as hardware and cryptographic requirements evolve, while keeping Mainnet compatibility and decentralization as primary constraints.
+
+Accordingly, the development direction is:
+
+- **stability before features** — avoid unnecessary consensus changes once Mainnet rules are established;
+- **long-lived compatibility** — protect Network ID, genesis, monetary rules and transaction validity from casual redesign;
+- **hardware-aware PoW** — keep AQM64 focused on meaningful resource use on modern general-purpose hardware;
+- **post-quantum transaction signatures** — retain ML-DSA-87 as the transaction-signature foundation;
+- **independent operation** — grow the number of unrelated miners, pools, full nodes, discovery routes and explorers;
+- **real-world proving period** — let the live network accumulate operating history, external integrations and independent review before treating it as mature infrastructure;
+- **security and auditability** — keep the code open, reproducible and reviewable, and pursue independent professional review before substantial-value use.
+
+This direction is intentionally conservative: the aim is for AuronQ to survive technological change through stable rules, independent infrastructure and gradual hardening rather than constant consensus churn.
+
 ## Current releases
 
 | Component | Current release | Status | Download |
