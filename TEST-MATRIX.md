@@ -63,15 +63,23 @@ This file is the engineering gate for moving from public testnet to mainnet. A p
 - public IPv4 and IPv6 where available
 - clean install from GitHub release assets with no manual peer entry
 
-## GPU Miner platform gate
+## Universal Miner platform gate
 
-- [x] Windows x64 miner/GUI compile in CI
-- [x] Linux amd64 native miner compile with CGO loader in CI
+- [x] Windows x64 miner/GUI compiles in CI
+- [x] Linux amd64 accelerated miner compiles with the CGO CUDA loader in CI
+- [x] portable CPU-safe miner + full-node CLI cross-build in CI for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64
+- [x] native CPU fallback reproduces canonical AQM64 byte-for-byte in tests
+- [x] AUTO backend falls back from unavailable CUDA to native CPU instead of failing startup
+- [x] conservative CPU AUTO profile is bounded to at most two 64 MiB lanes; explicit override is capped at 16
+- [x] Windows NVIDIA thermal safety reads direct local NVML telemetry and maps sensors to CUDA devices by UUID
+- [x] Windows GUI and Pool governor share the same local hardware sample
+- [x] Linux protected CUDA mining stops if local NVIDIA temperature telemetry disappears
 - [x] CUDA backend compiles as a Linux shared library without requiring a physical GPU in CI
-- [x] GPU/CPU AQM64 equivalence self-test is mandatory before mining on real hardware
-- [x] multi-GPU work uses disjoint nonce ranges
-- [x] Linux thermal governor reads NVIDIA temperature through `nvidia-smi`
-- [ ] real-device Linux validation on multiple distributions/driver versions/GPU models
+- [x] selected backend/canonical AQM64 equivalence self-test is mandatory before mining on real hardware
+- [x] multi-GPU CUDA work uses disjoint nonce ranges
+- [ ] real-device Windows/Linux validation across more NVIDIA GPU and driver combinations
+- [ ] real-device CPU fallback soak tests on representative Intel/AMD desktop and laptop systems
+- [ ] native AMD/Intel GPU acceleration (not shipped until an implementation passes canonical AQM64 validation on real hardware)
 - [ ] independent CUDA implementation/security review
 
 ## Release engineering
