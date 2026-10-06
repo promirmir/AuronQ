@@ -1,40 +1,52 @@
-# AuronQ GPU Miner v0.3.2 Alpha
+# AuronQ GPU Miner v0.3.3 Alpha
 
-Windows alpha update focused on automatic thermal management, useful live mining statistics and pool flexibility. This release changes miner/UI behavior only; it does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID, wallet rules or monetary policy.
+Windows alpha update adding first-class support for **MeshMiner 0.8.35+** in Pool mode. This remains a miner/UI update only; there are **no changes** to Mainnet consensus, AQM64, difficulty, genesis, Network ID, wallet rules or monetary policy.
 
-## New in v0.3.2
+## MeshMiner 0.8.35 integration
 
-- **Smart thermal governor**
-  - the configured temperature is now a hard safety ceiling, not the normal operating target;
-  - the built-in CUDA miner automatically targets about **5 °C below the hard limit**;
-  - it reduces batch size as temperature rises;
-  - it also introduces short adaptive duty-cycle pauses, because smaller batches alone may still leave a GPU continuously saturated;
-  - after sustained cooling it gradually restores performance;
-  - if the GPU still reaches the configured hard limit, mining stops as a final safety measure.
+AuronQ can now launch the official MeshMiner 0.8.35 AURQ path directly with the documented command-line interface:
 
-- **Reliable live H/s**
-  - the built-in miner reports an interval hashrate about once per second instead of waiting for a fixed number of large batches;
-  - multi-GPU mode aggregates the current rate from all GPU workers;
-  - the GUI prefers current `rate=` data and falls back to average H/s;
-  - pool-mode log parsing recognizes H/s, kH/s, MH/s, GH/s, TH/s and PH/s values emitted by compatible external miners.
+- `--algo auronq`;
+- `--pool host:port`;
+- `--user aurq1....worker`;
+- `--backend cuda|cpu|both`;
+- `--device 0,1,...` for selected NVIDIA cards;
+- `--fan auto` as an optional/default GPU cooling mode;
+- `--threads N` for CPU/both mode;
+- `--retune` when the operator explicitly wants to remeasure cards;
+- dedicated **Retune MeshMiner now** action using `--tune-only --retune`.
 
-- **Other pool endpoints**
-  - MeshPool remains a convenient preset;
-  - users can select **Custom / other pool** and enter any compatible `host:port` or `stratum+tcp://host:port` endpoint;
-  - the UI explicitly supports copying a current endpoint from another AURQ pool such as RPlant;
-  - no third-party pool binary is downloaded automatically.
+The GUI automatically looks for `meshpool-miner.exe` or `meshminer.exe` next to AuronQ-GPU-Miner.exe and also inside a neighboring folder whose name contains MeshMiner/MeshPool. A manual executable path remains available.
 
-## Retained from v0.3.x
+## Thermal behavior with external MeshMiner
 
-- multi-NVIDIA-GPU mining with disjoint nonce ranges;
-- per-GPU automatic batch tuning;
-- live temperature, fan, load, power and VRAM telemetry;
-- configurable hard thermal safety limit;
-- Solo and Pool modes;
-- PL/EN GUI;
-- GPU/CPU AQM64 equivalence self-test;
-- ordinary full-node validation of Solo-mined blocks.
+The built-in AuronQ CUDA Solo miner can regulate workload itself. An external closed binary cannot be safely given the same internal batch governor, so AuronQ uses the controls MeshMiner actually documents:
 
-## Important
+- MeshMiner `--fan auto` can be enabled directly from AuronQ and is enabled by default for GPU pool mining;
+- MeshMiner performs its own per-card tuning and remembers results;
+- AuronQ continues to monitor NVIDIA temperature independently;
+- the configured AuronQ temperature remains a **hard emergency stop** for Pool mode.
 
-This remains alpha software. The CUDA implementation, adaptive governor and multi-GPU orchestration have not received an independent professional audit. Test temperature behavior on your own cooling system before leaving mining unattended.
+This avoids pretending that AuronQ controls undocumented MeshMiner internals.
+
+## Pools
+
+MeshPool remains the preset endpoint. The user can also select **Custom / other pool** and enter another compatible AURQ pool endpoint. Compatibility still depends on the external pool/miner protocol; entering an endpoint does not make an incompatible Stratum implementation compatible.
+
+## Existing v0.3.2 behavior retained
+
+- live rolling H/s in the built-in miner;
+- multi-GPU aggregation;
+- generic pool H/s parsing;
+- smart thermal governor for the built-in CUDA miner;
+- multi-NVIDIA-GPU Solo mining;
+- PL/EN interface;
+- GPU/CPU AQM64 equivalence self-test.
+
+## Third-party software
+
+MeshMiner is independently developed and distributed:
+
+https://github.com/totom9000/meshminer/releases/tag/v.0.8.35
+
+AuronQ does not silently download, bundle, modify or redistribute the MeshMiner binary. Verify third-party releases, fees and pool rules independently.
