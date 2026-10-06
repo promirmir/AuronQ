@@ -1,26 +1,24 @@
-# AuronQ GPU Miner — Windows and Linux guide
+# AuronQ Miner — Windows and Linux accelerated guide
 
-Current release: **v0.3.8 Alpha**
+Current release: **v0.4.0 Alpha**
 
-The official NVIDIA CUDA miner supports Windows x64 and Linux amd64.
+The v0.4.0 miner uses **AUTO** compute selection: official NVIDIA CUDA acceleration on supported Windows/Linux systems, with a native CPU AQM64 fallback when CUDA is unavailable. See `UNIVERSAL-MINER-GUIDE.md` for portable Windows/Linux/macOS CPU-safe packages.
 
 ## Packages
 
-**Windows x64** includes the PL/EN graphical dashboard, the native CUDA worker, CUDA DLL, Mainnet metadata and documentation.
+**Windows x64 full package** includes the PL/EN graphical dashboard, native CUDA acceleration, CPU fallback, full-node CLI, Mainnet metadata and documentation.
 
-**Linux amd64** includes the native CLI miner, `libauronq-aqm64-cuda.so`, Mainnet metadata and documentation. v0.3.8 is CLI-first on Linux: native Solo CUDA mining, multi-GPU, Auto Tune, live H/s and smart thermal control are supported. The Windows dashboard GUI is not claimed as a Linux feature.
+**Linux amd64 full package** includes the universal CLI miner, `libauronq-aqm64-cuda.so`, CPU fallback, full-node CLI, Mainnet metadata and documentation. Portable CPU-only packages are additionally built for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64.
 
 ## Requirements
 
-- x86-64 / amd64
-- NVIDIA GPU with CUDA Compute Capability 7.5+
-- current proprietary NVIDIA driver
-- working `nvidia-smi`
-- synchronized AuronQ Mainnet full node for Solo mining
+For **CPU fallback**: a supported 64-bit Windows/Linux/macOS system and enough RAM for at least one 64 MiB AQM64 lane.
 
-The packaged release statically links the CUDA runtime. CUDA Toolkit is needed only when building the CUDA backend from source.
+For **NVIDIA CUDA acceleration**: NVIDIA GPU with CUDA Compute Capability 7.5+, current proprietary driver and Windows/Linux. CUDA Toolkit is needed only when building the accelerator from source.
 
-Check the driver:
+Solo mining also needs a synchronized AuronQ Mainnet full node; the v0.4.0 packages include the AuronQ node CLI.
+
+Check NVIDIA acceleration, when applicable:
 
 ~~~bash
 nvidia-smi
@@ -39,7 +37,7 @@ sha256sum -c SHA256SUMS-GPU-MINER.txt --ignore-missing
 Windows PowerShell:
 
 ~~~powershell
-Get-FileHash .\AuronQ-GPU-Miner-v0.3.8-alpha-Windows-x64.zip -Algorithm SHA256
+Get-FileHash .\AuronQ-Miner-v0.4.0-alpha-Windows-x64.zip -Algorithm SHA256
 ~~~
 
 Compare the value with the release checksum.
@@ -49,8 +47,8 @@ Compare the value with the release checksum.
 1. Download and extract the entire Windows ZIP.
 2. Run `AuronQ-GPU-Miner.exe`.
 3. Enter a valid AURQ Mainnet reward address.
-4. Select all NVIDIA GPUs or individual cards.
-5. Leave Auto Tune enabled for the first run.
+4. Leave the compute backend on **AUTO**. It will use CUDA if available, otherwise CPU.
+5. Leave Auto Tune enabled; CPU fallback automatically uses its conservative thread profile.
 6. Set the maximum GPU temperature.
 7. Choose Solo or Pool.
 8. Start mining.
@@ -60,8 +58,8 @@ In Solo mode the app uses an existing local AuronQ full node on `127.0.0.1:18444
 ## Linux quick start
 
 ~~~bash
-tar -xzf AuronQ-GPU-Miner-v0.3.8-alpha-Linux-amd64.tar.gz
-cd AuronQ-GPU-Miner-v0.3.8-alpha-Linux-amd64
+tar -xzf AuronQ-Miner-v0.4.0-alpha-Linux-amd64.tar.gz
+cd AuronQ-Miner-v0.4.0-alpha-Linux-amd64
 chmod +x auronq-gpu-miner
 ~~~
 
@@ -132,7 +130,7 @@ Recommended profile for laptop GPUs:
 thermal limit: 81 °C
 automatic target: ~76 °C
 emergency cooldown: 81 °C
-catastrophic fail-safe: 83 °C
+catastrophic fail-safe: 82 °C
 ~~~
 
 No manual restart is normally required after an ordinary thermal excursion.
@@ -155,7 +153,7 @@ Multi-GPU mode reports the aggregated rate.
 
 ## Pool mining / MeshMiner
 
-Windows GUI Pool mode can launch a user-supplied MeshMiner 0.8.35+ binary. It supports MeshPool preset, custom compatible endpoints, CUDA/CPU/both backends, selected GPUs, CPU thread override, Retune, live H/s parsing and the autonomous AuronQ-side thermal governor with automatic cooldown/resume.
+Windows GUI Pool mode can launch a user-supplied MeshMiner 0.8.35+ binary. AUTO chooses CUDA when a usable NVIDIA GPU exists and otherwise CPU. Explicit CUDA/CPU/both modes, custom compatible endpoints, selected GPUs, conservative CPU threads, Retune, live H/s parsing and the autonomous AuronQ-side GPU thermal governor are supported.
 
 MeshMiner is independently developed and is not bundled or automatically downloaded by AuronQ.
 
@@ -169,6 +167,8 @@ On Linux, compatible third-party pool miners can be run directly. The official L
 
 | Option | Meaning |
 |---|---|
+| `--backend auto|cuda|cpu` | AUTO is recommended; CUDA falls back to CPU only in AUTO mode |
+| `--cpu-threads N` | CPU lanes; 0 = conservative automatic profile, explicit max 16 |
 | `--node URL` | AuronQ full-node URL |
 | `--address aurq1...` | Mainnet reward address |
 | `--device N` | Single CUDA GPU |
