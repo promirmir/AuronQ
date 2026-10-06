@@ -25,16 +25,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compile CUDA backend without requiring a GPU
+      - name: Compile packaged Linux CUDA backend without requiring a GPU
         shell: bash
         run: |
           docker run --rm \
             -v "$PWD:/src" \
             -w /src \
             nvidia/cuda:12.6.3-devel-ubuntu24.04 \
-            nvcc -O3 -std=c++17 -Xcompiler -fPIC --shared \
-              gpu/cuda/aqm64_cuda.cu \
-              -o /tmp/libauronq-aqm64-cuda.so
+            bash ./gpu/cuda/build-linux.sh
+          test -f gpu/cuda/libauronq-aqm64-cuda.so
+          file gpu/cuda/libauronq-aqm64-cuda.so
 
   linux-app-compile:
     runs-on: ubuntu-latest
