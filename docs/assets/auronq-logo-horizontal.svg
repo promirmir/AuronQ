@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 760" role="img" aria-labelledby="title desc">
+<title id="title">AuronQ horizontal logo</title><desc id="desc">AuronQ emblem and AURONQ wordmark with optional BLOCKCHAIN descriptor.</desc>
+<defs>
+  <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".42" stop-color="#edf3ff"/><stop offset=".68" stop-color="#9fb3e8"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+  <linearGradient id="q" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7efcff"/><stop offset=".5" stop-color="#387dff"/><stop offset="1" stop-color="#db55ff"/></linearGradient>
+  <filter id="g" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<g transform="translate(25,20) scale(.69)">
+  <circle cx="512" cy="500" r="330" fill="none" stroke="url(#q)" stroke-width="8" opacity=".8" filter="url(#g)"/>
+  <circle cx="512" cy="500" r="292" fill="none" stroke="#2a7dff" stroke-width="3" opacity=".4"/>
+  <ellipse cx="512" cy="500" rx="350" ry="205" fill="none" stroke="#50dfff" stroke-width="4" opacity=".26" transform="rotate(-24 512 500)"/>
+  <ellipse cx="512" cy="500" rx="350" ry="205" fill="none" stroke="#af54ff" stroke-width="4" opacity=".25" transform="rotate(24 512 500)"/>
+  <path d="M512 92 L126 766 H300 L512 392 L724 766 H898 Z" fill="url(#metal)" stroke="url(#q)" stroke-width="5"/>
+  <path d="M145 756 C292 610 401 570 512 628 C640 695 754 784 899 651" fill="none" stroke="url(#q)" stroke-width="82" stroke-linecap="round" filter="url(#g)"/>
+  <line x1="512" y1="117" x2="512" y2="884" stroke="#68f7ff" stroke-width="5" opacity=".8"/>
+  <circle cx="512" cy="500" r="50" fill="url(#q)" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" filter="url(#g)"/>
+</g>
+<text x="740" y="440" font-family="Arial,Helvetica,sans-serif" font-size="250" font-weight="700" letter-spacing="9" fill="url(#metal)" stroke="#3c67be" stroke-width="2">AURON</text>
+<text x="1640" y="440" font-family="Arial,Helvetica,sans-serif" font-size="250" font-weight="700" fill="url(#q)" stroke="#7650ff" stroke-width="2" filter="url(#g)">Q</text>
+<text x="980" y="565" font-family="Arial,Helvetica,sans-serif" font-size="58" font-weight="400" letter-spacing="24" fill="#d9e6ff">BLOCKCHAIN</text>
+</svg>
