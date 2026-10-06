@@ -489,6 +489,8 @@ func (a *App) state() appState {
 	nodeErr := a.nodeErr
 	syncTarget := a.syncTarget
 	gpu := a.gpuName
+	gpus := append([]gpuInfo(nil), a.gpus...)
+	gpuErr := a.gpuTelemetryErr
 	logs := append([]string(nil), a.logs...)
 	mapping := a.portMapping
 	publicVerified := a.publicVerified
@@ -503,6 +505,8 @@ func (a *App) state() appState {
 		NodeError:   nodeErr,
 		SyncTarget:  syncTarget,
 		GPUName:     gpu,
+		GPUs:        gpus,
+		GPUError:    gpuErr,
 		Miner:       miner,
 		Settings:       cfg,
 		Logs:           logs,
@@ -886,9 +890,6 @@ func (a *App) isWorkerRunning() bool {
 }
 
 func (a *App) startWorker(mode string, s settings) error {
-	if err := validateWorkerExecutable(); err != nil {
-		return err
-	}
 	a.mu.Lock()
 	if a.miner.Running {
 		a.mu.Unlock()
@@ -896,13 +897,45 @@ func (a *App) startWorker(mode string, s settings) error {
 	}
 	a.mu.Unlock()
 
-	if s.Device < 0 || s.Batch < 1 || s.Batch > 64 {
-		return errors.New("invalid CUDA device or batch")
+	if err := a.saveSettings(s); err != nil {
+		return err
 	}
+	gpus, err := queryNVIDIAGPUs()
+	if err != nil {
+		return err
+	}
+	devices, err := selectedDeviceIndices(s, gpus)
+	if err != nil {
+		return err
+	}
+	names := make([]string, 0, len(devices))
+	for _, d := range devices {
+		for _, g := range gpus {
+			if g.Index == d {
+				names = append(names, fmt.Sprintf("GPU %d: %s", d, g.Name))
+				break
+			}
+		}
+	}
+	a.mu.Lock()
+	a.gpus = append([]gpuInfo(nil), gpus...)
+	a.gpuTelemetryErr = ""
+	a.gpuName = strings.Join(names, " | ")
+	a.mu.Unlock()
+
 	if mode == "mining" {
 		if err := a.validateRewardAddress(s.Address); err != nil {
 			return err
 		}
+		if s.MiningMode == "pool" {
+			return a.startPoolWorker(s, devices)
+		}
+	}
+
+	if err := validateWorkerExecutable(); err != nil {
+		return err
+	}
+	if mode == "mining" {
 		if err := a.ensureNode(); err != nil {
 			return fmt.Errorf("full node: %w", err)
 		}
@@ -912,20 +945,23 @@ func (a *App) startWorker(mode string, s settings) error {
 			return fmt.Errorf("full node is synchronizing: local height %d, peer height %d", state.Height, state.SyncTarget)
 		}
 	}
-	if err := a.saveSettings(s); err != nil {
-		return err
-	}
 
-	args := []string{"--device", strconv.Itoa(s.Device), "--batch", strconv.Itoa(s.Batch)}
+	args := []string{"--devices", deviceCSV(devices), "--batch", strconv.Itoa(s.Batch)}
 	switch mode {
 	case "selftest":
 		args = append(args, "--self-test")
 	case "benchmark":
+		if s.AutoTune {
+			args = append(args, "--auto-tune", "--auto-tune-seconds", strconv.Itoa(s.AutoTuneSeconds))
+		}
 		args = append(args, "--benchmark", "--benchmark-seconds", "15")
 	case "mining":
 		args = append(args, "--node", localNodeURL, "--address", strings.TrimSpace(s.Address))
 		if s.SelfTest {
 			args = append(args, "--self-test")
+		}
+		if s.AutoTune {
+			args = append(args, "--auto-tune", "--auto-tune-seconds", strconv.Itoa(s.AutoTuneSeconds))
 		}
 	default:
 		return errors.New("unknown worker mode")
@@ -934,6 +970,42 @@ func (a *App) startWorker(mode string, s settings) error {
 	cmd := exec.Command(workerPath(), args...)
 	cmd.Dir = filepath.Dir(workerPath())
 	cmd.SysProcAttr = &syscallSysProcAttr
+	return a.launchWorkerCommand(cmd, mode, s.AutoPublic)
+}
+
+func (a *App) startPoolWorker(s settings, devices []int) error {
+	path, err := resolvePoolMinerPath(s.PoolMinerPath)
+	if err != nil {
+		return err
+	}
+	endpoint, err := normalizePoolEndpoint(s.PoolURL)
+	if err != nil {
+		return err
+	}
+	worker := strings.TrimSpace(s.PoolWorker)
+	if worker == "" || strings.ContainsAny(worker, " \t\r\n") {
+		return errors.New("pool worker name must be a single non-empty token")
+	}
+	backend := s.PoolBackend
+	if backend != "both" {
+		backend = "cuda"
+	}
+	user := strings.TrimSpace(s.Address) + "." + worker
+	args := []string{
+		"--pool", endpoint,
+		"--user", user,
+		"--backend", backend,
+		"--algo", "auronq",
+		"--device", deviceCSV(devices),
+	}
+	cmd := exec.Command(path, args...)
+	cmd.Dir = filepath.Dir(path)
+	cmd.SysProcAttr = &syscallSysProcAttr
+	a.addLog(fmt.Sprintf("POOL bridge: %s endpoint=%s devices=%s backend=%s", filepath.Base(path), endpoint, deviceCSV(devices), backend))
+	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)
+}
+
+func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -959,7 +1031,7 @@ func (a *App) startWorker(mode string, s settings) error {
 	a.mu.Unlock()
 	a.addLog(strings.ToUpper(mode) + " started")
 
-	if mode == "mining" && s.AutoPublic {
+	if (mode == "mining" || mode == "pool") && autoPublic {
 		go a.ensurePublicPeer()
 	}
 
@@ -975,14 +1047,14 @@ func (a *App) startWorker(mode string, s settings) error {
 		finishedMode := a.miner.Mode
 		a.miner.Running = false
 		a.miner.Mode = ""
-		if finishedMode == "mining" {
+		if finishedMode == "mining" || finishedMode == "pool" {
 			a.miner.Hashrate = 0
 		}
 		if err != nil && !stopped {
 			a.miner.LastError = err.Error()
 		}
 		a.mu.Unlock()
-		if finishedMode == "mining" {
+		if finishedMode == "mining" || finishedMode == "pool" {
 			a.closePublicMapping()
 		}
 		if err != nil && !stopped {
@@ -1096,7 +1168,10 @@ func (a *App) stopWorker() {
 	a.minerStopRequested = true
 	a.mu.Unlock()
 	if cmd != nil && cmd.Process != nil {
-		_ = cmd.Process.Kill()
+		pid := strconv.Itoa(cmd.Process.Pid)
+		if err := exec.Command("taskkill", "/PID", pid, "/T", "/F").Run(); err != nil {
+			_ = cmd.Process.Kill()
+		}
 	}
 }
 
@@ -1174,7 +1249,7 @@ func (a *App) ensurePublicPeer() {
 
 	a.mu.Lock()
 	// Mining may have been stopped while UPnP discovery was in progress.
-	if a.portMapping != nil || !a.miner.Running || a.miner.Mode != "mining" {
+	if a.portMapping != nil || !a.miner.Running || (a.miner.Mode != "mining" && a.miner.Mode != "pool") {
 		a.mu.Unlock()
 		mapping.Close()
 		return
