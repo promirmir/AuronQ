@@ -44,3 +44,47 @@ func ExtractSingleLaneKey(finalBlock []uint64, keyLen uint32) ([]byte, error) {
 	}
 	return blake2bLong(keyLen, raw), nil
 }
+
+
+// SingleLaneWorkspace reuses the 64 MiB Argon2 memory region for prepared
+// AQM64 CPU work. It lets the universal miner provide a CPU fallback without
+// allocating a fresh scratchpad for every nonce.
+type SingleLaneWorkspace struct {
+	blocks []block
+	memory uint32
+}
+
+// NewSingleLaneWorkspace creates a reusable single-lane workspace. memory is
+// expressed in KiB and is normalized exactly like the canonical Argon2 code.
+func NewSingleLaneWorkspace(memory uint32) *SingleLaneWorkspace {
+	m := normalizedMemory(memory, 1)
+	return &SingleLaneWorkspace{
+		blocks: make([]block, m),
+		memory: m,
+	}
+}
+
+// ProcessPreparedSingleLane continues Argon2id from the two initial 1 KiB
+// blocks produced by PrepareSingleLaneBlocks and returns the final 1 KiB
+// block. The workspace is not safe for concurrent use.
+func (w *SingleLaneWorkspace) ProcessPreparedSingleLane(initial []uint64, timeCost uint32) ([]uint64, error) {
+	if w == nil || len(w.blocks) == 0 || w.memory < 8 {
+		return nil, errors.New("argon2: invalid single-lane workspace")
+	}
+	if timeCost < 1 {
+		return nil, errors.New("argon2: number of rounds too small")
+	}
+	if len(initial) != 2*blockLength {
+		return nil, errors.New("argon2: prepared input must contain exactly two blocks")
+	}
+
+	// processBlocks overwrites the rest of the memory graph deterministically,
+	// so only the two initial blocks need to be replaced for each nonce.
+	copy(w.blocks[0][:], initial[:blockLength])
+	copy(w.blocks[1][:], initial[blockLength:2*blockLength])
+	processBlocks(w.blocks, timeCost, w.memory, 1)
+
+	out := make([]uint64, blockLength)
+	copy(out, w.blocks[w.memory-1][:])
+	return out, nil
+}
