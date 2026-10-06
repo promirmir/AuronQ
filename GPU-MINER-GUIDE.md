@@ -26,18 +26,18 @@ nvidia-smi
 
 ## Verify downloads
 
-Every release contains `SHA256SUMS-GPU-MINER.txt`.
+Every release contains `SHA256SUMS-AURONQ-MINER.txt`.
 
 Linux:
 
 ~~~bash
-sha256sum -c SHA256SUMS-GPU-MINER.txt --ignore-missing
+sha256sum -c SHA256SUMS-AURONQ-MINER.txt --ignore-missing
 ~~~
 
 Windows PowerShell:
 
 ~~~powershell
-Get-FileHash .\AuronQ-Miner-v0.4.0-alpha-Windows-x64.zip -Algorithm SHA256
+Get-FileHash .\AuronQ-Miner-v0.4.0-alpha-Windows-x64-GUI-CUDA.zip -Algorithm SHA256
 ~~~
 
 Compare the value with the release checksum.
@@ -45,7 +45,7 @@ Compare the value with the release checksum.
 ## Windows quick start
 
 1. Download and extract the entire Windows ZIP.
-2. Run `AuronQ-GPU-Miner.exe`.
+2. Run `AuronQ-Miner.exe`.
 3. Enter a valid AURQ Mainnet reward address.
 4. Leave the compute backend on **AUTO**. It will use CUDA if available, otherwise CPU.
 5. Leave Auto Tune enabled; CPU fallback automatically uses its conservative thread profile.
@@ -58,15 +58,15 @@ In Solo mode the app uses an existing local AuronQ full node on `127.0.0.1:18444
 ## Linux quick start
 
 ~~~bash
-tar -xzf AuronQ-Miner-v0.4.0-alpha-Linux-amd64.tar.gz
-cd AuronQ-Miner-v0.4.0-alpha-Linux-amd64
-chmod +x auronq-gpu-miner
+tar -xzf AuronQ-Miner-v0.4.0-alpha-Linux-x64-CUDA.tar.gz
+cd AuronQ-Miner-v0.4.0-alpha-Linux-x64-CUDA
+chmod +x auronq-miner
 ~~~
 
 Run the mandatory correctness test:
 
 ~~~bash
-./auronq-gpu-miner --self-test --device 0
+./auronq-miner --self-test --device 0
 ~~~
 
 Expected result:
@@ -78,13 +78,13 @@ SELF-TEST OK
 Benchmark:
 
 ~~~bash
-./auronq-gpu-miner --benchmark --benchmark-seconds 20 --device 0
+./auronq-miner --benchmark --benchmark-seconds 20 --device 0
 ~~~
 
 Solo mine on all NVIDIA GPUs:
 
 ~~~bash
-./auronq-gpu-miner \
+./auronq-miner \
   --node http://127.0.0.1:18444 \
   --address aurq1... \
   --devices all \
@@ -101,13 +101,13 @@ With an 81 °C hard limit, the automatic target is about 76 °C.
 All NVIDIA GPUs:
 
 ~~~bash
-./auronq-gpu-miner --devices all ...
+./auronq-miner --devices all ...
 ~~~
 
 Selected GPUs:
 
 ~~~bash
-./auronq-gpu-miner --devices 0,1 ...
+./auronq-miner --devices 0,1 ...
 ~~~
 
 Each GPU receives a separate worker and disjoint nonce range. The parent process aggregates current H/s.
@@ -161,7 +161,7 @@ MeshMiner is independently developed and is not bundled or automatically downloa
 - MeshPool: https://meshpool.net/pool/auronq-main
 - RPlant: https://pool.rplant.xyz/#auronq#connect
 
-On Linux, compatible third-party pool miners can be run directly. The official Linux AuronQ binary in v0.3.8 provides the native **Solo CUDA** path.
+On Linux, compatible third-party pool miners can be run directly. The official v0.4.0 Linux miner provides **Solo AUTO**, native NVIDIA CUDA acceleration when available, and the native CPU fallback otherwise.
 
 ## Main CLI options
 
@@ -177,7 +177,7 @@ On Linux, compatible third-party pool miners can be run directly. The official L
 | `--batch N` | Manual batch; 0 uses backend recommendation |
 | `--auto-tune` | Find the fastest safe batch |
 | `--auto-tune-seconds N` | Time per Auto Tune candidate |
-| `--self-test` | GPU/CPU AQM64 equivalence test |
+| `--self-test` | Selected backend vs canonical AQM64 equivalence test |
 | `--benchmark` | Offline AQM64 benchmark |
 | `--benchmark-seconds N` | Benchmark duration |
 | `--thermal-auto` | Smart thermal governor |
@@ -192,10 +192,10 @@ If `nvidia-smi` is unavailable, fix/install the proprietary NVIDIA driver first.
 If the CUDA shared library cannot be opened, keep `libauronq-aqm64-cuda.so` beside the miner or pass:
 
 ~~~bash
-./auronq-gpu-miner --cuda-dll /full/path/libauronq-aqm64-cuda.so ...
+./auronq-miner --cuda-dll /full/path/libauronq-aqm64-cuda.so ...
 ~~~
 
-If the GPU self-test fails, do not mine Mainnet with that GPU/build. Update the driver, re-extract the official package and test again.
+If the selected-backend self-test fails, do not mine Mainnet with that build/backend. In AUTO mode you can force `--backend cpu` to isolate a CUDA/driver problem.
 
 ## Build from source
 
@@ -214,9 +214,9 @@ bash ./gpu/cuda/build-linux.sh
 Linux package:
 
 ~~~bash
-bash ./build-gpu-miner-linux.sh 0.3.8-alpha
+bash ./build-gpu-miner-linux.sh 0.4.0-alpha
 ~~~
 
 ## Status
 
-GPU Miner remains alpha software. The CUDA implementation has not received an independent professional security or cryptographic audit. Valid Solo blocks are still subject to ordinary AuronQ full-node Mainnet validation.
+Universal Miner remains alpha software. The CUDA implementation has not received an independent professional security or cryptographic audit. Valid Solo blocks are still subject to ordinary AuronQ full-node Mainnet validation.
