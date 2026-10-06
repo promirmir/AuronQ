@@ -40,7 +40,7 @@ Use the official [GitHub Releases](https://github.com/promirmir/AuronQ/releases)
 
 The current release includes Windows x64 and Linux amd64 builds. An Android wallet client is available as an alpha release.
 
-The official GPU Miner v0.3.7 Alpha also ships for Windows x64 and Linux amd64. Windows has the PL/EN dashboard; Linux is currently CLI-first. See [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md).
+The official GPU Miner v0.3.8 Alpha also ships for Windows x64 and Linux amd64. Windows has the PL/EN dashboard; Linux is currently CLI-first. See [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md).
 
 ## Is the Android app a full node?
 
