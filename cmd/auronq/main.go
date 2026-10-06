@@ -303,8 +303,25 @@ func listenPort(raw string) (int, error) {
 	return port, nil
 }
 
+func listenAllowsInbound(raw string) bool {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(raw))
+	if err != nil {
+		return false
+	}
+	host = strings.Trim(host, "[]")
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && !ip.IsLoopback()
+}
+
 func maintainCLIPublicNode(ctx context.Context, node *aq.Node, listen string) {
 	if node == nil {
+		return
+	}
+	if !listenAllowsInbound(listen) {
+		log.Printf("public node: --listen %s is loopback/non-public; auto-public skipped", listen)
 		return
 	}
 	port, err := listenPort(listen)
