@@ -57,6 +57,9 @@ https://github.com/promirmir/AuronQ
 [b]Latest Desktop / Full Node release:[/b]
 https://github.com/promirmir/AuronQ/releases/tag/v1.7.13
 
+[b]Official Universal Miner v0.4.2 Alpha:[/b]
+https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.2-alpha
+
 [b]Public Explorer:[/b]
 https://mir.taild63f46.ts.net/explorer
 
@@ -173,11 +176,11 @@ https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linu
 SHA-256:
 [code]2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6[/code]
 
-[b]Android — AuronQ Mobile 0.5.1 Alpha[/b]
-https://github.com/promirmir/AuronQ/releases/download/android-v0.5.1-alpha/AuronQ-Mobile-0.5.1-alpha.apk
+[b]Android — AuronQ Mobile 0.5.3 Alpha[/b]
+https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk
 
 SHA-256:
-[code]c224dd9f94d52132d71e7f781dfadcbbc3a7bc92c2c07bf32d38dc4929328c73[/code]
+[code]913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c[/code]
 
 Windows binaries are not currently Authenticode-signed, so SmartScreen may show a warning on first launch.
 
@@ -194,7 +197,7 @@ The easiest way to try the network is:
 [li]Run [code]START-AURONQ.cmd[/code].[/li]
 [li]Wait for the node to connect and synchronize.[/li]
 [li]Create or import a wallet and back it up.[/li]
-[li]If you want to mine, enable CPU mining from the Desktop application.[/li]
+[li]If you want to mine, use the official Universal Miner v0.4.2 Alpha in AUTO mode or the built-in Desktop CPU miner.[/li]
 [/list]
 
 Full Windows guide:
