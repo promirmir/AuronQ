@@ -1,37 +1,33 @@
-# AuronQ GPU Miner v0.3.4 Alpha
+# AuronQ GPU Miner v0.3.5 Alpha
 
-Windows alpha update focused on **real thermal regulation of external pool miners** after field testing with MeshMiner 0.8.35. This is miner/UI behavior only; there are **no changes** to Mainnet consensus, AQM64, difficulty, genesis, Network ID, wallet rules or monetary policy.
+Windows alpha update focused on the **GPU dashboard and operator readability**. This release changes presentation and telemetry only; it does **not** change Mainnet consensus, AQM64, difficulty, genesis, Network ID, wallet rules or monetary policy.
 
-## External pool thermal governor
+## GPU dashboard refresh
 
-Field logs showed that MeshMiner 0.8.35 can mine AURQ correctly and report stable live H/s, accepted shares, temperature, clocks and power, while some laptop NVIDIA configurations still expose fan control as `driver default` / `0%`. In that case `--fan auto` alone is not enough to hold a user-selected thermal ceiling.
+- redesigned per-GPU cards instead of a compact text row;
+- large live temperature with clear OK / WARM / HOT state;
+- utilization, fan, power and VRAM shown as dedicated metrics;
+- core clock, memory clock and NVIDIA performance state (P-state);
+- progress bars for GPU utilization, VRAM, temperature and power;
+- configured thermal target and hard limit shown directly on each card;
+- overview page now includes the GPU cards as well as the mining page;
+- total GPU power and live H/W efficiency are calculated alongside H/s;
+- multi-GPU layouts scale automatically to the available window width.
 
-AuronQ v0.3.4 therefore adds an **AuronQ-side thermal governor for external GPU pool miners**:
+## Telemetry
 
-- normal target is about **5 °C below** the configured hard limit;
-- when temperature approaches the target, AuronQ briefly suspends and resumes the external miner process to reduce GPU duty cycle;
-- the pause increases progressively as temperature rises;
-- after cooling, full duty cycle is restored automatically;
-- the configured temperature remains the final hard emergency stop;
-- the mechanism does not modify MeshMiner binaries or undocumented internal parameters.
+AuronQ now requests these additional NVIDIA driver values through `nvidia-smi`:
 
-This applies to GPU-backed Pool mode, including MeshMiner CUDA and CUDA+CPU modes. CPU-only Pool mode is unaffected.
+- graphics/core clock;
+- memory clock;
+- P-state.
 
-## MeshMiner 0.8.35 integration retained
+Existing temperature, fan, load, power and VRAM monitoring remain unchanged.
 
-- AURQ / AQM64 via `--algo auronq`;
-- CUDA / CPU / CUDA+CPU backends;
-- multiple NVIDIA GPUs;
-- `--threads`, `--fan auto`, `--retune` and `--tune-only`;
-- MeshPool preset and compatible custom pool endpoints;
-- live H/s parsing;
-- explicit third-party miner path or automatic discovery next to AuronQ.
+## Mining behavior retained
 
-MeshMiner remains independently developed and distributed:
-https://github.com/totom9000/meshminer/releases/tag/v.0.8.35
-
-MeshMiner 0.8.35 reports a 0.5% developer fee on MeshPool and 1.2% elsewhere.
+v0.3.5 keeps the v0.3.4 external-pool thermal governor, MeshMiner 0.8.35 integration, custom pool endpoints, live H/s parsing, multi-GPU Solo mode and the hard thermal safety stop.
 
 ## Important
 
-This remains alpha software. The new external duty-cycle governor uses short Windows process suspend/resume pulses and should be tested on different GPUs, drivers and pool conditions before unattended long-duration use.
+This remains alpha software. Some laptop NVIDIA drivers do not expose fan speed and may report it as unavailable/driver-controlled even while the physical cooling system is operating.
