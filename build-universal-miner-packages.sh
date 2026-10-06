@@ -61,7 +61,7 @@ available; otherwise the miner falls back to a conservative CPU profile.
 3) Start mining with your AURQ address:
    auronq-miner$EXT --backend auto --node http://127.0.0.1:18444 --address aurq1... --self-test --thermal-auto --thermal-limit 81
 
-CPU safe mode defaults to about half of logical CPUs, max 4 lanes.
+CPU safe mode defaults to about one quarter of logical CPUs, max 2 lanes.
 Each AQM64 lane uses about 64 MiB.
 See UNIVERSAL-MINER-GUIDE.md for details.
 TXT
