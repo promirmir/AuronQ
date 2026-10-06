@@ -553,6 +553,9 @@ func (a *App) state() appState {
 	logs := append([]string(nil), a.logs...)
 	mapping := a.portMapping
 	publicVerified := a.publicVerified
+	publicAttempting := a.publicAttempting
+	publicError := a.publicError
+	publicLastAttempt := a.publicLastAttempt
 	a.mu.RUnlock()
 
 	st := appState{
@@ -575,6 +578,10 @@ func (a *App) state() appState {
 		Settings:       cfg,
 		Logs:           logs,
 		PublicVerified: publicVerified,
+		PublicError: publicError,
+	}
+	if !publicLastAttempt.IsZero() {
+		st.PublicLastAttempt = publicLastAttempt.Unix()
 	}
 	if !gpuAt.IsZero() {
 		age := time.Since(gpuAt).Milliseconds()
@@ -604,10 +611,28 @@ func (a *App) state() appState {
 		st.SyncTarget = st.Height
 	}
 	st.Synchronized = st.NodeRunning && st.Height >= st.SyncTarget
+	switch {
+	case !cfg.AutoPublic:
+		st.PublicState = "disabled"
+	case !st.NodeRunning:
+		st.PublicState = "node_offline"
+	case st.PublicVerified:
+		st.PublicState = "verified"
+	case publicAttempting:
+		st.PublicState = "opening"
+	case st.PublicEndpoint != "":
+		st.PublicState = "pending"
+	default:
+		st.PublicState = "outbound_only"
+	}
 	return st
 }
 
 func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
+	a.mu.RLock()
+	oldAutoPublic := a.cfg.AutoPublic
+	a.mu.RUnlock()
+
 	var s settings
 	if err := readBody(r, &s); err != nil {
 		apiError(w, 400, err)
@@ -616,6 +641,14 @@ func (a *App) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if err := a.saveSettings(s); err != nil {
 		apiError(w, 400, err)
 		return
+	}
+	if s.AutoPublic {
+		go a.ensurePublicPeer()
+	} else if oldAutoPublic {
+		a.closePublicMapping()
+		a.mu.Lock()
+		a.publicError = ""
+		a.mu.Unlock()
 	}
 	writeJSON(w, map[string]any{"ok": true})
 }
@@ -842,6 +875,12 @@ func (a *App) handleReconnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.refreshSyncTarget()
+	a.mu.RLock()
+	autoPublic := a.cfg.AutoPublic
+	a.mu.RUnlock()
+	if autoPublic {
+		go a.ensurePublicPeer()
+	}
 	writeJSON(w, map[string]any{"ok": true})
 }
 
@@ -851,6 +890,7 @@ func (a *App) monitorNetwork() {
 	for {
 		a.refreshSyncTarget()
 		a.refreshPublicVerification()
+		a.maintainPublicNode()
 		select {
 		case <-a.exit:
 			return
