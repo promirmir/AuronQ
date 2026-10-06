@@ -11,7 +11,7 @@ mkdir -p "$DIST"
 rm -rf "$DIR" "$ARCHIVE"
 mkdir -p "$DIR"
 
-"$ROOT/gpu/cuda/build-linux.sh"
+bash "$ROOT/gpu/cuda/build-linux.sh"
 
 echo "Building Linux miner..."
 (
