@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">AuronQ monochrome icon</title>
+  <circle cx="512" cy="500" r="318" fill="none" stroke="currentColor" stroke-width="12" opacity="0.28"/>
+  <path d="M512 100 L172 742 H322 L512 382 L702 742 H852 Z" fill="currentColor"/>
+  <path d="M181 740 C325 610 410 570 510 627 C635 699 747 768 884 657"
+        fill="none" stroke="currentColor" stroke-width="82"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="512" cy="500" r="24" fill="currentColor"/>
+</svg>
