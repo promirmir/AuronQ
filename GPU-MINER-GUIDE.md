@@ -1,8 +1,8 @@
 # AuronQ Miner — Windows and Linux accelerated guide
 
-Current release: **v0.4.2 Alpha**
+Current release: **v0.4.3 Alpha**
 
-The v0.4.2 miner uses **AUTO** compute selection: official NVIDIA CUDA acceleration on supported Windows/Linux systems, with a native CPU AQM64 fallback when CUDA is unavailable. See `UNIVERSAL-MINER-GUIDE.md` for portable Windows/Linux/macOS CPU-safe packages.
+The v0.4.3 miner uses **AUTO** compute selection: official NVIDIA CUDA acceleration on supported Windows/Linux systems, with a native CPU AQM64 fallback when CUDA is unavailable. See `UNIVERSAL-MINER-GUIDE.md` for portable Windows/Linux/macOS CPU-safe packages.
 
 ## Packages
 
@@ -16,7 +16,7 @@ For **CPU fallback**: a supported 64-bit Windows/Linux/macOS system and enough R
 
 For **NVIDIA CUDA acceleration**: NVIDIA GPU with CUDA Compute Capability 7.5+, current proprietary driver and Windows/Linux. CUDA Toolkit is needed only when building the accelerator from source.
 
-Solo mining also needs a synchronized AuronQ Mainnet full node; the v0.4.2 packages include the AuronQ node CLI.
+Solo mining also needs a synchronized AuronQ Mainnet full node; the v0.4.3 packages include the AuronQ node CLI.
 
 Check NVIDIA acceleration, when applicable:
 
@@ -37,7 +37,7 @@ sha256sum -c SHA256SUMS-AURONQ-MINER.txt --ignore-missing
 Windows PowerShell:
 
 ~~~powershell
-Get-FileHash .\AuronQ-Miner-v0.4.2-alpha-Windows-x64-GUI-CUDA.zip -Algorithm SHA256
+Get-FileHash .\AuronQ-Miner-v0.4.3-alpha-Windows-x64-GUI-CUDA.zip -Algorithm SHA256
 ~~~
 
 Compare the value with the release checksum.
@@ -58,8 +58,8 @@ In Solo mode the app uses an existing local AuronQ full node on `127.0.0.1:18444
 ## Linux quick start
 
 ~~~bash
-tar -xzf AuronQ-Miner-v0.4.2-alpha-Linux-x64-CUDA.tar.gz
-cd AuronQ-Miner-v0.4.2-alpha-Linux-x64-CUDA
+tar -xzf AuronQ-Miner-v0.4.3-alpha-Linux-x64-CUDA.tar.gz
+cd AuronQ-Miner-v0.4.3-alpha-Linux-x64-CUDA
 chmod +x auronq-miner
 ~~~
 
@@ -161,7 +161,7 @@ MeshMiner is independently developed and is not bundled or automatically downloa
 - MeshPool: https://meshpool.net/pool/auronq-main
 - RPlant: https://pool.rplant.xyz/#auronq#connect
 
-On Linux, compatible third-party pool miners can be run directly. The official v0.4.2 Linux miner provides **Solo AUTO**, native NVIDIA CUDA acceleration when available, and the native CPU fallback otherwise.
+On Linux, compatible third-party pool miners can be run directly. The official v0.4.3 Linux miner provides **Solo AUTO**, native NVIDIA CUDA acceleration when available, and the native CPU fallback otherwise.
 
 ## Main CLI options
 
@@ -214,7 +214,7 @@ bash ./gpu/cuda/build-linux.sh
 Linux package:
 
 ~~~bash
-bash ./build-gpu-miner-linux.sh 0.4.2-alpha
+bash ./build-gpu-miner-linux.sh 0.4.3-alpha
 ~~~
 
 ## Status
