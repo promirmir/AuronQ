@@ -1600,16 +1600,20 @@ func (a *App) maintainPublicNode() {
 
 	// Public reachability belongs to the full node, not to the miner. If the
 	// local node disappears, remove only the mapping owned by this application.
-	if nodeRun {
-		if st, ok := probeNodeStatus(localNodeURL, 700*time.Millisecond); !ok || st.NetworkID != a.network.NetworkID() {
-			if mapping != nil {
-				a.closePublicMapping()
-			}
-			return
+	if !nodeRun {
+		if mapping != nil {
+			a.closePublicMapping()
 		}
+		return
+	}
+	if st, ok := probeNodeStatus(localNodeURL, 700*time.Millisecond); !ok || st.NetworkID != a.network.NetworkID() {
+		if mapping != nil {
+			a.closePublicMapping()
+		}
+		return
 	}
 
-	if !nodeRun || mapping != nil || attempting {
+	if mapping != nil || attempting {
 		return
 	}
 	if !lastAttempt.IsZero() && time.Since(lastAttempt) < 2*time.Minute {
