@@ -15,11 +15,7 @@ This file records the public Mainnet identity established at launch. These conse
 
 Bootstrap metadata is not part of consensus and may change without changing Network ID.
 
-Current official manifest:
-
-`https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
-
-Current bootstrap registry:
+Current bootstrap registry (discovery metadata):
 
 `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
 
