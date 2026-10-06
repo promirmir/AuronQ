@@ -961,12 +961,12 @@ func safeGUIThreads(requested int) int {
 		}
 		return requested
 	}
-	n := cpus / 2
+	n := cpus / 4
 	if n < 1 {
 		n = 1
 	}
-	if n > 4 {
-		n = 4
+	if n > 2 {
+		n = 2
 	}
 	return n
 }
