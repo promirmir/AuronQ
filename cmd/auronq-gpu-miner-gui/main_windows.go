@@ -1567,22 +1567,88 @@ func (a *App) handlePoolRetune(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true})
 }
 
-func (a *App) ensurePublicPeer() {
-	a.mu.RLock()
-	if a.portMapping != nil {
-		a.mu.RUnlock()
-		return
+func classifyPublicNodeError(err error) string {
+	if err == nil {
+		return ""
 	}
-	ownedNode := a.node
+	msg := err.Error()
+	lower := strings.ToLower(msg)
+	switch {
+	case strings.Contains(lower, "cgnat") || strings.Contains(lower, "public wan ip"):
+		return "Router nie ma publicznego adresu WAN — prawdopodobny CGNAT. Potrzebny publiczny IPv4/IPv6 lub przekierowanie po stronie operatora."
+	case strings.Contains(lower, "upnp/igd not available"):
+		return "Router nie udostępnia UPnP/IGD albo UPnP jest wyłączone. Włącz UPnP lub ręcznie przekieruj TCP/18444."
+	case strings.Contains(lower, "addportmapping"):
+		return "Router wykryty, ale odmówił mapowania TCP/18444. Sprawdź UPnP i istniejące reguły przekierowania portów."
+	default:
+		return "Nie udało się automatycznie udostępnić TCP/18444: " + msg
+	}
+}
+
+func (a *App) maintainPublicNode() {
+	a.mu.RLock()
+	autoPublic := a.cfg.AutoPublic
+	nodeRun := a.nodeRun
+	mapping := a.portMapping
+	attempting := a.publicAttempting
+	lastAttempt := a.publicLastAttempt
 	a.mu.RUnlock()
 
-	// If the local node is already directly public (or AuronQ Desktop already
-	// configured a public endpoint), do not create a second router mapping.
+	if !autoPublic {
+		return
+	}
+
+	// Public reachability belongs to the full node, not to the miner. If the
+	// local node disappears, remove only the mapping owned by this application.
+	if nodeRun {
+		if st, ok := probeNodeStatus(localNodeURL, 700*time.Millisecond); !ok || st.NetworkID != a.network.NetworkID() {
+			if mapping != nil {
+				a.closePublicMapping()
+			}
+			return
+		}
+	}
+
+	if !nodeRun || mapping != nil || attempting {
+		return
+	}
+	if !lastAttempt.IsZero() && time.Since(lastAttempt) < 2*time.Minute {
+		return
+	}
+	go a.ensurePublicPeer()
+}
+
+func (a *App) ensurePublicPeer() {
+	a.mu.Lock()
+	if a.portMapping != nil || a.publicAttempting || !a.cfg.AutoPublic || !a.nodeRun {
+		a.mu.Unlock()
+		return
+	}
+	a.publicAttempting = true
+	a.publicLastAttempt = time.Now()
+	a.publicError = ""
+	ownedNode := a.node
+	a.mu.Unlock()
+
+	defer func() {
+		a.mu.Lock()
+		a.publicAttempting = false
+		a.mu.Unlock()
+	}()
+
+	// If the local node (including AuronQ Desktop) already advertises a public
+	// endpoint, do not create a competing router mapping. Verification remains
+	// independent and is handled by the network monitor.
 	statusCtx, statusCancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
 	if st, err := aq.NewClient(localNodeURL).StatusContext(statusCtx); err == nil &&
 		st.NetworkID == a.network.NetworkID() && strings.TrimSpace(st.PublicAdvertise) != "" {
 		statusCancel()
+		a.mu.Lock()
+		a.publicError = ""
+		a.mu.Unlock()
 		a.addLog("Public node already active: " + st.PublicAdvertise)
+		a.announcePublic(strings.TrimSpace(st.PublicAdvertise))
+		go a.refreshPublicVerification()
 		return
 	}
 	statusCancel()
@@ -1591,27 +1657,37 @@ func (a *App) ensurePublicPeer() {
 	mapping, err := aq.TryUPnPPortMapping(ctx, 18444)
 	cancel()
 	if err != nil {
-		a.addLog("Public node: UPnP unavailable (" + err.Error() + "); continuing outbound-only")
+		reason := classifyPublicNodeError(err)
+		a.mu.Lock()
+		a.publicError = reason
+		a.mu.Unlock()
+		a.addLog("Public node: " + reason + " Node pozostaje outbound-only.")
 		return
 	}
 
 	a.mu.Lock()
-	// Mining may have been stopped while UPnP discovery was in progress.
-	if a.portMapping != nil || !a.miner.Running || (a.miner.Mode != "mining" && a.miner.Mode != "pool") {
+	// The node may have been stopped or AUTO-public disabled while discovery
+	// was in progress. Never keep a stale router mapping in that case.
+	if a.portMapping != nil || !a.nodeRun || !a.cfg.AutoPublic {
 		a.mu.Unlock()
 		mapping.Close()
 		return
 	}
 	a.portMapping = mapping
+	a.publicError = ""
 	a.mu.Unlock()
 
 	if ownedNode != nil {
 		if !ownedNode.SetPublicAdvertise(mapping.Advertise) {
+			a.mu.Lock()
+			a.publicError = "Lokalny node odrzucił publiczny endpoint."
+			a.mu.Unlock()
 			a.addLog("Public node: endpoint rejected by local node")
 			a.closePublicMapping()
 			return
 		}
 	}
+
 	a.addLog("Public node: TCP/18444 mapped to " + mapping.Advertise)
 	a.announcePublic(mapping.Advertise)
 	go func() {
@@ -1626,6 +1702,7 @@ func (a *App) ensurePublicPeer() {
 	}
 	a.publicCancel = cancelLoop
 	a.mu.Unlock()
+
 	go func() {
 		t := time.NewTicker(2 * time.Minute)
 		defer t.Stop()
@@ -1635,6 +1712,7 @@ func (a *App) ensurePublicPeer() {
 				return
 			case <-t.C:
 				a.announcePublic(mapping.Advertise)
+				a.refreshPublicVerification()
 			}
 		}
 	}()
