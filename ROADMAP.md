@@ -8,6 +8,7 @@ This roadmap lists engineering priorities, not promises or investment claims. Se
 - Windows/Linux full node and Desktop wallet.
 - ML-DSA-87 transaction signing.
 - AQM64 Proof-of-Work mining.
+- Official NVIDIA CUDA GPU Miner for Windows x64 and Linux amd64, including multi-GPU, Auto Tune, live H/s and thermal control.
 - UTXO validation and cumulative-work reorganization.
 - Persistent P2P peer storage and gossip.
 - Replaceable/prunable bootstrap peers.
