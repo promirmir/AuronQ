@@ -186,7 +186,7 @@ func normalizePoolEndpoint(raw string) (string, error) {
 
 func resolvePoolMinerPath(configured string) (string, error) {
 	if p := strings.TrimSpace(configured); p != "" {
-		p = strings.Trim(p, """)
+		p = strings.Trim(p, "\"")
 		if !filepath.IsAbs(p) {
 			if exeDir, err := executableDir(); err == nil {
 				p = filepath.Join(exeDir, p)
