@@ -1,11 +1,19 @@
-# AuronQ (AURQ)
+<p align="center">
+  <img src="assets/brand/auronq-banner.svg" alt="AuronQ — Blockchain" width="100%">
+</p>
 
-[![CI](https://github.com/promirmir/AuronQ/actions/workflows/ci.yml/badge.svg)](https://github.com/promirmir/AuronQ/actions/workflows/ci.yml)
-[![Network hardening](https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml/badge.svg)](https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml)
-[![Reproducible builds](https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml/badge.svg)](https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml)
-[![Latest release](https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag)](https://github.com/promirmir/AuronQ/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go](https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ)](go.mod)
+<h1 align="center">AuronQ (AURQ)</h1>
+
+<p align="center"><strong>Open-source public Proof-of-Work cryptocurrency network</strong></p>
+
+<p align="center">
+  <a href="https://github.com/promirmir/AuronQ/actions/workflows/ci.yml"><img src="https://github.com/promirmir/AuronQ/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml"><img src="https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml/badge.svg" alt="Network hardening"></a>
+  <a href="https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml"><img src="https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml/badge.svg" alt="Reproducible builds"></a>
+  <a href="https://github.com/promirmir/AuronQ/releases/latest"><img src="https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
+  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ" alt="Go version"></a>
+</p>
 
 **AuronQ** is an open-source public cryptocurrency network written in Go. It combines a **UTXO ledger**, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
 
