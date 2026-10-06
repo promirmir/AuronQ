@@ -63,6 +63,17 @@ This file is the engineering gate for moving from public testnet to mainnet. A p
 - public IPv4 and IPv6 where available
 - clean install from GitHub release assets with no manual peer entry
 
+## GPU Miner platform gate
+
+- [x] Windows x64 miner/GUI compile in CI
+- [x] Linux amd64 native miner compile with CGO loader in CI
+- [x] CUDA backend compiles as a Linux shared library without requiring a physical GPU in CI
+- [x] GPU/CPU AQM64 equivalence self-test is mandatory before mining on real hardware
+- [x] multi-GPU work uses disjoint nonce ranges
+- [x] Linux thermal governor reads NVIDIA temperature through `nvidia-smi`
+- [ ] real-device Linux validation on multiple distributions/driver versions/GPU models
+- [ ] independent CUDA implementation/security review
+
 ## Release engineering
 
 - `go test ./...`
