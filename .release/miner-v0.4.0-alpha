@@ -1,0 +1,5 @@
+AuronQ Universal Miner v0.4.0-alpha release trigger
+
+Source commit: b29e7ae555d3258fc75b37ce533e2f94422e8136
+Post-merge gates passed: CI, reproducible builds, Universal Miner compatibility CI.
+No Mainnet consensus changes.
