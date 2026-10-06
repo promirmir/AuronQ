@@ -6,7 +6,7 @@ not change Mainnet consensus.
 
 ## Status
 
-**v0.3.5-alpha release candidate.** The built-in solo miner retains the validated AQM64 CUDA path, multi-GPU orchestration, automatic tuning and thermal protection, while the Windows GUI now presents GPU telemetry as a full dashboard with temperature state, clocks, utilization, power, VRAM and efficiency. It remains alpha software and the CUDA implementation has not received an independent professional audit.
+**v0.3.6-alpha release candidate.** The native AQM64 CUDA miner now supports both **Windows x64 and Linux amd64**. Windows retains the PL/EN graphical dashboard; Linux v0.3.6 is a CLI-first release with native Solo CUDA mining, multi-GPU orchestration, Auto Tune, rolling H/s and smart thermal control. It remains alpha software and the CUDA implementation has not received an independent professional audit.
 
 Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
 with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
@@ -35,11 +35,11 @@ conservative batch from free VRAM and the GPU SM count.
 
 ## Requirements
 
-- Windows x64
+- Windows x64 **or Linux amd64**
 - NVIDIA GPU with CUDA Compute Capability 7.5+
-- NVIDIA driver
-- CUDA Toolkit is **not required to run the packaged release**; the CUDA runtime is linked statically. A Toolkit 13.x installation is only required when building from source
-- a running AuronQ full node, normally http://127.0.0.1:18444
+- current proprietary NVIDIA driver with working `nvidia-smi`
+- CUDA Toolkit is **not required to run the packaged release**; the CUDA runtime is linked statically. A Toolkit 12.x/13.x installation is only required when building from source
+- a running AuronQ full node for Solo mining, normally http://127.0.0.1:18444
 
 RTX 20/30/40-class cards are the initial target. RTX 4050 Laptop GPU is supported by the current sm_89 build target. The first implementation is
 correctness-first; kernel tuning comes after device self-test and real hardware
@@ -47,17 +47,26 @@ benchmarks.
 
 ## Build
 
-Build the Go miner from the repository root:
+### Windows
 
 ~~~powershell
 go build -o auronq-gpu-miner.exe ./cmd/auronq-gpu-miner
+powershell -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
 ~~~
 
-Build the CUDA DLL:
+### Linux
 
-~~~powershell
-powershell -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
-copy .\gpu\cuda\auronq-aqm64-cuda.dll .\
+The Linux Go binary uses CGO only to load the packaged CUDA shared library dynamically.
+
+~~~bash
+CGO_ENABLED=1 go build -o auronq-gpu-miner ./cmd/auronq-gpu-miner
+bash ./gpu/cuda/build-linux.sh
+~~~
+
+Build the complete Linux release-style package:
+
+~~~bash
+bash ./build-gpu-miner-linux.sh 0.3.6-alpha
 ~~~
 
 ## Windows application
@@ -104,15 +113,23 @@ powershell -ExecutionPolicy Bypass -File .\build-gpu-miner-windows.ps1
 
 The script builds the CUDA DLL, CLI worker and Windows app, copies the immutable
 Mainnet configuration/bootstrap metadata, performs the mandatory GPU/CPU AQM64
-self-test, and creates `AuronQ-GPU-Miner-v0.3.5-alpha-Windows-x64.zip` under
+self-test, and creates `AuronQ-GPU-Miner-v0.3.6-alpha-Windows-x64.zip` under
 `dist`.
+
+The Linux package is `AuronQ-GPU-Miner-v0.3.6-alpha-Linux-amd64.tar.gz` and contains the native CLI miner plus `libauronq-aqm64-cuda.so`.
 
 ## Mandatory device self-test before mining
 
-Run:
+Windows worker:
 
 ~~~powershell
 .\auronq-gpu-worker.exe --self-test
+~~~
+
+Linux:
+
+~~~bash
+./auronq-gpu-miner --self-test --device 0
 ~~~
 
 The self-test performs one full 64 MiB / time-cost-2 Argon2id calculation on
@@ -149,7 +166,7 @@ Optional flags:
 - --batch N: candidates processed concurrently; 0 = backend recommendation
 - --auto-tune: benchmark several batch sizes before mining and select the fastest measured value per GPU
 - --auto-tune-seconds N: measurement time for each autotune candidate (default 1 second)
-- --cuda-dll PATH: explicit path to auronq-aqm64-cuda.dll
+- --cuda-dll PATH: explicit path to the CUDA backend (`auronq-aqm64-cuda.dll` on Windows or `libauronq-aqm64-cuda.so` on Linux)
 - --self-test: GPU/CPU equivalence test before mining
 - --benchmark: offline end-to-end AQM64 throughput benchmark; does not connect to a node or submit blocks
 - --benchmark-seconds N: approximate benchmark duration (default 20 seconds)
@@ -166,5 +183,9 @@ block only after the final AQM64 digest satisfies the template target.
 - The CUDA code is new and has not received an independent audit.
 - Real-device equivalence testing has passed on RTX 4050 Laptop GPU; more GPU models still need coverage.
 - The Windows app's embedded/public-node path uses the same AuronQ full-node and P2P implementation as the main project.
+- The Linux v0.3.6 release is CLI-first; it does not claim the Windows dashboard GUI.
 - Public-node enablement is best-effort and callback-verified; it never treats UPnP success alone as consensus or peer trust.
 - Performance numbers should not be advertised until measured with the offline benchmark on actual GPUs.
+
+
+Complete user instructions: [../../GPU-MINER-GUIDE.md](../../GPU-MINER-GUIDE.md)
