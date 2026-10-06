@@ -45,14 +45,14 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 		return batch, -1, 0, "", nil
 	}
 	now := time.Now()
-	if !t.lastCheck.IsZero() && now.Sub(t.lastCheck) < 2*time.Second {
+	if !t.lastCheck.IsZero() && now.Sub(t.lastCheck) < 500*time.Millisecond {
 		return batch, t.lastTemp, t.cooldownFor(t.lastTemp), "", nil
 	}
 	t.lastCheck = now
 
 	temp, err := queryNVIDIATemperature(t.device)
 	if err != nil {
-		return batch, -1, 0, "", nil
+		return batch, -1, 0, "stop", fmt.Errorf("THERMAL TELEMETRY FAILSAFE: local NVIDIA temperature unavailable for GPU %d: %w", t.device, err)
 	}
 	t.lastTemp = temp
 	if temp >= t.limitC {

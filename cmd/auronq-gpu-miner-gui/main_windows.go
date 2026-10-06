@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.3.8-alpha"
+	guiVersion       = "0.4.0-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -54,6 +54,8 @@ type settings struct {
 	AutoPublic      bool   `json:"auto_public"`
 	SelfTest        bool   `json:"self_test"`
 	MiningMode      string `json:"mining_mode"`
+	SoloBackend     string `json:"solo_backend"`
+	CPUThreads      int    `json:"cpu_threads"`
 	PoolURL         string `json:"pool_url"`
 	PoolWorker      string `json:"pool_worker"`
 	PoolMinerPath   string `json:"pool_miner_path"`
@@ -68,6 +70,7 @@ type settings struct {
 type minerState struct {
 	Running     bool    `json:"running"`
 	Mode        string  `json:"mode,omitempty"`
+	Backend     string  `json:"backend,omitempty"`
 	Hashrate    float64 `json:"hashrate"`
 	Height      uint64  `json:"height"`
 	BlocksFound uint64  `json:"blocks_found"`
@@ -96,6 +99,10 @@ type appState struct {
 	GPUError        string     `json:"gpu_error,omitempty"`
 	GPUTelemetrySource string `json:"gpu_telemetry_source,omitempty"`
 	GPUTelemetryAgeMS int64   `json:"gpu_telemetry_age_ms,omitempty"`
+	CPUCount        int        `json:"cpu_count"`
+	SafeCPUThreads  int        `json:"safe_cpu_threads"`
+	CUDAAvailable   bool       `json:"cuda_available"`
+	Platform        string     `json:"platform"`
 	Miner           minerState `json:"miner"`
 	Settings        settings   `json:"settings"`
 	Logs            []string   `json:"logs"`
@@ -228,7 +235,7 @@ func newApp() (*App, error) {
 		return nil, err
 	}
 	a.token = hex.EncodeToString(tokenBytes[:])
-	a.addLog("AuronQ GPU Miner " + guiVersion)
+	a.addLog("AuronQ Universal Miner " + guiVersion)
 	a.addLog(fmt.Sprintf("Mainnet loaded: %s", n.NetworkID().String()))
 	a.addLog(fmt.Sprintf("Bootstrap peers: %d", len(a.bootstrap)))
 	return a, nil
@@ -284,10 +291,12 @@ func defaultSettings() settings {
 		AutoPublic:      true,
 		SelfTest:        true,
 		MiningMode:      "solo",
+		SoloBackend:     "auto",
+		CPUThreads:      0,
 		PoolURL:         "pool.meshpool.net:3359",
 		PoolWorker:      "rig1",
 		PoolEngine:      "meshminer",
-		PoolBackend:     "cuda",
+		PoolBackend:     "auto",
 		PoolFanAuto:     true,
 		PoolThreads:     0,
 		Language:        "pl",
@@ -310,6 +319,12 @@ func normalizeSettings(s *settings) {
 	if s.MiningMode != "pool" {
 		s.MiningMode = "solo"
 	}
+	if s.SoloBackend != "cpu" && s.SoloBackend != "cuda" {
+		s.SoloBackend = "auto"
+	}
+	if s.CPUThreads < 0 || s.CPUThreads > 16 {
+		s.CPUThreads = 0
+	}
 	if strings.TrimSpace(s.PoolURL) == "" {
 		s.PoolURL = "pool.meshpool.net:3359"
 	}
@@ -319,10 +334,10 @@ func normalizeSettings(s *settings) {
 	if s.PoolEngine != "custom" {
 		s.PoolEngine = "meshminer"
 	}
-	if s.PoolBackend != "cpu" && s.PoolBackend != "both" {
-		s.PoolBackend = "cuda"
+	if s.PoolBackend != "cpu" && s.PoolBackend != "both" && s.PoolBackend != "cuda" {
+		s.PoolBackend = "auto"
 	}
-	if s.PoolThreads < 0 || s.PoolThreads > 256 {
+	if s.PoolThreads < 0 || s.PoolThreads > 16 {
 		s.PoolThreads = 0
 	}
 	if s.Language != "en" {
@@ -379,14 +394,20 @@ func (a *App) saveSettings(s settings) error {
 	if s.MiningMode != "solo" && s.MiningMode != "pool" {
 		return errors.New("mining mode must be solo or pool")
 	}
+	if s.SoloBackend != "auto" && s.SoloBackend != "cuda" && s.SoloBackend != "cpu" {
+		return errors.New("solo backend must be auto, cuda or cpu")
+	}
+	if s.CPUThreads < 0 || s.CPUThreads > 16 {
+		return errors.New("CPU threads must be between 0 and 16")
+	}
 	if s.PoolEngine != "" && s.PoolEngine != "meshminer" && s.PoolEngine != "custom" {
 		return errors.New("pool engine must be meshminer or custom")
 	}
-	if s.PoolBackend != "cuda" && s.PoolBackend != "cpu" && s.PoolBackend != "both" {
-		return errors.New("pool backend must be cuda, cpu or both")
+	if s.PoolBackend != "auto" && s.PoolBackend != "cuda" && s.PoolBackend != "cpu" && s.PoolBackend != "both" {
+		return errors.New("pool backend must be auto, cuda, cpu or both")
 	}
-	if s.PoolThreads < 0 || s.PoolThreads > 256 {
-		return errors.New("pool CPU threads must be between 0 and 256")
+	if s.PoolThreads < 0 || s.PoolThreads > 16 {
+		return errors.New("pool CPU threads must be between 0 and 16")
 	}
 	if s.MiningMode == "pool" {
 		if _, err := normalizePoolEndpoint(s.PoolURL); err != nil {
@@ -532,7 +553,11 @@ func (a *App) state() appState {
 		GPUName:     gpu,
 		GPUs:        gpus,
 		GPUError:    gpuErr,
-		GPUTelemetrySource: "NVML_DIRECT",
+		GPUTelemetrySource: func() string { if len(gpus) > 0 { return "NVML_DIRECT" }; return "" }(),
+		CPUCount: runtime.NumCPU(),
+		SafeCPUThreads: safeGUIThreads(cfg.CPUThreads),
+		CUDAAvailable: len(gpus) > 0,
+		Platform: runtime.GOOS + "/" + runtime.GOARCH,
 		Miner:       miner,
 		Settings:       cfg,
 		Logs:           logs,
@@ -883,12 +908,19 @@ func (a *App) validateRewardAddress(addr string) error {
 func workerPath() string {
 	exe, err := os.Executable()
 	if err != nil {
-		return "auronq-gpu-worker.exe"
+		return "auronq-miner-worker.exe"
 	}
-	// Windows paths are case-insensitive by default. The GUI executable is
-	// AuronQ-GPU-Miner.exe, so the worker must use a genuinely different base
-	// name rather than only different letter casing.
-	return filepath.Join(filepath.Dir(exe), "auronq-gpu-worker.exe")
+	dir := filepath.Dir(exe)
+	// v0.4 uses the universal worker name. Keep the v0.3 filename as a
+	// compatibility fallback so old extracted packages can still be upgraded
+	// without an ambiguous same-name executable on case-insensitive Windows.
+	for _, name := range []string{"auronq-miner-worker.exe", "auronq-gpu-worker.exe"} {
+		p := filepath.Join(dir, name)
+		if st, statErr := os.Stat(p); statErr == nil && !st.IsDir() {
+			return p
+		}
+	}
+	return filepath.Join(dir, "auronq-miner-worker.exe")
 }
 
 func validateWorkerExecutable() error {
@@ -903,15 +935,40 @@ func validateWorkerExecutable() error {
 	}
 	workerInfo, err := os.Stat(worker)
 	if err != nil {
-		return fmt.Errorf("GPU worker missing: %s", worker)
+		return fmt.Errorf("universal miner worker missing: %s", worker)
 	}
 	if os.SameFile(guiInfo, workerInfo) || strings.EqualFold(filepath.Clean(guiPath), filepath.Clean(worker)) {
-		return errors.New("invalid package: GUI and GPU worker resolve to the same executable")
+		return errors.New("invalid package: GUI and miner worker resolve to the same executable")
 	}
-	if !strings.EqualFold(filepath.Base(worker), "auronq-gpu-worker.exe") {
-		return fmt.Errorf("unexpected GPU worker filename: %s", filepath.Base(worker))
+	base := strings.ToLower(filepath.Base(worker))
+	if base != "auronq-miner-worker.exe" && base != "auronq-gpu-worker.exe" {
+		return fmt.Errorf("unexpected miner worker filename: %s", filepath.Base(worker))
 	}
 	return nil
+}
+
+func safeGUIThreads(requested int) int {
+	cpus := runtime.NumCPU()
+	if cpus < 1 {
+		cpus = 1
+	}
+	if requested > 0 {
+		if requested > cpus {
+			requested = cpus
+		}
+		if requested > 16 {
+			requested = 16
+		}
+		return requested
+	}
+	n := cpus / 4
+	if n < 1 {
+		n = 1
+	}
+	if n > 2 {
+		n = 2
+	}
+	return n
 }
 
 func (a *App) isWorkerRunning() bool {
@@ -931,20 +988,44 @@ func (a *App) startWorker(mode string, s settings) error {
 	if err := a.saveSettings(s); err != nil {
 		return err
 	}
+	normalizeSettings(&s)
 
-	needsGPU := !(mode == "mining" && s.MiningMode == "pool" && s.PoolBackend == "cpu")
+	// Probe local NVIDIA hardware only when the requested mode may use CUDA.
+	// "auto" is deliberately tolerant: if there is no supported NVIDIA stack,
+	// the native worker or pool bridge falls back to a conservative CPU profile.
+	wantsGPU := false
+	explicitGPU := false
+	if mode == "mining" && s.MiningMode == "pool" {
+		wantsGPU = s.PoolBackend == "auto" || s.PoolBackend == "cuda" || s.PoolBackend == "both"
+		explicitGPU = s.PoolBackend == "cuda" || s.PoolBackend == "both"
+	} else {
+		wantsGPU = s.SoloBackend == "auto" || s.SoloBackend == "cuda"
+		explicitGPU = s.SoloBackend == "cuda"
+	}
+
 	var gpus []gpuInfo
 	var devices []int
-	if needsGPU {
+	if wantsGPU {
 		var err error
 		gpus, err = queryNVIDIAGPUs()
 		if err != nil {
-			return err
+			if explicitGPU {
+				return fmt.Errorf("requested NVIDIA CUDA backend is unavailable: %w", err)
+			}
+			a.addLog("AUTO compute: no usable NVIDIA CUDA telemetry/device found; CPU fallback will be used")
+		} else {
+			devices, err = selectedDeviceIndices(s, gpus)
+			if err != nil {
+				if explicitGPU {
+					return err
+				}
+				a.addLog("AUTO compute: selected NVIDIA GPU set unavailable; CPU fallback will be used")
+				devices = nil
+			}
 		}
-		devices, err = selectedDeviceIndices(s, gpus)
-		if err != nil {
-			return err
-		}
+	}
+
+	if len(gpus) > 0 && len(devices) > 0 {
 		names := make([]string, 0, len(devices))
 		for _, d := range devices {
 			for _, g := range gpus {
@@ -962,7 +1043,7 @@ func (a *App) startWorker(mode string, s settings) error {
 		a.mu.Unlock()
 	} else {
 		a.mu.Lock()
-		a.gpuName = "MeshMiner CPU"
+		a.gpuName = fmt.Sprintf("CPU AQM64 safe mode (%d threads)", safeGUIThreads(s.CPUThreads))
 		a.mu.Unlock()
 	}
 
@@ -989,7 +1070,14 @@ func (a *App) startWorker(mode string, s settings) error {
 		}
 	}
 
-	args := []string{"--devices", deviceCSV(devices), "--batch", strconv.Itoa(s.Batch)}
+	args := []string{
+		"--backend", s.SoloBackend,
+		"--cpu-threads", strconv.Itoa(safeGUIThreads(s.CPUThreads)),
+		"--batch", strconv.Itoa(s.Batch),
+	}
+	if len(devices) > 0 {
+		args = append(args, "--devices", deviceCSV(devices))
+	}
 	switch mode {
 	case "selftest":
 		args = append(args, "--self-test")
@@ -1016,13 +1104,22 @@ func (a *App) startWorker(mode string, s settings) error {
 	cmd := exec.Command(workerPath(), args...)
 	cmd.Dir = filepath.Dir(workerPath())
 	cmd.SysProcAttr = &syscallSysProcAttr
-	return a.launchWorkerCommand(cmd, mode, s.AutoPublic)
+
+	resolved := s.SoloBackend
+	if resolved == "auto" {
+		if len(devices) > 0 {
+			resolved = "cuda"
+		} else {
+			resolved = "cpu"
+		}
+	}
+	return a.launchWorkerCommand(cmd, mode, s.AutoPublic, resolved)
 }
 
 func meshMinerArgs(s settings, devices []int, endpoint, user string) ([]string, error) {
 	backend := s.PoolBackend
 	if backend != "cuda" && backend != "cpu" && backend != "both" {
-		backend = "cuda"
+		return nil, fmt.Errorf("unsupported resolved pool backend %q", backend)
 	}
 	args := []string{
 		"--pool", endpoint,
@@ -1049,6 +1146,30 @@ func meshMinerArgs(s settings, devices []int, endpoint, user string) ([]string, 
 }
 
 func (a *App) startPoolWorker(s settings, devices []int) error {
+	effectiveBackend := s.PoolBackend
+	if effectiveBackend == "auto" {
+		if len(devices) > 0 {
+			effectiveBackend = "cuda"
+		} else {
+			effectiveBackend = "cpu"
+		}
+		a.addLog("POOL AUTO backend resolved to " + effectiveBackend)
+	}
+	if effectiveBackend == "cuda" || effectiveBackend == "both" {
+		if len(devices) == 0 {
+			return errors.New("selected pool backend requires NVIDIA CUDA, but no usable NVIDIA GPU is available")
+		}
+	}
+	if effectiveBackend == "cpu" || effectiveBackend == "both" {
+		if s.PoolThreads <= 0 {
+			s.PoolThreads = safeGUIThreads(s.CPUThreads)
+			a.addLog(fmt.Sprintf("POOL CPU safe profile: %d thread(s)", s.PoolThreads))
+		} else if s.PoolThreads > 16 {
+			s.PoolThreads = 16
+		}
+	}
+	s.PoolBackend = effectiveBackend
+
 	path, err := resolvePoolMinerPath(s.PoolMinerPath)
 	if err != nil {
 		return err
@@ -1071,19 +1192,16 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 	cmd.Dir = filepath.Dir(path)
 	cmd.SysProcAttr = &syscallSysProcAttr
 	a.addLog(fmt.Sprintf("POOL %s: %s endpoint=%s backend=%s devices=%s fan_auto=%t threads=%d retune=%t",
-		s.PoolEngine, filepath.Base(path), endpoint, s.PoolBackend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
-	if s.PoolBackend != "cpu" {
+		s.PoolEngine, filepath.Base(path), endpoint, effectiveBackend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
+	if effectiveBackend != "cpu" {
 		target := s.ThermalStopC - 5
 		if target < 50 {
 			target = 50
 		}
-		if s.PoolFanAuto {
-			a.addLog(fmt.Sprintf("POOL thermal AUTO: MeshMiner --fan auto requested; AuronQ targets ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C", target, s.ThermalStopC, s.ThermalStopC+2))
-		} else {
-			a.addLog(fmt.Sprintf("POOL thermal AUTO: AuronQ targets ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C", target, s.ThermalStopC, s.ThermalStopC+2))
-		}
+		a.addLog(fmt.Sprintf("POOL thermal AUTO: local NVML target ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C",
+			target, s.ThermalStopC, s.ThermalStopC+1))
 	}
-	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)
+	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic, effectiveBackend)
 }
 
 func (a *App) startPoolRetune(s settings) error {
@@ -1119,10 +1237,10 @@ func (a *App) startPoolRetune(s settings) error {
 	cmd.Dir = filepath.Dir(path)
 	cmd.SysProcAttr = &syscallSysProcAttr
 	a.addLog(fmt.Sprintf("MeshMiner retune: devices=%s fan_auto=%t", deviceCSV(devices), s.PoolFanAuto))
-	return a.launchWorkerCommand(cmd, "pool-tune", false)
+	return a.launchWorkerCommand(cmd, "pool-tune", false, "cuda")
 }
 
-func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) error {
+func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool, backend string) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -1141,6 +1259,7 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) e
 	a.miner = minerState{
 		Running:     true,
 		Mode:        mode,
+		Backend:     backend,
 		BlocksFound: a.miner.BlocksFound,
 		LastBlock:   a.miner.LastBlock,
 		StartedAt:   time.Now().Unix(),
@@ -1148,7 +1267,7 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) e
 	a.mu.Unlock()
 	a.addLog(strings.ToUpper(mode) + " started")
 
-	if mode == "pool" {
+	if mode == "pool" && backend != "cpu" {
 		go a.monitorPoolThermals(cmd)
 	}
 	if (mode == "mining" || mode == "pool") && autoPublic {
@@ -1167,6 +1286,7 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) e
 		finishedMode := a.miner.Mode
 		a.miner.Running = false
 		a.miner.Mode = ""
+		a.miner.Backend = ""
 		if finishedMode == "mining" || finishedMode == "pool" {
 			a.miner.Hashrate = 0
 		}
@@ -1209,6 +1329,12 @@ func (a *App) parseWorkerLine(line string) {
 
 	if strings.HasPrefix(line, "GPU: ") {
 		a.gpuName = strings.TrimSpace(strings.TrimPrefix(line, "GPU: "))
+	}
+	if strings.HasPrefix(line, "Compute: ") {
+		a.gpuName = strings.TrimSpace(strings.TrimPrefix(line, "Compute: "))
+	}
+	if strings.HasPrefix(line, "Backend: ") {
+		a.miner.Backend = strings.TrimSpace(strings.TrimPrefix(line, "Backend: "))
 	}
 	if strings.HasPrefix(line, "Mining height ") {
 		fields := strings.Fields(line)

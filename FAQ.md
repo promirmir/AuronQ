@@ -38,9 +38,9 @@ Use the official [GitHub Releases](https://github.com/promirmir/AuronQ/releases)
 
 ## Which operating systems are supported?
 
-The current release includes Windows x64 and Linux amd64 builds. An Android wallet client is available as an alpha release.
+The current Desktop/full-node release includes Windows x64 and Linux amd64 builds. An Android wallet client is available as an alpha release.
 
-The official GPU Miner v0.3.8 Alpha also ships for Windows x64 and Linux amd64. Windows has the PL/EN dashboard; Linux is currently CLI-first. See [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md).
+The official Universal Miner v0.4.0 Alpha adds portable CPU-safe mining builds for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64. Windows x64 also has the PL/EN GUI with NVIDIA CUDA acceleration; Linux x64 has an accelerated CUDA package. On unsupported/non-NVIDIA graphics, AUTO safely falls back to native CPU mining. See [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md) and [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md).
 
 ## Is the Android app a full node?
 
@@ -48,7 +48,7 @@ No. The Android application is a wallet client. Private keys and transaction sig
 
 ## Can I mine AuronQ?
 
-Yes. Mining is part of the Proof-of-Work network. See the release documentation and command-line help for the currently supported mining workflow.
+Yes. Mining is part of the Proof-of-Work network. Universal Miner AUTO uses validated NVIDIA CUDA acceleration when available and otherwise falls back to the native CPU AQM64 backend. The selected backend should pass the built-in self-test before Mainnet mining. See [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md).
 
 ## Does every node validate the blockchain independently?
 

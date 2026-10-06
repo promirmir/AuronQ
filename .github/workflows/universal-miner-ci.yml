@@ -1,0 +1,100 @@
+name: Universal Miner compatibility CI
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/auronq-gpu-miner/**'
+      - 'internal/argon2pure/**'
+      - 'internal/auronq/**'
+      - 'internal/gputelemetry/**'
+      - '.github/workflows/universal-miner-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'cmd/auronq-gpu-miner/**'
+      - 'internal/argon2pure/**'
+      - 'internal/auronq/**'
+      - 'internal/gputelemetry/**'
+      - '.github/workflows/universal-miner-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-fallback-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Test canonical CPU fallback
+        run: |
+          CGO_ENABLED=0 go test ./internal/argon2pure ./cmd/auronq-gpu-miner ./cmd/auronq
+
+  portable-cli-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            ext: .exe
+          - goos: windows
+            goarch: arm64
+            ext: .exe
+          - goos: linux
+            goarch: amd64
+            ext: ''
+          - goos: linux
+            goarch: arm64
+            ext: ''
+          - goos: darwin
+            goarch: amd64
+            ext: ''
+          - goos: darwin
+            goarch: arm64
+            ext: ''
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build CPU-safe universal CLI
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist-ci
+          out="dist-ci/auronq-miner-${GOOS}-${GOARCH}${{ matrix.ext }}"
+          node="dist-ci/auronq-${GOOS}-${GOARCH}${{ matrix.ext }}"
+          go build -trimpath -o "$out" ./cmd/auronq-gpu-miner
+          go build -trimpath -o "$node" ./cmd/auronq
+          test -s "$out"
+          test -s "$node"
+
+
+  portable-package-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build all CPU-safe release archives
+        run: |
+          bash ./build-universal-miner-packages.sh 0.4.0-alpha
+          test -f dist/universal-v0.4.0-alpha/AuronQ-Universal-Miner-v0.4.0-alpha-windows-amd64.zip
+          test -f dist/universal-v0.4.0-alpha/AuronQ-Universal-Miner-v0.4.0-alpha-windows-arm64.zip
+          test -f dist/universal-v0.4.0-alpha/AuronQ-Universal-Miner-v0.4.0-alpha-linux-amd64.tar.gz
+          test -f dist/universal-v0.4.0-alpha/AuronQ-Universal-Miner-v0.4.0-alpha-linux-arm64.tar.gz
+          test -f dist/universal-v0.4.0-alpha/AuronQ-Universal-Miner-v0.4.0-alpha-darwin-amd64.tar.gz
+          test -f dist/universal-v0.4.0-alpha/AuronQ-Universal-Miner-v0.4.0-alpha-darwin-arm64.tar.gz
+          test -s dist/universal-v0.4.0-alpha/SHA256SUMS-UNIVERSAL-MINER.txt

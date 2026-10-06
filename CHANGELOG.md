@@ -22,6 +22,21 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### Universal Miner v0.4.0 Alpha
+
+- Adds **AUTO** compute selection: official NVIDIA CUDA acceleration when available, otherwise the native AQM64 CPU fallback.
+- Adds a reusable CPU AQM64 backend verified against the canonical proof-of-work implementation.
+- Conservative automatic CPU profile uses about one quarter of logical CPUs, capped at two 64 MiB lanes; explicit override is capped at 16 lanes.
+- Windows GUI adds AUTO / NVIDIA CUDA / CPU modes and clean no-GPU fallback behavior.
+- Pool AUTO selects CUDA when a usable NVIDIA GPU is present and otherwise uses CPU with conservative thread defaults.
+- Windows NVIDIA thermal safety remains driven by direct local NVML hardware samples; external pool/miner temperature reports are not trusted.
+- Linux protected GPU mining now stops if local temperature telemetry disappears instead of silently continuing.
+- Portable CPU-safe CLI builds are CI-compiled for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64, together with the AuronQ full-node CLI.
+- Source build scripts can produce usable CPU-safe packages even when the CUDA Toolkit is not installed.
+- Ordinary `auronq mine` now defaults to a conservative CPU thread profile instead of consuming every logical CPU.
+- No Mainnet consensus, AQM64 parameters, difficulty, Network ID, genesis, transaction validation or monetary-policy changes.
+
+
 ### GPU Miner v0.3.8 Alpha
 
 - Windows thermal safety now uses direct local NVIDIA NVML hardware telemetry instead of temperatures reported by pool/miner software.

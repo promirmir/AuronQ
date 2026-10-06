@@ -1,0 +1,165 @@
+name: Publish AuronQ Universal Miner v0.4.0-alpha
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.release/miner-v0.4.0-alpha'
+
+permissions:
+  contents: write
+
+env:
+  MINER_VERSION: 0.4.0-alpha
+  MINER_TAG: miner-v0.4.0-alpha
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  windows-x64-full:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '13.2.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Build CUDA backend
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
+      - name: Build full Windows package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $name = "AuronQ-Miner-v$env:MINER_VERSION-Windows-x64-GUI-CUDA"
+          $dir = Join-Path $PWD "dist\$name"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+
+          go build -trimpath -o (Join-Path $dir "auronq-miner-worker.exe") .\cmd\auronq-gpu-miner
+          go build -trimpath -ldflags "-H=windowsgui" -o (Join-Path $dir "AuronQ-Miner.exe") .\cmd\auronq-gpu-miner-gui
+          go build -trimpath -o (Join-Path $dir "auronq.exe") .\cmd\auronq
+
+          Copy-Item .\gpu\cuda\auronq-aqm64-cuda.dll $dir -Force
+          Copy-Item .\network.json $dir -Force
+          Copy-Item .\bootstrap.json $dir -Force
+          Copy-Item .\UNIVERSAL-MINER-GUIDE.md $dir -Force
+          Copy-Item .\GPU-MINER-GUIDE.md $dir -Force
+          if (Test-Path .\LICENSE) { Copy-Item .\LICENSE $dir -Force }
+
+          & (Join-Path $dir "auronq-miner-worker.exe") --backend cpu --cpu-threads 1 --self-test
+          if ($LASTEXITCODE -ne 0) { throw "CPU fallback self-test failed" }
+
+          $zip = Join-Path $PWD "dist\$name.zip"
+          Compress-Archive -Path (Join-Path $dir "*") -DestinationPath $zip -CompressionLevel Optimal
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-windows-full
+          path: dist/AuronQ-Miner-v0.4.0-alpha-Windows-x64-GUI-CUDA.zip
+          if-no-files-found: error
+
+  linux-x64-full:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '13.2.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Build CUDA backend
+        run: bash ./gpu/cuda/build-linux.sh
+      - name: Build full Linux package
+        shell: bash
+        run: |
+          set -euo pipefail
+          name="AuronQ-Miner-v$MINER_VERSION-Linux-x64-CUDA"
+          dir="dist/$name"
+          mkdir -p "$dir"
+          CGO_ENABLED=1 go build -trimpath -o "$dir/auronq-miner" ./cmd/auronq-gpu-miner
+          CGO_ENABLED=1 go build -trimpath -o "$dir/auronq" ./cmd/auronq
+          cp gpu/cuda/libauronq-aqm64-cuda.so "$dir/"
+          cp network.json bootstrap.json UNIVERSAL-MINER-GUIDE.md GPU-MINER-GUIDE.md "$dir/"
+          if [[ -f LICENSE ]]; then cp LICENSE "$dir/"; fi
+          chmod +x "$dir/auronq-miner" "$dir/auronq"
+          "$dir/auronq-miner" --backend cpu --cpu-threads 1 --self-test
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-linux-full
+          path: dist/AuronQ-Miner-v0.4.0-alpha-Linux-x64-CUDA.tar.gz
+          if-no-files-found: error
+
+  portable-cpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build portable CPU-safe matrix
+        run: bash ./build-universal-miner-packages.sh "$MINER_VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-portable
+          path: |
+            dist/universal-v0.4.0-alpha/*.zip
+            dist/universal-v0.4.0-alpha/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [windows-x64-full, linux-x64-full, portable-cpu]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Verify and checksum all miner packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          test -f "AuronQ-Miner-v$MINER_VERSION-Windows-x64-GUI-CUDA.zip"
+          test -f "AuronQ-Miner-v$MINER_VERSION-Linux-x64-CUDA.tar.gz"
+          test -f "AuronQ-Universal-Miner-v$MINER_VERSION-windows-amd64.zip"
+          test -f "AuronQ-Universal-Miner-v$MINER_VERSION-windows-arm64.zip"
+          test -f "AuronQ-Universal-Miner-v$MINER_VERSION-linux-amd64.tar.gz"
+          test -f "AuronQ-Universal-Miner-v$MINER_VERSION-linux-arm64.tar.gz"
+          test -f "AuronQ-Universal-Miner-v$MINER_VERSION-darwin-amd64.tar.gz"
+          test -f "AuronQ-Universal-Miner-v$MINER_VERSION-darwin-arm64.tar.gz"
+          sha256sum *.zip *.tar.gz | sort > SHA256SUMS-AURONQ-MINER.txt
+          cat SHA256SUMS-AURONQ-MINER.txt
+      - name: Publish GitHub prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          assets=(dist/*.zip dist/*.tar.gz dist/SHA256SUMS-AURONQ-MINER.txt)
+          if gh release view "$MINER_TAG" >/dev/null 2>&1; then
+            gh release upload "$MINER_TAG" "${assets[@]}" --clobber
+          else
+            gh release create "$MINER_TAG" "${assets[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "AuronQ Universal Miner v0.4.0 Alpha" \
+              --notes-file "./MINER-RELEASE-NOTES.md" \
+              --prerelease
+          fi
