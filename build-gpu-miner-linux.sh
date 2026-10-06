@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-0.3.6-alpha}"
+VERSION="${1:-0.3.7-alpha}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$ROOT/dist"
 DIR="$DIST/AuronQ-GPU-Miner-v$VERSION-Linux-amd64"
