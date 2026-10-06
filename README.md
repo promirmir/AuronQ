@@ -127,6 +127,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 - AuronQ Pool mode can launch a user-supplied MeshMiner 0.8.35+ directly with `--algo auronq`.
 - Supports CUDA, CPU or CUDA+CPU, selected NVIDIA devices, CPU thread override, `--fan auto` and an explicit Retune action.
 - MeshMiner release: https://github.com/totom9000/meshminer/releases/tag/v.0.8.35
+- MeshMiner 0.8.35 reports a **0.5% dev fee on MeshPool and 1.2% elsewhere**.
 - The external binary is **not bundled or downloaded automatically**.
 
 **Independent pools and third-party miners:**
