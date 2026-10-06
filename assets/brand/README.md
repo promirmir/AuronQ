@@ -2,17 +2,23 @@
 
 Official visual assets for **AuronQ (AURQ)**.
 
-Files:
-- `auronq-icon.svg` — primary transparent vector icon.
-- `auronq-icon-monochrome.svg` — single-color transparent icon using `currentColor`.
-- `auronq-logo-horizontal.svg` — horizontal icon + AURONQ wordmark.
+## Primary assets
 
-## Usage
+- `auronq-banner.svg` — repository / website hero banner.
+- `auronq-logo-horizontal.svg` — horizontal AURONQ logo with optional BLOCKCHAIN descriptor.
+- `auronq-icon.svg` — primary standalone icon.
+- `auronq-icon-monochrome.svg` — single-color icon using `currentColor`.
 
-Use these assets for public project listings, mining pools, explorers, community pages and other AuronQ integrations.
-
-The visual identity references quantum-era / post-quantum technology, but the artwork itself is not a security claim. AuronQ uses ML-DSA-87 transaction signatures; the complete protocol and implementation have not yet received an independent professional security or cryptographic audit.
+The identity uses a quantum-inspired orbital/wave motif while keeping the project name **AuronQ** and the neutral descriptor **BLOCKCHAIN**. It does not claim that the complete system has been independently proven quantum-safe.
 
 ## File hygiene
 
-The SVG files are deliberately minimal and contain **no embedded author, editor, EXIF, XMP, location or generation metadata** and no external image references.
+These official GitHub assets are clean standalone SVG files:
+- no EXIF;
+- no XMP;
+- no embedded author/editor/generator metadata;
+- no location data;
+- no external image references;
+- no scripts.
+
+For third-party listings and integrations, link directly to these canonical files from the public repository.
