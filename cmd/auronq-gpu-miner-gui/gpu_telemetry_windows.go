@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type gpuInfo struct {
@@ -193,4 +194,54 @@ func resolvePoolMinerPath(configured string) (string, error) {
 		}
 	}
 	return "", errors.New("pool mode needs a compatible external pool miner (for example MeshMiner 0.8.35+); place meshpool-miner.exe next to AuronQ-GPU-Miner.exe or set its path")
+}
+
+
+func (a *App) monitorGPUs() {
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+	for {
+		a.refreshGPUInfo()
+		<-ticker.C
+	}
+}
+
+func (a *App) refreshGPUInfo() {
+	gpus, err := queryNVIDIAGPUs()
+	if err != nil {
+		a.mu.Lock()
+		a.gpuTelemetryErr = err.Error()
+		a.mu.Unlock()
+		return
+	}
+
+	a.mu.Lock()
+	a.gpus = append([]gpuInfo(nil), gpus...)
+	a.gpuTelemetryErr = ""
+	cfg := a.cfg
+	running := a.miner.Running
+	stopping := a.minerStopRequested
+	a.mu.Unlock()
+
+	if !running || stopping || cfg.ThermalStopC <= 0 {
+		return
+	}
+	devices, err := selectedDeviceIndices(cfg, gpus)
+	if err != nil {
+		return
+	}
+	selected := make(map[int]bool, len(devices))
+	for _, d := range devices {
+		selected[d] = true
+	}
+	for _, g := range gpus {
+		if !selected[g.Index] || g.TemperatureC < 0 {
+			continue
+		}
+		if g.TemperatureC >= cfg.ThermalStopC {
+			a.addLog(fmt.Sprintf("THERMAL SAFETY: GPU %d reached %d C (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))
+			a.stopWorker()
+			return
+		}
+	}
 }
