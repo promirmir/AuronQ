@@ -68,7 +68,7 @@ The official miner now uses **AUTO compute selection**: NVIDIA CUDA acceleration
 | Portable CPU platforms | ✅ Windows x64/ARM64 · Linux x64/ARM64 · macOS x64/ARM64 |
 | NVIDIA GPUs | ✅ RTX/Turing-class CUDA target; choose specific devices or **all detected GPUs** |
 | Multi-GPU work | ✅ Separate worker per GPU with disjoint nonce ranges |
-| Automatic tuning | ✅ Tests safe batch sizes, then continuously adapts workload to temperature |
+| Automatic tuning | ✅ CUDA Auto Tune + adaptive GPU thermals; CPU fallback uses a conservative automatic thread profile |
 | Live performance | ✅ Rolling H/s, H/W efficiency, temperature state, clocks, fan, GPU load, power, VRAM and P-state |
 | Thermal protection | ✅ Smart Solo governor + AuronQ-side adaptive duty-cycle governor for external GPU pool miners + hard stop |
 | Solo mining | ✅ Uses the ordinary AuronQ full-node template/validation path |
@@ -127,7 +127,8 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 - **Windows x64 GUI/CUDA:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.0-alpha/AuronQ-Miner-v0.4.0-alpha-Windows-x64-GUI-CUDA.zip
 - **Linux x64 CUDA:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.0-alpha/AuronQ-Miner-v0.4.0-alpha-Linux-x64-CUDA.tar.gz
 - **Portable Windows/Linux/macOS CPU-safe builds:** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.0-alpha
-- **User guide:** [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md)
+- **Universal user guide:** [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md)
+- **NVIDIA accelerated guide:** [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md)
 - **Technical CUDA notes:** [gpu/cuda/README.md](gpu/cuda/README.md)
 
 **MeshMiner 0.8.35 integration:**
