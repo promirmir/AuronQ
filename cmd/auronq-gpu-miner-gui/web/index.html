@@ -335,20 +335,74 @@ function renderGPUChoices(s){
  document.querySelectorAll(".gpuPick").forEach(x=>x.disabled=allDevices.checked);
 }
 function metric(v,suffix,digits=0){v=Number(v);return Number.isFinite(v)&&v>=0?(digits?v.toFixed(digits):Math.round(v))+suffix:"N/A"}
+function clamp(v,min=0,max=100){v=Number(v);return Number.isFinite(v)?Math.max(min,Math.min(max,v)):0}
+function selectedGPUSet(s){
+ const x=s.settings||{},gs=s.gpus||[];
+ if(x.use_all_devices!==false)return new Set(gs.map(g=>Number(g.index)));
+ const ds=(x.devices||[]).map(Number);
+ if(ds.length)return new Set(ds);
+ return new Set([Number(x.device||0)]);
+}
+function gpuThermalClass(temp,target,limit){
+ temp=Number(temp);
+ if(!Number.isFinite(temp)||temp<0)return"";
+ if(temp>=limit-1)return" hot";
+ if(temp>=target+1)return" warm";
+ return"";
+}
+function gpuCardHTML(g,s){
+ const limit=Number(s.settings?.thermal_stop_c||85);
+ const target=Math.max(50,limit-5);
+ const temp=Number(g.temperature_c);
+ const selected=selectedGPUSet(s).has(Number(g.index));
+ const util=clamp(g.util_percent);
+ const memPct=(Number(g.memory_total_mib)>0)?clamp(Number(g.memory_used_mib)/Number(g.memory_total_mib)*100):0;
+ const powerPct=(Number(g.power_limit_w)>0)?clamp(Number(g.power_w)/Number(g.power_limit_w)*100):0;
+ const tempPct=clamp((temp-30)/Math.max(1,limit-30)*100);
+ const mem=(g.memory_used_mib>=0&&g.memory_total_mib>=0)?(g.memory_used_mib/1024).toFixed(1)+" / "+(g.memory_total_mib/1024).toFixed(1)+" GiB":"N/A";
+ const fan=Number(g.fan_percent)>=0?metric(g.fan_percent," %"):"driver";
+ const pstate=g.pstate?esc(g.pstate):"—";
+ const cls=gpuThermalClass(temp,target,limit);
+ const tempLabel=(temp>=limit-1)?"HOT":(temp>=target+1?"WARM":"OK");
+ return '<div class="gpu-card'+cls+'">'+
+  '<div class="gpu-head"><div class="gpu-title"><b>GPU '+g.index+' • '+esc(g.name)+'</b><small>'+pstate+(selected?' • '+tr("selected"):'')+'</small></div>'+
+  '<div class="gpu-temp">'+metric(temp,"°C")+'<small>'+tempLabel+' · '+tr("thermal_target")+' '+target+'°C</small></div></div>'+
+  '<div class="gpu-metrics">'+
+   '<div class="gpu-metric"><span>'+tr("utilization")+'</span><b>'+metric(g.util_percent," %")+'</b></div>'+
+   '<div class="gpu-metric"><span>'+tr("fan")+'</span><b>'+fan+'</b></div>'+
+   '<div class="gpu-metric"><span>'+tr("power")+'</span><b>'+metric(g.power_w," W",1)+' / '+metric(g.power_limit_w," W",0)+'</b></div>'+
+   '<div class="gpu-metric"><span>'+tr("core_clock")+'</span><b>'+metric(g.core_clock_mhz," MHz")+'</b></div>'+
+   '<div class="gpu-metric"><span>'+tr("memory_clock")+'</span><b>'+metric(g.memory_clock_mhz," MHz")+'</b></div>'+
+   '<div class="gpu-metric"><span>'+tr("vram")+'</span><b>'+mem+'</b></div>'+
+  '</div>'+
+  '<div class="gpu-bars">'+
+   '<div><div class="gbar-head"><span>'+tr("utilization")+'</span><span>'+Math.round(util)+'%</span></div><div class="gbar"><i style="width:'+util+'%"></i></div></div>'+
+   '<div><div class="gbar-head"><span>'+tr("vram")+'</span><span>'+Math.round(memPct)+'%</span></div><div class="gbar"><i style="width:'+memPct+'%"></i></div></div>'+
+   '<div><div class="gbar-head"><span>'+tr("temperature")+'</span><span>'+metric(temp," °C")+' / '+limit+' °C</span></div><div class="gbar temp"><i style="width:'+tempPct+'%"></i></div></div>'+
+   '<div><div class="gbar-head"><span>'+tr("power")+'</span><span>'+Math.round(powerPct)+'%</span></div><div class="gbar"><i style="width:'+powerPct+'%"></i></div></div>'+
+  '</div></div>';
+}
 function renderTelemetry(s){
  const gs=s.gpus||[];
- if(!gs.length){gpuTelemetry.innerHTML='<div class="hint">'+esc(s.gpu_error||"—")+'</div>';return}
- const limit=Number(thermalStop.value||85);
- gpuTelemetry.innerHTML=gs.map(g=>{
-  const hot=Number(g.temperature_c)>=limit?" hot":"";
-  const mem=(g.memory_used_mib>=0&&g.memory_total_mib>=0)?Math.round(g.memory_used_mib/1024*10)/10+" / "+Math.round(g.memory_total_mib/1024*10)/10+" GiB":"N/A";
-  return '<div class="gpu-row'+hot+'"><div class="name">GPU '+g.index+' • '+esc(g.name)+'</div>'+
-   '<div class="metric">Temp<b>'+metric(g.temperature_c," °C")+'</b></div>'+
-   '<div class="metric">Fan<b>'+metric(g.fan_percent," %")+'</b></div>'+
-   '<div class="metric">Load<b>'+metric(g.util_percent," %")+'</b></div>'+
-   '<div class="metric">Power<b>'+metric(g.power_w," W",1)+'</b></div>'+
-   '<div class="metric">VRAM<b>'+mem+'</b></div></div>'
- }).join("");
+ const empty='<div class="hint">'+esc(s.gpu_error||"—")+'</div>';
+ if(!gs.length){gpuTelemetry.innerHTML=empty;overviewGpuCards.innerHTML=empty;return}
+ const html=gs.map(g=>gpuCardHTML(g,s)).join("");
+ gpuTelemetry.innerHTML=html;
+ overviewGpuCards.innerHTML=html;
+}
+function renderGPUSummary(s){
+ const gs=s.gpus||[];
+ const hash=Number(s.miner?.hashrate||0);
+ const power=gs.reduce((n,g)=>n+(Number(g.power_w)>0?Number(g.power_w):0),0);
+ const eff=power>0&&hash>0?hash/power:0;
+ const limit=Number(s.settings?.thermal_stop_c||85);
+ const target=Math.max(50,limit-5);
+ const hottest=gs.reduce((m,g)=>Number(g.temperature_c)>m?Number(g.temperature_c):m,-1);
+ sumHash.textContent=liveHash.textContent=fmtRate(hash);
+ sumPower.textContent=livePower.textContent=power>0?power.toFixed(1)+" W":"—";
+ sumEfficiency.textContent=liveEfficiency.textContent=eff>0?eff.toFixed(2)+" H/W":"—";
+ gpuCountBadge.textContent=gs.length?gs.length+" GPU":"—";
+ thermalBadge.textContent=gs.length?("~"+target+"°C · max "+limit+"°C"+(hottest>=0?" · "+hottest+"°C":"")):"—";
 }
 function hydrateControls(s){
  if(controlsHydrated)return;
@@ -359,7 +413,7 @@ function hydrateControls(s){
  controlsHydrated=true;togglePoolFields();updateThermalHint();
 }
 function render(s){
- if(!s)return;lastState=s;hydrateControls(s);renderGPUChoices(s);renderTelemetry(s);
+ if(!s)return;lastState=s;hydrateControls(s);renderGPUChoices(s);renderTelemetry(s);renderGPUSummary(s);
  statHash.textContent=fmtRate(s.miner?.hashrate);statGPU.textContent=s.gpu_name||((s.gpus||[]).map(g=>g.name).join(" | ")||"—");statHeight.textContent=s.height??"—";statPeers.textContent=s.peers??"—";statBlocks.textContent=s.miner?.blocks_found||0;statLastBlock.textContent=short(s.miner?.last_block);
  const synced=s.synchronized;statSync.textContent=s.node_running?(synced?tr("synced"):tr("syncing")+" "+(s.sync_target||"")):tr("offline");
  ovGPU.textContent=s.gpu_name||((s.gpus||[]).length?((s.gpus||[]).length+" GPU"):"—");ovBatch.textContent=s.settings?.auto_tune?"AUTO":(s.settings?.batch??"—");ovAddress.textContent=short(s.settings?.address);ovMiningHeight.textContent=s.miner?.height||"—";ovNodeMode.textContent=nodeMode(s);ovPublic.textContent=s.public_endpoint||tr("outbound");ovNetHash.textContent=fmtRate(s.network_hashrate);ovNetID.textContent=short(s.network_id);
