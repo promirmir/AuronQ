@@ -36,6 +36,11 @@ type multiGPUState struct {
 	heights map[int]uint64
 }
 
+type multiGPUChild struct {
+	device int
+	cmd    *exec.Cmd
+}
+
 func resolveCUDADevices(raw string) ([]int, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -87,11 +92,7 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 		rates:   make(map[int]float64, len(devices)),
 		heights: make(map[int]uint64, len(devices)),
 	}
-	type child struct {
-		device int
-		cmd    *exec.Cmd
-	}
-	children := make([]child, 0, len(devices))
+	children := make([]multiGPUChild, 0, len(devices))
 	done := make(chan error, len(devices))
 
 	for slot, device := range devices {
@@ -134,7 +135,7 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 			killChildren(children)
 			return fmt.Errorf("start GPU %d worker: %w", device, err)
 		}
-		children = append(children, child{device: device, cmd: cmd})
+		children = append(children, multiGPUChild{device: device, cmd: cmd})
 		fmt.Printf("MULTI GPU %d worker started pid=%d nonce_base=%d\n", device, cmd.Process.Pid, prefix)
 
 		go scanMultiStream(stdout, device, state, false)
@@ -177,16 +178,10 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 	return nil
 }
 
-func killChildren[T interface{ ~struct{ device int; cmd *exec.Cmd } }](children []T) {
-	// Kept generic only to avoid duplicating a tiny cleanup loop at launch sites.
-	// Windows GUI stop uses taskkill /T as an additional process-tree safety net.
-	for i := range children {
-		c := any(children[i]).(struct {
-			device int
-			cmd    *exec.Cmd
-		})
-		if c.cmd != nil && c.cmd.Process != nil {
-			_ = c.cmd.Process.Kill()
+func killChildren(children []multiGPUChild) {
+	for _, child := range children {
+		if child.cmd != nil && child.cmd.Process != nil {
+			_ = child.cmd.Process.Kill()
 		}
 	}
 }
