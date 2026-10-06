@@ -30,7 +30,7 @@ Yes. AuronQ uses a UTXO transaction model.
 
 ## Is the AuronQ Mainnet live?
 
-Yes. The current stable full-node/Desktop release documented by this repository is AuronQ 1.7.1 Mainnet.
+Yes. The current stable full-node/Desktop release documented by this repository is AuronQ 1.7.13 Mainnet.
 
 ## Where can I download AuronQ?
 
