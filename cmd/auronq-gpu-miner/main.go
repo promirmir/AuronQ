@@ -38,7 +38,7 @@ func main() {
 	autoTuneSeconds := flag.Int("auto-tune-seconds", 1, "autotune measurement time per batch size in seconds")
 	thermalAuto := flag.Bool("thermal-auto", false, "automatically reduce/increase GPU batch to stay below a temperature target")
 	thermalLimit := flag.Int("thermal-limit", 85, "hard GPU temperature limit in C; reaching it stops mining")
-	thermalTarget := flag.Int("thermal-target", 0, "target GPU temperature in C (0 = thermal-limit minus 4 C)")
+	thermalTarget := flag.Int("thermal-target", 0, "target GPU temperature in C (0 = thermal-limit minus 5 C)")
 	noncePrefix := flag.Uint64("nonce-prefix", 0, "starting nonce prefix/base used to partition work between GPUs")
 	flag.Parse()
 
@@ -146,7 +146,7 @@ func main() {
 		}
 		target := *thermalTarget
 		if target == 0 {
-			target = *thermalLimit - 4
+			target = *thermalLimit - 5
 		}
 		if target < 50 || target >= *thermalLimit {
 			fmt.Fprintln(os.Stderr, "--thermal-target must be at least 50 C and below --thermal-limit")
