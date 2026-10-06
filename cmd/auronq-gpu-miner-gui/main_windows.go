@@ -333,7 +333,7 @@ func normalizeSettings(s *settings) {
 	if s.PoolBackend != "cpu" && s.PoolBackend != "both" && s.PoolBackend != "cuda" {
 		s.PoolBackend = "auto"
 	}
-	if s.PoolThreads < 0 || s.PoolThreads > 256 {
+	if s.PoolThreads < 0 || s.PoolThreads > 16 {
 		s.PoolThreads = 0
 	}
 	if s.Language != "en" {
@@ -402,8 +402,8 @@ func (a *App) saveSettings(s settings) error {
 	if s.PoolBackend != "auto" && s.PoolBackend != "cuda" && s.PoolBackend != "cpu" && s.PoolBackend != "both" {
 		return errors.New("pool backend must be auto, cuda, cpu or both")
 	}
-	if s.PoolThreads < 0 || s.PoolThreads > 256 {
-		return errors.New("pool CPU threads must be between 0 and 256")
+	if s.PoolThreads < 0 || s.PoolThreads > 16 {
+		return errors.New("pool CPU threads must be between 0 and 16")
 	}
 	if s.MiningMode == "pool" {
 		if _, err := normalizePoolEndpoint(s.PoolURL); err != nil {
