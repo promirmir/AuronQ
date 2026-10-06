@@ -231,10 +231,11 @@ func (a *App) refreshGPUInfo() {
 	cfg := a.cfg
 	running := a.miner.Running
 	mode := a.miner.Mode
+	backend := a.miner.Backend
 	stopping := a.minerStopRequested
 	a.mu.Unlock()
 
-	if !running || stopping || cfg.ThermalStopC <= 0 {
+	if !running || stopping || cfg.ThermalStopC <= 0 || backend == "cpu" {
 		return
 	}
 	devices, err := selectedDeviceIndices(cfg, gpus)
