@@ -365,10 +365,6 @@ func cmdBalance(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	miningThreads, err := safeCPUMiningThreads(*threads)
-	if err != nil {
-		return err
-	}
 	a := *addr
 	if a == "" && *wallet != "" {
 		b, err := os.ReadFile(*wallet)
@@ -472,6 +468,10 @@ func cmdMine(args []string) error {
 	threads := fs.Int("threads", 0, "CPU mining threads (0 = conservative automatic profile, max 16)")
 	once := fs.Bool("once", false, "mine one block and exit")
 	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	miningThreads, err := safeCPUMiningThreads(*threads)
+	if err != nil {
 		return err
 	}
 	a := *addr
