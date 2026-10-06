@@ -103,6 +103,7 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 		prefix := opt.NoncePrefix + (uint64(slot) << 56)
 		args := []string{
 			"--multi-child",
+			"--backend", "cuda",
 			"--device", strconv.Itoa(device),
 			"--batch", strconv.Itoa(opt.Batch),
 			"--cuda-dll", opt.DLLPath,
