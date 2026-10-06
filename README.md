@@ -158,7 +158,9 @@ The published release announcement reports AURQ support on **CPU and NVIDIA GPUs
 
 Third-party availability can change. Before mining with any external service or binary, independently verify its current connection parameters, fees, payout policy, download source and miner compatibility.
 
-Public mining/network tracking: https://cpu-mining.info/
+Public mining/network tracking:
+- **MiningChamp:** https://miningchamp.com/coin/auronq
+- **CPU-Mining.info:** https://cpu-mining.info/
 
 **Pool operators:** see [POOL-INTEGRATION.md](POOL-INTEGRATION.md) for the current HTTP/JSON mining interface, AQM64 share-validation requirements, stale-work handling and the recommended independent-pool architecture. Public decentralization coordination remains tracked in [issue #66](https://github.com/promirmir/AuronQ/issues/66).
 
