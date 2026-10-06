@@ -3,17 +3,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/csv"
-	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"syscall"
 	"time"
+
+	gt "auronq/internal/gputelemetry"
 )
 
 type thermalController struct {
@@ -49,16 +42,14 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 		return batch, -1, 0, "", nil
 	}
 	now := time.Now()
-	if !t.lastCheck.IsZero() && now.Sub(t.lastCheck) < 2*time.Second {
+	if !t.lastCheck.IsZero() && now.Sub(t.lastCheck) < 500*time.Millisecond {
 		return batch, t.lastTemp, t.cooldownFor(t.lastTemp), "", nil
 	}
 	t.lastCheck = now
 
 	temp, err := queryNVIDIATemperature(t.device)
 	if err != nil {
-		// Telemetry failure must not silently disable mining. The GUI still
-		// exposes the telemetry error and the hard-stop monitor remains active.
-		return batch, -1, 0, "", nil
+		return batch, -1, 0, "stop", fmt.Errorf("THERMAL TELEMETRY FAILSAFE: direct NVML sample unavailable for CUDA device %d: %w", t.device, err)
 	}
 	t.lastTemp = temp
 
@@ -124,59 +115,7 @@ func (t *thermalController) cooldownFor(temp int) time.Duration {
 }
 
 func queryNVIDIATemperature(device int) (int, error) {
-	smi, err := findWorkerNvidiaSMI()
-	if err != nil {
-		return -1, err
-	}
-	cmd := exec.Command(smi,
-		"--query-gpu=index,temperature.gpu",
-		"--format=csv,noheader,nounits",
-	)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	out, err := cmd.Output()
-	if err != nil {
-		return -1, fmt.Errorf("nvidia-smi temperature: %w", err)
-	}
-	r := csv.NewReader(bytes.NewReader(out))
-	r.TrimLeadingSpace = true
-	records, err := r.ReadAll()
-	if err != nil {
-		return -1, err
-	}
-	for _, rec := range records {
-		if len(rec) < 2 {
-			continue
-		}
-		idx, err := strconv.Atoi(strings.TrimSpace(rec[0]))
-		if err != nil || idx != device {
-			continue
-		}
-		temp, err := strconv.Atoi(strings.TrimSpace(rec[1]))
-		if err != nil {
-			return -1, err
-		}
-		return temp, nil
-	}
-	return -1, fmt.Errorf("GPU %d temperature not reported", device)
-}
-
-func findWorkerNvidiaSMI() (string, error) {
-	if p, err := exec.LookPath("nvidia-smi"); err == nil {
-		return p, nil
-	}
-	candidates := []string{
-		filepath.Join(os.Getenv("ProgramW6432"), "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"),
-		filepath.Join(os.Getenv("ProgramFiles"), "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"),
-	}
-	for _, p := range candidates {
-		if strings.TrimSpace(p) == "" {
-			continue
-		}
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return p, nil
-		}
-	}
-	return "", errors.New("nvidia-smi not found")
+	return gt.Temperature(device)
 }
 
 func maxInt(a, b int) int {

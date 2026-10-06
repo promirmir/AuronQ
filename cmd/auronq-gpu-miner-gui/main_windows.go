@@ -94,6 +94,8 @@ type appState struct {
 	GPUName         string     `json:"gpu_name,omitempty"`
 	GPUs            []gpuInfo  `json:"gpus,omitempty"`
 	GPUError        string     `json:"gpu_error,omitempty"`
+	GPUTelemetrySource string `json:"gpu_telemetry_source,omitempty"`
+	GPUTelemetryAgeMS int64   `json:"gpu_telemetry_age_ms,omitempty"`
 	Miner           minerState `json:"miner"`
 	Settings        settings   `json:"settings"`
 	Logs            []string   `json:"logs"`
@@ -125,6 +127,7 @@ type App struct {
 	gpuName            string
 	gpus               []gpuInfo
 	gpuTelemetryErr    string
+	gpuTelemetryAt     time.Time
 
 	cfg        settings
 	syncTarget uint64
@@ -512,6 +515,7 @@ func (a *App) state() appState {
 	gpu := a.gpuName
 	gpus := append([]gpuInfo(nil), a.gpus...)
 	gpuErr := a.gpuTelemetryErr
+	gpuAt := a.gpuTelemetryAt
 	logs := append([]string(nil), a.logs...)
 	mapping := a.portMapping
 	publicVerified := a.publicVerified
@@ -528,10 +532,16 @@ func (a *App) state() appState {
 		GPUName:     gpu,
 		GPUs:        gpus,
 		GPUError:    gpuErr,
+		GPUTelemetrySource: "NVML_DIRECT",
 		Miner:       miner,
 		Settings:       cfg,
 		Logs:           logs,
 		PublicVerified: publicVerified,
+	}
+	if !gpuAt.IsZero() {
+		age := time.Since(gpuAt).Milliseconds()
+		if age < 0 { age = 0 }
+		st.GPUTelemetryAgeMS = age
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 900*time.Millisecond)
@@ -947,6 +957,7 @@ func (a *App) startWorker(mode string, s settings) error {
 		a.mu.Lock()
 		a.gpus = append([]gpuInfo(nil), gpus...)
 		a.gpuTelemetryErr = ""
+		a.gpuTelemetryAt = time.Now()
 		a.gpuName = strings.Join(names, " | ")
 		a.mu.Unlock()
 	} else {

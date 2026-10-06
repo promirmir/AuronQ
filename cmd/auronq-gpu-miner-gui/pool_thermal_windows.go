@@ -165,11 +165,11 @@ func (a *App) monitorPoolThermals(cmd *exec.Cmd) {
 			return
 		}
 
-		gpus, err := queryNVIDIAGPUs()
+		gpus, err := a.hardwareTelemetrySnapshot(1500 * time.Millisecond)
 		if err != nil {
 			telemetryFailures++
 			if telemetryFailures >= poolTelemetryFailLimit {
-				a.addLog(fmt.Sprintf("POOL THERMAL FAILSAFE: NVIDIA telemetry unavailable for %d consecutive samples; stopping miner", telemetryFailures))
+				a.addLog(fmt.Sprintf("POOL THERMAL FAILSAFE: direct NVML hardware telemetry unavailable for %d consecutive samples (%v); stopping miner", telemetryFailures, err))
 				a.stopWorker()
 				return
 			}
@@ -281,11 +281,11 @@ func (a *App) emergencyPoolCooldown(cmd *exec.Cmd, devices []int, target, limit 
 			return false
 		}
 
-		gpus, qerr := queryNVIDIAGPUs()
+		gpus, qerr := a.hardwareTelemetrySnapshot(1500 * time.Millisecond)
 		if qerr != nil {
 			telemetryFailures++
 			if telemetryFailures >= poolTelemetryFailLimit {
-				a.addLog("POOL THERMAL FAILSAFE: telemetry lost during emergency cooldown; stopping miner")
+				a.addLog("POOL THERMAL FAILSAFE: direct NVML telemetry lost during emergency cooldown; stopping miner")
 				a.stopWorker()
 				return false
 			}
@@ -300,8 +300,8 @@ func (a *App) emergencyPoolCooldown(cmd *exec.Cmd, devices []int, target, limit 
 		temp := hottest.TemperatureC
 
 		// A suspended miner should cool. Continued rise means another workload,
-		// broken telemetry or a cooling-system problem, so stop the miner.
-		if temp >= limit+2 {
+		// broken direct hardware telemetry or a cooling-system problem, so stop the miner.
+		if temp >= limit+1 {
 			a.addLog(fmt.Sprintf("POOL THERMAL FAILSAFE: GPU %d still at %d C while miner is suspended; stopping miner", hottest.Index, temp))
 			a.stopWorker()
 			return false
