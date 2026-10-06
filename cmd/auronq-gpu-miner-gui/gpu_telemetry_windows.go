@@ -26,6 +26,9 @@ type gpuInfo struct {
 	MemoryTotalMiB int     `json:"memory_total_mib"`
 	PowerW         float64 `json:"power_w"`
 	PowerLimitW    float64 `json:"power_limit_w"`
+	CoreClockMHz   int     `json:"core_clock_mhz"`
+	MemoryClockMHz int     `json:"memory_clock_mhz"`
+	PState         string  `json:"pstate,omitempty"`
 }
 
 func findNvidiaSMI() (string, error) {
@@ -53,7 +56,7 @@ func queryNVIDIAGPUs() ([]gpuInfo, error) {
 		return nil, err
 	}
 	cmd := exec.Command(smi,
-		"--query-gpu=index,name,temperature.gpu,fan.speed,utilization.gpu,memory.used,memory.total,power.draw,power.limit",
+		"--query-gpu=index,name,temperature.gpu,fan.speed,utilization.gpu,memory.used,memory.total,power.draw,power.limit,clocks.gr,clocks.mem,pstate",
 		"--format=csv,noheader,nounits",
 	)
 	cmd.SysProcAttr = &syscallSysProcAttr
@@ -69,7 +72,7 @@ func queryNVIDIAGPUs() ([]gpuInfo, error) {
 	}
 	gpus := make([]gpuInfo, 0, len(records))
 	for _, rec := range records {
-		if len(rec) < 9 {
+		if len(rec) < 12 {
 			continue
 		}
 		idx, err := strconv.Atoi(strings.TrimSpace(rec[0]))
@@ -86,6 +89,9 @@ func queryNVIDIAGPUs() ([]gpuInfo, error) {
 			MemoryTotalMiB: parseSMIInt(rec[6]),
 			PowerW:         parseSMIFloat(rec[7]),
 			PowerLimitW:    parseSMIFloat(rec[8]),
+			CoreClockMHz:   parseSMIInt(rec[9]),
+			MemoryClockMHz: parseSMIInt(rec[10]),
+			PState:         parseSMIString(rec[11]),
 		})
 	}
 	if len(gpus) == 0 {
@@ -105,6 +111,14 @@ func parseSMIInt(s string) int {
 		return -1
 	}
 	return int(v + 0.5)
+}
+
+func parseSMIString(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" || strings.EqualFold(s, "N/A") || strings.HasPrefix(s, "[") {
+		return ""
+	}
+	return s
 }
 
 func parseSMIFloat(s string) float64 {
