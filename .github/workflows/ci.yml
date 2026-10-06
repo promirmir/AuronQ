@@ -9,12 +9,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # On pull requests, newer commits supersede older checks.
+  # On main, every pushed commit must finish so GitHub does not show
+  # a misleading red/cancelled status for the repository head.
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test:
     strategy:
+      # Keep the other platform running even if one platform fails so the
+      # commit status shows the real failure instead of a secondary cancel.
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}

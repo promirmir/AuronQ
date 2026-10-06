@@ -14,8 +14,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: network-hardening-${{ github.ref }}
-  cancel-in-progress: true
+  # Hardening runs are evidence, not disposable freshness checks.
+  # Keep scheduled, manual and main-push runs independent and let them finish.
+  group: network-hardening-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   resilience:
