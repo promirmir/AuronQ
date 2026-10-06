@@ -17,12 +17,9 @@ The official mainnet manifest is:
 
 Bootstrap metadata is **not consensus** and is excluded from Network ID. It can therefore be rotated without a hard fork.
 
-At present the manifest advertises two externally verified public endpoints:
+The manifest is a **dynamic public registry** and should be treated as the source of truth for current bootstrap endpoints. It may contain project-operated HTTPS rendezvous endpoints together with crawler-verified public IP nodes learned from the live network.
 
-- `https://mir.taild63f46.ts.net`
-- `https://desktop-4nifg1j.taild63f46.ts.net`
-
-These are rendezvous paths to ordinary full nodes. They cannot create coins, approve invalid blocks or override cumulative-work selection.
+Do not copy a fixed peer count from this document: the registry can change as public nodes appear, disappear or fail verification. Every listed endpoint is still only a rendezvous path to an ordinary full node; it cannot create coins, approve invalid blocks or override cumulative-work selection.
 
 ## First-start flow
 
@@ -44,7 +41,7 @@ A completely fresh installation still needs at least one discovery route. To red
 
 The crawler never changes consensus and never makes a peer trusted for blocks: every full node still validates the chain locally. It also deliberately preserves existing manifest entries during transient outages instead of deleting the registry.
 
-At present there are two confirmed public bootstrap endpoints, but they are still operated within the same project infrastructure. The network is therefore **not yet operationally independent** for first-time installs. Independence is achieved in practice after multiple independently operated, publicly reachable nodes have been learned/published. Existing nodes can already continue with persisted/gossiped peers when the original bootstrap is unavailable.
+The public registry now includes project rendezvous endpoints and crawler-verified public nodes learned from the network. That improves first-contact resilience, but raw endpoint count is not the same as operator independence. The stronger target is sustained diversity across independently controlled operators, networks and discovery routes. Existing nodes can already continue with persisted/gossiped peers when any particular bootstrap endpoint is unavailable.
 
 AuronQ also supports DNS seeds. Adding independently operated DNS seeds later gives a second discovery mechanism that does not depend on the repository manifest.
 
@@ -103,7 +100,7 @@ Discovery metadata can be changed without changing Network ID.
 
 ## Mainnet security status
 
-AuronQ 1.7.0 is live mainnet software. It is **not independently audited**. AQM64, consensus/reorg logic, wallet handling and the P2P layer should receive independent review before meaningful real-world value depends on the network.
+AuronQ Mainnet is live public software. It is **not independently audited**. AQM64, consensus/reorg logic, wallet handling and the P2P layer should receive independent review before meaningful real-world value depends on the network.
 
 
 ### Automatic direct-public advertisement
