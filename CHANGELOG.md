@@ -22,6 +22,14 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### Universal Miner v0.4.1 Alpha
+
+- Critical Windows GUI hotfix: repaired an invalid JavaScript string in the CPU fallback card that prevented the embedded dashboard script from parsing.
+- Restores dashboard refresh, buttons, settings, mining actions and live status updates in the Windows GUI.
+- Adds a mandatory `node --check` gate for the embedded miner JavaScript so syntax-broken GUI releases cannot pass CI again.
+- No Mainnet consensus, AQM64 parameters, difficulty, Network ID, genesis, transaction validation or monetary-policy changes.
+
+
 ### Universal Miner v0.4.0 Alpha
 
 - Adds **AUTO** compute selection: official NVIDIA CUDA acceleration when available, otherwise the native AQM64 CPU fallback.

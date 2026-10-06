@@ -400,7 +400,7 @@ function gpuCardHTML(g,s){
 function renderTelemetry(s){
  const gs=s.gpus||[];
  if(!gs.length){
-  const cpu='<div class="gpu-card"><div class="gpu-head"><div class="gpu-title"><b>'+esc(tr("cpu_safe_card"))+'</b><small>'+esc(s.platform||"")+" • "+(s.cpu_count||"—")+" logical CPU</small></div><div class="gpu-temp">'+(s.safe_cpu_threads||"—")+'<small>safe threads</small></div></div><div class="hint">'+esc(tr("cpu_fallback_ready"))+'</div></div>';
+  const cpu='<div class="gpu-card"><div class="gpu-head"><div class="gpu-title"><b>'+esc(tr("cpu_safe_card"))+'</b><small>'+esc(s.platform||"—")+' • '+esc(s.cpu_count||"—")+' logical CPU</small></div><div class="gpu-temp">'+esc(s.safe_cpu_threads||"—")+'<small>safe threads</small></div></div><div class="hint">'+esc(tr("cpu_fallback_ready"))+'</div></div>';
   gpuTelemetry.innerHTML=cpu;overviewGpuCards.innerHTML=cpu;return
  }
  const html=gs.map(g=>gpuCardHTML(g,s)).join("");

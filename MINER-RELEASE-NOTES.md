@@ -1,4 +1,10 @@
-# AuronQ Universal Miner v0.4.0 Alpha
+# AuronQ Universal Miner v0.4.1 Alpha
+
+## Critical GUI hotfix
+
+v0.4.1 fixes a JavaScript syntax error in the Windows GUI shipped in v0.4.0 Alpha. The broken inline script prevented the dashboard controls, refresh loop and actions from running correctly even though the compiled executables and backend self-tests were valid.
+
+A mandatory JavaScript syntax check is now part of CI so an invalid embedded dashboard script cannot pass the Universal Miner release gate again.
 
 This release is a miner compatibility and safety update. It does not change AuronQ Mainnet consensus.
 
@@ -48,7 +54,7 @@ Each portable package includes the AuronQ miner CLI, full-node CLI, network.json
 
 ## GPU acceleration limits
 
-Official accelerated GPU backend in v0.4.0 remains NVIDIA CUDA. AMD/Intel computers are supported through the native CPU fallback. An AMD/Intel GPU backend will only be promoted after hardware testing and byte-for-byte AQM64 validation; v0.4.0 does not ship an unvalidated OpenCL/HIP/oneAPI implementation.
+Official accelerated GPU backend in v0.4.1 remains NVIDIA CUDA. AMD/Intel computers are supported through the native CPU fallback. An AMD/Intel GPU backend will only be promoted after hardware testing and byte-for-byte AQM64 validation; v0.4.1 does not ship an unvalidated OpenCL/HIP/oneAPI implementation.
 
 ## Consensus unchanged
 
