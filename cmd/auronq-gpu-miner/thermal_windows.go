@@ -44,24 +44,26 @@ func newThermalController(device, targetC, limitC, maxBatch int) *thermalControl
 func (t *thermalController) Target() int { return t.targetC }
 func (t *thermalController) Limit() int  { return t.limitC }
 
-func (t *thermalController) Adjust(batch int) (int, int, string, error) {
+func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, error) {
 	if t == nil {
-		return batch, -1, "", nil
+		return batch, -1, 0, "", nil
 	}
 	now := time.Now()
 	if !t.lastCheck.IsZero() && now.Sub(t.lastCheck) < 2*time.Second {
-		return batch, t.lastTemp, "", nil
+		return batch, t.lastTemp, t.cooldownFor(t.lastTemp), "", nil
 	}
 	t.lastCheck = now
 
 	temp, err := queryNVIDIATemperature(t.device)
 	if err != nil {
-		return batch, -1, "", nil
+		// Telemetry failure must not silently disable mining. The GUI still
+		// exposes the telemetry error and the hard-stop monitor remains active.
+		return batch, -1, 0, "", nil
 	}
 	t.lastTemp = temp
 
 	if temp >= t.limitC {
-		return batch, temp, "stop", fmt.Errorf("THERMAL LIMIT: GPU %d reached %d C (limit %d C)", t.device, temp, t.limitC)
+		return batch, temp, 0, "stop", fmt.Errorf("THERMAL LIMIT: GPU %d reached %d C (limit %d C)", t.device, temp, t.limitC)
 	}
 
 	newBatch := batch
@@ -97,7 +99,28 @@ func (t *thermalController) Adjust(batch int) (int, int, string, error) {
 	if newBatch == batch {
 		action = ""
 	}
-	return newBatch, temp, action, nil
+	return newBatch, temp, t.cooldownFor(temp), action, nil
+}
+
+func (t *thermalController) cooldownFor(temp int) time.Duration {
+	if temp < 0 || temp < t.targetC {
+		return 0
+	}
+	// Reducing batch size alone can leave the GPU continuously saturated.
+	// A short adaptive duty-cycle pause gives the cooling system real headroom.
+	delta := temp - t.targetC
+	switch {
+	case temp >= t.limitC-1:
+		return 900 * time.Millisecond
+	case delta >= 3:
+		return 500 * time.Millisecond
+	case delta == 2:
+		return 300 * time.Millisecond
+	case delta == 1:
+		return 160 * time.Millisecond
+	default:
+		return 80 * time.Millisecond
+	}
 }
 
 func queryNVIDIATemperature(device int) (int, error) {
