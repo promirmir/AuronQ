@@ -1,0 +1,4 @@
+publish=true
+tag=gpu-v0.3.6-alpha
+version=0.3.6-alpha
+platforms=windows-x64,linux-amd64
