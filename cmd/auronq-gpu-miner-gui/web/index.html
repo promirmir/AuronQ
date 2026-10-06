@@ -362,10 +362,14 @@ function gpuCardHTML(g,s){
  const mem=(g.memory_used_mib>=0&&g.memory_total_mib>=0)?(g.memory_used_mib/1024).toFixed(1)+" / "+(g.memory_total_mib/1024).toFixed(1)+" GiB":"N/A";
  const fan=Number(g.fan_percent)>=0?metric(g.fan_percent," %"):"driver";
  const pstate=g.pstate?esc(g.pstate):"—";
+ const src=esc(s.gpu_telemetry_source||g.telemetry_source||"—");
+ const age=Number(s.gpu_telemetry_age_ms);
+ const ageText=Number.isFinite(age)?(age<1000?Math.round(age)+" ms":(age/1000).toFixed(1)+" s"):"—";
+ const sensor=(src==="NVML_DIRECT"?"NVML DIRECT":src)+" • "+ageText;
  const cls=gpuThermalClass(temp,target,limit);
  const tempLabel=(temp>=limit-1)?"HOT":(temp>=target+1?"WARM":"OK");
  return '<div class="gpu-card'+cls+'">'+
-  '<div class="gpu-head"><div class="gpu-title"><b>GPU '+g.index+' • '+esc(g.name)+'</b><small>'+pstate+(selected?' • '+tr("selected"):'')+'</small></div>'+
+  '<div class="gpu-head"><div class="gpu-title"><b>GPU '+g.index+' • '+esc(g.name)+'</b><small>'+pstate+(selected?' • '+tr("selected"):'')+' • '+sensor+'</small></div>'+
   '<div class="gpu-temp">'+metric(temp,"°C")+'<small>'+tempLabel+' · '+tr("thermal_target")+' '+target+'°C</small></div></div>'+
   '<div class="gpu-metrics">'+
    '<div class="gpu-metric"><span>'+tr("utilization")+'</span><b>'+metric(g.util_percent," %")+'</b></div>'+
@@ -402,7 +406,7 @@ function renderGPUSummary(s){
  sumPower.textContent=livePower.textContent=power>0?power.toFixed(1)+" W":"—";
  sumEfficiency.textContent=liveEfficiency.textContent=eff>0?eff.toFixed(2)+" H/W":"—";
  gpuCountBadge.textContent=gs.length?gs.length+" GPU":"—";
- thermalBadge.textContent=gs.length?("AUTO ~"+target+"°C · LIMIT "+limit+"°C"+(hottest>=0?" · "+hottest+"°C":"")):"—";
+ thermalBadge.textContent=gs.length?("NVML DIRECT · AUTO ~"+target+"°C · LIMIT "+limit+"°C"+(hottest>=0?" · "+hottest+"°C":"")):"—";
 }
 function hydrateControls(s){
  if(controlsHydrated)return;
