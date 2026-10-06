@@ -32,7 +32,7 @@ jobs:
           cache: false
       - name: Test canonical CPU fallback
         run: |
-          CGO_ENABLED=0 go test ./internal/argon2pure ./cmd/auronq-gpu-miner
+          CGO_ENABLED=0 go test ./internal/argon2pure ./cmd/auronq-gpu-miner ./cmd/auronq
 
   portable-cli-build:
     runs-on: ubuntu-latest
@@ -73,5 +73,8 @@ jobs:
         run: |
           mkdir -p dist-ci
           out="dist-ci/auronq-miner-${GOOS}-${GOARCH}${{ matrix.ext }}"
+          node="dist-ci/auronq-${GOOS}-${GOARCH}${{ matrix.ext }}"
           go build -trimpath -o "$out" ./cmd/auronq-gpu-miner
+          go build -trimpath -o "$node" ./cmd/auronq
           test -s "$out"
+          test -s "$node"
