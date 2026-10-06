@@ -103,7 +103,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 | Component | Current release | Status | Download |
 |---|---:|---|---|
 | Desktop / Full Node | **v1.7.13** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) |
-| Universal Miner | **v0.4.0 Alpha** | AUTO CUDA→CPU · Windows GUI · portable Windows/Linux/macOS · safe fallback | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.8-alpha/AuronQ-GPU-Miner-v0.3.8-alpha-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.8-alpha/AuronQ-GPU-Miner-v0.3.8-alpha-Linux-amd64.tar.gz) |
+| Universal Miner | **v0.4.0 Alpha** | AUTO CUDA→CPU · Windows GUI · portable Windows/Linux/macOS · safe fallback | [Windows x64 GUI/CUDA](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.0-alpha/AuronQ-Miner-v0.4.0-alpha-Windows-x64-GUI-CUDA.zip) · [Linux x64 CUDA](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.0-alpha/AuronQ-Miner-v0.4.0-alpha-Linux-x64-CUDA.tar.gz) · [portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.0-alpha) |
 | AuronQ Mobile | **0.5.3 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) |
 
 **Project site:** https://promirmir.github.io/AuronQ/
@@ -124,8 +124,9 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 
 **Official miner:**
 - **AuronQ Universal Miner v0.4.0 Alpha:** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.0-alpha
-- **Windows x64:** https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.8-alpha/AuronQ-GPU-Miner-v0.3.8-alpha-Windows-x64.zip
-- **Linux amd64:** https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.8-alpha/AuronQ-GPU-Miner-v0.3.8-alpha-Linux-amd64.tar.gz
+- **Windows x64 GUI/CUDA:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.0-alpha/AuronQ-Miner-v0.4.0-alpha-Windows-x64-GUI-CUDA.zip
+- **Linux x64 CUDA:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.0-alpha/AuronQ-Miner-v0.4.0-alpha-Linux-x64-CUDA.tar.gz
+- **Portable Windows/Linux/macOS CPU-safe builds:** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.0-alpha
 - **User guide:** [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md)
 - **Technical CUDA notes:** [gpu/cuda/README.md](gpu/cuda/README.md)
 
@@ -150,8 +151,8 @@ The official AuronQ miner provides native Solo CUDA **and native CPU fallback** 
 ```text
 7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
 2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6  AuronQ-1.7.13-Linux-amd64.tar.gz
-# GPU Miner v0.4.0 Alpha:
-# verify against SHA256SUMS-GPU-MINER.txt on the gpu-v0.3.8-alpha release page
+# Universal Miner v0.4.0 Alpha:
+# verify against SHA256SUMS-AURONQ-MINER.txt on the miner-v0.4.0-alpha release page
 913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c  AuronQ-Mobile-0.5.3-alpha.apk
 ```
 
