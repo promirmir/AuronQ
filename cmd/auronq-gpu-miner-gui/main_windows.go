@@ -1061,8 +1061,16 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 	cmd.SysProcAttr = &syscallSysProcAttr
 	a.addLog(fmt.Sprintf("POOL %s: %s endpoint=%s backend=%s devices=%s fan_auto=%t threads=%d retune=%t",
 		s.PoolEngine, filepath.Base(path), endpoint, s.PoolBackend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
-	if s.PoolFanAuto && s.PoolBackend != "cpu" {
-		a.addLog(fmt.Sprintf("POOL thermal: MeshMiner --fan auto enabled; AuronQ hard stop remains %d C", s.ThermalStopC))
+	if s.PoolBackend != "cpu" {
+		target := s.ThermalStopC - 5
+		if target < 50 {
+			target = 50
+		}
+		if s.PoolFanAuto {
+			a.addLog(fmt.Sprintf("POOL thermal: requested MeshMiner --fan auto; AuronQ external governor targets ~%d C with hard stop %d C", target, s.ThermalStopC))
+		} else {
+			a.addLog(fmt.Sprintf("POOL thermal: AuronQ external governor targets ~%d C with hard stop %d C", target, s.ThermalStopC))
+		}
 	}
 	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)
 }
@@ -1129,6 +1137,9 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) e
 	a.mu.Unlock()
 	a.addLog(strings.ToUpper(mode) + " started")
 
+	if mode == "pool" {
+		go a.monitorPoolThermals(cmd)
+	}
 	if (mode == "mining" || mode == "pool") && autoPublic {
 		go a.ensurePublicPeer()
 	}
