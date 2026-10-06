@@ -15,7 +15,7 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 60
     env:
-      GPU_VERSION: 0.3.4-alpha
+      GPU_VERSION: 0.3.5-alpha
       GPU_TAG: gpu-v0.3.5-alpha
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
