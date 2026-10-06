@@ -7,11 +7,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -289,12 +291,79 @@ func cmdNetworkSetSeeds(args []string) error {
 	return nil
 }
 
+func listenPort(raw string) (int, error) {
+	_, portRaw, err := net.SplitHostPort(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, err
+	}
+	port, err := strconv.Atoi(portRaw)
+	if err != nil || port < 1 || port > 65535 {
+		return 0, fmt.Errorf("invalid listen port %q", portRaw)
+	}
+	return port, nil
+}
+
+func maintainCLIPublicNode(ctx context.Context, node *aq.Node, listen string) {
+	if node == nil {
+		return
+	}
+	port, err := listenPort(listen)
+	if err != nil {
+		log.Printf("public node: cannot determine listen port: %v", err)
+		return
+	}
+
+	// Let ListenAndServe bind first. Direct public IPv4/IPv6 detection in Node
+	// may already provide an endpoint and then no router mutation is needed.
+	timer := time.NewTimer(750 * time.Millisecond)
+	select {
+	case <-ctx.Done():
+		timer.Stop()
+		return
+	case <-timer.C:
+	}
+
+	var mapping *aq.PortMapping
+	defer func() {
+		if mapping != nil {
+			node.ClearPublicAdvertise(mapping.Advertise)
+			mapping.Close()
+		}
+	}()
+
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+	for {
+		if strings.TrimSpace(node.PublicAdvertise()) == "" && mapping == nil {
+			mctx, cancel := context.WithTimeout(ctx, 6*time.Second)
+			m, mapErr := aq.TryUPnPPortMapping(mctx, port)
+			cancel()
+			if mapErr != nil {
+				log.Printf("public node: auto-public unavailable: %v; staying outbound-only", mapErr)
+			} else if !node.SetPublicAdvertise(m.Advertise) {
+				m.Close()
+				log.Printf("public node: mapped endpoint rejected: %s", m.Advertise)
+			} else {
+				mapping = m
+				log.Printf("public node: TCP/%d mapped automatically to %s", port, m.Advertise)
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
 func cmdNode(args []string) error {
 	fs := flag.NewFlagSet("node", flag.ContinueOnError)
 	network := fs.String("network", "network.json", "network file")
 	data := fs.String("data", "data", "chain data directory")
 	listen := fs.String("listen", "0.0.0.0:18444", "HTTP/P2P listen address")
 	advertise := fs.String("advertise", "", "public peer URL, e.g. http://203.0.113.10:18444")
+	autoPublic := fs.Bool("auto-public", true, "automatically try UPnP for the node listen port when no public endpoint is known")
 	peers := fs.String("peers", "", "comma-separated peers")
 	peerStore := fs.String("peer-store", "", "persistent cache of discovered public peers")
 	if err := fs.Parse(args); err != nil {
@@ -311,6 +380,9 @@ func cmdNode(args []string) error {
 	node := aq.NewNode(c, aq.NodeConfig{Listen: *listen, Advertise: *advertise, Peers: splitPeers(*peers), PeerStorePath: *peerStore})
 	ctx, cancel := ctxSignals()
 	defer cancel()
+	if *autoPublic && strings.TrimSpace(*advertise) == "" {
+		go maintainCLIPublicNode(ctx, node, *listen)
+	}
 	return node.Run(ctx)
 }
 
