@@ -24,8 +24,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: reproducible-builds-${{ github.ref }}
-  cancel-in-progress: true
+  # Supersede obsolete PR revisions, but never cancel verification of main,
+  # scheduled or manually requested reproducible-build checks.
+  group: reproducible-builds-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   linux:
