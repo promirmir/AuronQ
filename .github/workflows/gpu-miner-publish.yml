@@ -1,11 +1,11 @@
-name: Publish GPU Miner v0.3.3-alpha
+name: Publish GPU Miner v0.3.4-alpha
 
 on:
   push:
     branches:
       - main
     paths:
-      - '.release/gpu-miner-v0.3.3-alpha'
+      - '.release/gpu-miner-v0.3.4-alpha'
 
 permissions:
   contents: write
@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 60
     env:
       GPU_VERSION: 0.3.3-alpha
-      GPU_TAG: gpu-v0.3.3-alpha
+      GPU_TAG: gpu-v0.3.4-alpha
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
@@ -86,4 +86,4 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Failed to replace GPU miner release assets" }
             exit 0
           }
-          gh release create $env:GPU_TAG $zip $sums --target $env:GITHUB_SHA --title "AuronQ GPU Miner v0.3.3 Alpha" --notes-file ".\GPU-MINER-RELEASE-NOTES.md" --prerelease
+          gh release create $env:GPU_TAG $zip $sums --target $env:GITHUB_SHA --title "AuronQ GPU Miner v0.3.4 Alpha" --notes-file ".\GPU-MINER-RELEASE-NOTES.md" --prerelease
