@@ -1,0 +1,9 @@
+AuronQ Universal Miner v0.4.3-alpha release trigger
+
+Thermal stability update:
+- smoother Windows Pool-mode duty-cycle regulation
+- earlier throttling and slower performance release
+- post-cooldown stabilization hold
+- bounded thermal-inertia overshoot handling
+- direct local NVML remains authoritative
+- no Mainnet consensus changes
