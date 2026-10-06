@@ -96,7 +96,7 @@ func main() {
 		batch = 64
 	}
 
-	fmt.Printf("AuronQ GPU Miner v0.3.2-alpha CUDA\n")
+	fmt.Printf("AuronQ GPU Miner v0.3.3-alpha CUDA\n")
 	fmt.Printf("GPU: %s\n", backend.Name())
 	fmt.Printf("Batch: %d nonces\n", batch)
 
