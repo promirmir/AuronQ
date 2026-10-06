@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 520" role="img" aria-labelledby="title desc">
+  <title id="title">AuronQ horizontal logo</title>
+  <desc id="desc">AuronQ wordmark with quantum-wave emblem.</desc>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.48" stop-color="#dce7ff"/>
+      <stop offset="0.78" stop-color="#93aff0"/>
+      <stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="quantum" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00e7ff"/>
+      <stop offset="0.5" stop-color="#256dff"/>
+      <stop offset="1" stop-color="#a24cff"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <g transform="translate(36,-6) scale(.50)">
+    <circle cx="512" cy="500" r="318" fill="none" stroke="url(#quantum)" stroke-width="10" opacity="0.40"/>
+    <circle cx="512" cy="500" r="282" fill="none" stroke="#67dfff" stroke-width="3" stroke-dasharray="8 20" opacity="0.28"/>
+    <path d="M512 100 L172 742 H322 L512 382 L702 742 H852 Z"
+          fill="url(#metal)" stroke="#6aa8ff" stroke-width="4"/>
+    <path d="M181 740 C325 610 410 570 510 627 C635 699 747 768 884 657"
+          fill="none" stroke="url(#quantum)" stroke-width="82"
+          stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+    <circle cx="512" cy="500" r="22" fill="#ffffff"/>
+  </g>
+
+  <text x="570" y="335"
+        font-family="Inter,Segoe UI,Arial,sans-serif"
+        font-size="230" font-weight="600" letter-spacing="20"
+        fill="url(#metal)">AURON</text>
+  <text x="1485" y="335"
+        font-family="Inter,Segoe UI,Arial,sans-serif"
+        font-size="230" font-weight="650" fill="url(#quantum)">Q</text>
+</svg>
