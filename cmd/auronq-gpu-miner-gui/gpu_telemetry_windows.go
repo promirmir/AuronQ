@@ -186,22 +186,49 @@ func normalizePoolEndpoint(raw string) (string, error) {
 
 func resolvePoolMinerPath(configured string) (string, error) {
 	if p := strings.TrimSpace(configured); p != "" {
+		p = strings.Trim(p, """)
+		if !filepath.IsAbs(p) {
+			if exeDir, err := executableDir(); err == nil {
+				p = filepath.Join(exeDir, p)
+			}
+		}
 		if st, err := os.Stat(p); err == nil && !st.IsDir() {
 			return p, nil
 		}
 		return "", fmt.Errorf("pool miner executable not found: %s", p)
 	}
+
 	exeDir, err := executableDir()
 	if err != nil {
 		return "", err
 	}
-	for _, name := range []string{"meshpool-miner.exe", "meshminer.exe"} {
+	names := []string{"meshpool-miner.exe", "meshminer.exe"}
+	for _, name := range names {
 		p := filepath.Join(exeDir, name)
 		if st, err := os.Stat(p); err == nil && !st.IsDir() {
 			return p, nil
 		}
 	}
-	return "", errors.New("pool mode needs a compatible external pool miner (for example MeshMiner 0.8.35+); place meshpool-miner.exe next to AuronQ-GPU-Miner.exe or set its path")
+
+	// MeshMiner's Windows ZIP is commonly extracted as a folder next to the
+	// AuronQ miner. Search one directory level down without scanning the disk.
+	entries, _ := os.ReadDir(exeDir)
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		lower := strings.ToLower(entry.Name())
+		if !strings.Contains(lower, "meshminer") && !strings.Contains(lower, "meshpool") {
+			continue
+		}
+		for _, name := range names {
+			p := filepath.Join(exeDir, entry.Name(), name)
+			if st, err := os.Stat(p); err == nil && !st.IsDir() {
+				return p, nil
+			}
+		}
+	}
+	return "", errors.New("MeshMiner 0.8.35+ not found; extract its Windows ZIP next to AuronQ-GPU-Miner.exe or enter the path to meshpool-miner.exe")
 }
 
 
