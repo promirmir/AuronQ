@@ -15,6 +15,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	gt "auronq/internal/gputelemetry"
 )
 
 type multiGPUOptions struct {
@@ -50,14 +52,15 @@ func resolveCUDADevices(raw string) ([]int, error) {
 		return nil, errors.New("empty CUDA device selection")
 	}
 	if strings.EqualFold(raw, "all") {
-		cmd := exec.Command("nvidia-smi", "--query-gpu=index", "--format=csv,noheader,nounits")
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-		out, err := cmd.Output()
+		gpus, err := gt.QueryNVIDIA()
 		if err != nil {
-			return nil, fmt.Errorf("detect CUDA devices with nvidia-smi: %w", err)
+			return nil, fmt.Errorf("detect CUDA devices from direct local NVIDIA telemetry: %w", err)
 		}
-		raw = strings.ReplaceAll(string(out), "\r", "")
-		raw = strings.ReplaceAll(raw, "\n", ",")
+		parts := make([]string, 0, len(gpus))
+		for _, gpu := range gpus {
+			parts = append(parts, strconv.Itoa(gpu.Index))
+		}
+		raw = strings.Join(parts, ",")
 	}
 
 	seen := map[int]bool{}
