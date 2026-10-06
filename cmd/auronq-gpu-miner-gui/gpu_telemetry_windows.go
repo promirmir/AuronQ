@@ -269,6 +269,7 @@ func (a *App) refreshGPUInfo() {
 	a.gpuTelemetryErr = ""
 	cfg := a.cfg
 	running := a.miner.Running
+	mode := a.miner.Mode
 	stopping := a.minerStopRequested
 	a.mu.Unlock()
 
@@ -287,8 +288,21 @@ func (a *App) refreshGPUInfo() {
 		if !selected[g.Index] || g.TemperatureC < 0 {
 			continue
 		}
-		if g.TemperatureC >= cfg.ThermalStopC {
-			a.addLog(fmt.Sprintf("THERMAL SAFETY: GPU %d reached %d C (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))
+
+		// Pool mining has its own 2 Hz autonomous governor. At the configured
+		// limit it first suspends the external miner, cools the GPU and resumes
+		// automatically. Keep this slower monitor as an independent catastrophic
+		// fail-safe only, so it does not race the emergency cooldown path.
+		stopAt := cfg.ThermalStopC
+		if mode == "pool" {
+			stopAt += 2
+		}
+		if g.TemperatureC >= stopAt {
+			if mode == "pool" {
+				a.addLog(fmt.Sprintf("THERMAL FAILSAFE: GPU %d reached %d C despite pool governor (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))
+			} else {
+				a.addLog(fmt.Sprintf("THERMAL SAFETY: GPU %d reached %d C (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))
+			}
 			a.stopWorker()
 			return
 		}

@@ -135,11 +135,11 @@ func TestExternalThermalPausePolicy(t *testing.T) {
 	}{
 		{70, 0},
 		{75, 0},
-		{76, 100 * time.Millisecond},
-		{77, 220 * time.Millisecond},
-		{78, 400 * time.Millisecond},
-		{79, 600 * time.Millisecond},
-		{80, 850 * time.Millisecond},
+		{76, 25 * time.Millisecond},
+		{77, 50 * time.Millisecond},
+		{78, 100 * time.Millisecond},
+		{79, 175 * time.Millisecond},
+		{80, 300 * time.Millisecond},
 		{81, 0},
 	}
 	for _, tc := range cases {

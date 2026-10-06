@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.3.6-alpha"
+	guiVersion       = "0.3.7-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -277,7 +277,7 @@ func defaultSettings() settings {
 		Batch:           60,
 		AutoTune:        true,
 		AutoTuneSeconds: 1,
-		ThermalStopC:    85,
+		ThermalStopC:    81,
 		AutoPublic:      true,
 		SelfTest:        true,
 		MiningMode:      "solo",
@@ -302,7 +302,7 @@ func normalizeSettings(s *settings) {
 		s.AutoTuneSeconds = 1
 	}
 	if s.ThermalStopC < 60 || s.ThermalStopC > 95 {
-		s.ThermalStopC = 85
+		s.ThermalStopC = 81
 	}
 	if s.MiningMode != "pool" {
 		s.MiningMode = "solo"
@@ -1067,9 +1067,9 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 			target = 50
 		}
 		if s.PoolFanAuto {
-			a.addLog(fmt.Sprintf("POOL thermal: requested MeshMiner --fan auto; AuronQ external governor targets ~%d C with hard stop %d C", target, s.ThermalStopC))
+			a.addLog(fmt.Sprintf("POOL thermal AUTO: MeshMiner --fan auto requested; AuronQ targets ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C", target, s.ThermalStopC, s.ThermalStopC+2))
 		} else {
-			a.addLog(fmt.Sprintf("POOL thermal: AuronQ external governor targets ~%d C with hard stop %d C", target, s.ThermalStopC))
+			a.addLog(fmt.Sprintf("POOL thermal AUTO: AuronQ targets ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C", target, s.ThermalStopC, s.ThermalStopC+2))
 		}
 	}
 	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)

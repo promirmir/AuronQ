@@ -1,59 +1,48 @@
-# AuronQ GPU Miner v0.3.6 Alpha
+# AuronQ GPU Miner v0.3.7 Alpha
 
-This release adds the first **official native Linux amd64 CUDA miner package** and synchronizes the miner documentation for Windows and Linux. It does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID, wallet rules or monetary policy.
+This release focuses on **safe autonomous pool mining on Windows**, especially laptop GPUs. It does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID, wallet rules or monetary policy.
 
-## Linux amd64
+## Autonomous pool thermal governor
 
-The official Linux package contains:
+The Windows GUI now wraps external MeshMiner pool mining with a smoother AuronQ-side thermal controller:
 
-- `auronq-gpu-miner` — native AQM64 CUDA CLI miner;
-- `libauronq-aqm64-cuda.so` — Linux CUDA backend;
-- Mainnet `network.json` and `bootstrap.json`;
-- complete GPU Miner documentation.
+- NVIDIA temperature telemetry is sampled every 500 ms;
+- load is reduced with short adaptive duty-cycle pulses instead of long 400–850 ms one-shot pauses;
+- throttling increases quickly when temperature rises, but is released gradually after cooling to avoid thermal oscillation;
+- the recommended/default safety limit is now **81 °C**, with an automatic operating target around **76 °C**;
+- at 81 °C the miner is suspended for an automatic cooldown instead of immediately requiring a manual restart;
+- mining resumes automatically after the GPU is stably cooled below the target;
+- a separate catastrophic fail-safe stops the external miner at approximately **limit + 2 °C** if temperature still rises despite suspension;
+- loss of NVIDIA thermal telemetry or failure of process suspend/resume now fails safe by stopping the miner rather than continuing blind.
 
-Linux v0.3.6 supports:
+The goal is stable long-running mining with less hashrate loss and no repeated full-load / long-pause temperature oscillation.
 
-- native Solo AQM64 CUDA mining;
-- NVIDIA multi-GPU with disjoint nonce ranges;
-- Auto Tune;
-- rolling live H/s;
-- GPU/CPU AQM64 equivalence self-test;
-- offline benchmark;
-- smart thermal governor using NVIDIA temperature telemetry;
-- explicit GPU selection or `--devices all`.
+## Dashboard
 
-The Linux release is intentionally **CLI-first**. The Windows PL/EN dashboard GUI is not advertised as a Linux feature.
+The PL/EN dashboard now presents the thermal profile as an **AUTO** mode and uses 81 °C as the safe default for new settings. Existing user settings remain under user control.
 
-## Windows x64
+## Pool mining
 
-Windows keeps the v0.3.5 GPU dashboard and v0.3.4 external-pool thermal governor, including:
+MeshMiner 0.8.35+ integration remains external and optional. AuronQ does not bundle or silently download third-party pool miners. Pool support still includes:
 
-- rich per-GPU telemetry dashboard;
-- Solo mining;
-- MeshMiner 0.8.35 integration;
-- custom compatible pool endpoints;
-- live H/s, power and H/W efficiency;
-- adaptive thermal control and hard safety limit.
+- MeshPool preset;
+- custom AuronQ-compatible endpoints;
+- CUDA / CPU / both backends;
+- multi-GPU selection;
+- Retune;
+- live H/s parsing;
+- AuronQ-side safety control independent of MeshMiner fan reporting.
 
-## Cross-platform packaging
+## Linux
 
-The release workflow now builds and publishes both:
+The native Linux amd64 Solo CUDA miner remains available in the release package. v0.3.7 does not claim the Windows external-pool suspend/resume governor as a Linux GUI feature.
 
-- `AuronQ-GPU-Miner-v0.3.6-alpha-Windows-x64.zip`
-- `AuronQ-GPU-Miner-v0.3.6-alpha-Linux-amd64.tar.gz`
+## Packages
 
-A single `SHA256SUMS-GPU-MINER.txt` covers both official packages.
-
-The packaged CUDA runtime is statically linked. A CUDA Toolkit is required to build from source, but not merely to run the packaged miner. A current proprietary NVIDIA driver is still required.
-
-## Documentation
-
-New complete guide:
-
-- [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md)
-
-It documents Windows and Linux setup, self-test, benchmark, Solo mining, multi-GPU, thermal control, live H/s, Pool/MeshMiner behavior, troubleshooting and source builds.
+- `AuronQ-GPU-Miner-v0.3.7-alpha-Windows-x64.zip`
+- `AuronQ-GPU-Miner-v0.3.7-alpha-Linux-amd64.tar.gz`
+- `SHA256SUMS-GPU-MINER.txt`
 
 ## Important
 
-GPU Miner remains alpha software. The CUDA implementation has not received an independent professional security or cryptographic audit. Real-device Linux validation is still needed across multiple distributions, NVIDIA driver versions and GPU models before Linux support should be treated as production-hardened.
+GPU Miner remains alpha software. The CUDA implementation and the external-pool thermal governor have not received an independent professional security audit. The autonomous thermal controller is a software safety layer and does not replace working laptop fans, unobstructed airflow, the NVIDIA driver or hardware thermal protection.
