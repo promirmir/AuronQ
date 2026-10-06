@@ -4,7 +4,7 @@ Windows alpha update adding first-class support for **MeshMiner 0.8.35+** in Poo
 
 ## MeshMiner 0.8.35 integration
 
-AuronQ can now launch the official MeshMiner 0.8.35 AURQ path directly with the documented command-line interface:
+AuronQ can now launch MeshMiner 0.8.35's documented AURQ path directly with its command-line interface:
 
 - `--algo auronq`;
 - `--pool host:port`;
@@ -49,4 +49,4 @@ MeshMiner is independently developed and distributed:
 
 https://github.com/totom9000/meshminer/releases/tag/v.0.8.35
 
-AuronQ does not silently download, bundle, modify or redistribute the MeshMiner binary. Verify third-party releases, fees and pool rules independently.
+AuronQ does not silently download, bundle, modify or redistribute the MeshMiner binary. MeshMiner 0.8.35 reports a 0.5% developer fee on MeshPool and 1.2% elsewhere. Verify third-party releases, fees and pool rules independently.
