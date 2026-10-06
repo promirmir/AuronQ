@@ -48,6 +48,7 @@ func resolveCUDADevices(raw string) ([]int, error) {
 	}
 	if strings.EqualFold(raw, "all") {
 		cmd := exec.Command("nvidia-smi", "--query-gpu=index", "--format=csv,noheader,nounits")
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 		out, err := cmd.Output()
 		if err != nil {
 			return nil, fmt.Errorf("detect CUDA devices with nvidia-smi: %w", err)
