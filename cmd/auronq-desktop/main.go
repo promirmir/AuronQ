@@ -894,7 +894,6 @@ func (a *App) startNode() error {
 	} else {
 		a.addLog("Brak publicznych seedów w network.json — node działa, ale świeża instalacja nie ma punktu startowego do globalnego P2P")
 	}
-	go a.publicNodeLoop(ctx, node)
 	go func() {
 		err := node.Run(ctx)
 		a.closePublicMappingForNode(node)
@@ -922,6 +921,7 @@ func (a *App) startNode() error {
 	if !run && e != "" {
 		return errors.New(e)
 	}
+	go a.publicNodeLoop(ctx, node)
 	return nil
 }
 func (a *App) stopNode() {
@@ -1233,16 +1233,7 @@ func (a *App) closePublicMappingForNode(node *aq.Node) {
 	}
 }
 
-func (a *App) helpNetworkWhileMining() {
-	// Compatibility wrapper for older UI/API flows. Public reachability is now
-	// maintained automatically for the full node, so mining no longer owns it.
-	a.mu.RLock()
-	node := a.node
-	a.mu.RUnlock()
-	go a.ensurePublicNode(node)
-}
-
-func (a *App) startMiner(wallet string, threads int, helpNetwork bool) error {
+func (a *App) startMiner(wallet string, threads int, _ bool) error {
 	a.mu.Lock()
 	if a.miner.Running {
 		a.mu.Unlock()
@@ -1272,9 +1263,6 @@ func (a *App) startMiner(wallet string, threads int, helpNetwork bool) error {
 	}
 	if threads > runtime.NumCPU() {
 		threads = runtime.NumCPU()
-	}
-	if helpNetwork {
-		a.helpNetworkWhileMining()
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.mu.Lock()
