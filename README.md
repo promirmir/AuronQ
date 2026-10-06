@@ -13,11 +13,23 @@
   <a href="https://github.com/promirmir/AuronQ/releases/latest"><img src="https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
   <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ" alt="Go version"></a>
+  <a href="https://github.com/promirmir/AuronQ/releases/tag/gpu-v0.3.0-alpha"><img src="https://img.shields.io/badge/GPU%20Miner-v0.3.0%20Alpha-7c5cff" alt="GPU Miner v0.3.0 Alpha"></a>
+  <img src="https://img.shields.io/badge/Mainnet-Live-19a974" alt="Mainnet Live">
 </p>
 
 **AuronQ** is an open-source public cryptocurrency network written in Go. It combines a **UTXO ledger**, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
 
 The AuronQ Mainnet is live. The project is designed around **independent full-node validation, replaceable peer discovery, local wallets, local explorers and no privileged founder node**.
+
+## 🚀 Start here
+
+| Run the network | Mine AURQ | Inspect the chain |
+|---|---|---|
+| **AuronQ Desktop / Full Node v1.7.13** | **AuronQ GPU Miner v0.3.0 Alpha** | **Public Explorer** |
+| Windows + Linux full validating node, wallet and local Explorer | NVIDIA CUDA, multi-GPU, Auto Tune, live thermals and Solo/Pool modes | Blocks, transactions, peers and network state |
+| [⬇️ Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) | [⬇️ Download GPU Miner](https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.0-alpha/AuronQ-GPU-Miner-v0.3.0-alpha-Windows-x64.zip) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/gpu-v0.3.0-alpha) | [🌐 Open Explorer](https://mir.taild63f46.ts.net/explorer) |
+
+> **GPU miner:** the built-in AQM64 CUDA miner can use all detected NVIDIA GPUs or selected cards, auto-tune batch size per GPU, display temperature/fan/load/power/VRAM and stop on a configurable thermal limit. Pool mode uses a user-supplied compatible external pool miner; AuronQ does not silently download third-party binaries.
 
 ### Verify AuronQ yourself
 
@@ -35,6 +47,32 @@ If you want to follow the project rather than actively participate, **Star** or 
 
 > [!WARNING]
 > AuronQ is a young public cryptocurrency network in an early stage of operational maturity. AQM64 and the complete consensus/network implementation have **not** yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not use AuronQ to store or transfer substantial value.
+
+## ⛏️ Official AuronQ GPU Miner v0.3.0 Alpha
+
+The official Windows GPU miner is now a first-class AuronQ application rather than a hidden developer tool.
+
+<p align="center">
+  <a href="https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.0-alpha/AuronQ-GPU-Miner-v0.3.0-alpha-Windows-x64.zip"><strong>⬇️ Download AuronQ GPU Miner v0.3.0 Alpha — Windows x64</strong></a>
+  &nbsp;·&nbsp;
+  <a href="gpu/cuda/README.md">Setup & technical guide</a>
+  &nbsp;·&nbsp;
+  <a href="https://github.com/promirmir/AuronQ/releases/tag/gpu-v0.3.0-alpha">Release page</a>
+</p>
+
+| Capability | v0.3.0 Alpha |
+|---|---|
+| NVIDIA GPUs | ✅ RTX/Turing-class CUDA target; choose specific devices or **all detected GPUs** |
+| Multi-GPU work | ✅ Separate worker per GPU with disjoint nonce ranges |
+| Automatic tuning | ✅ Tests safe batch sizes and selects the fastest measured setting per GPU |
+| Live telemetry | ✅ Temperature, fan (when reported), GPU load, power and VRAM |
+| Thermal protection | ✅ Configurable emergency stop, **85 °C default** |
+| Solo mining | ✅ Uses the ordinary AuronQ full-node template/validation path |
+| Pool mode | ✅ Configurable pool endpoint through a user-supplied compatible external miner |
+| Languages | ✅ Polish / English |
+| Correctness check | ✅ GPU/CPU AQM64 equivalence self-test |
+
+The miner remains **alpha software**. Multi-GPU behavior should be tested on more hardware combinations, and the CUDA implementation has not received an independent professional audit. A valid block found in Solo mode is still submitted to an ordinary AuronQ full node and must pass the same Mainnet validation rules as every other block.
 
 ## Long-term direction
 
@@ -61,7 +99,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 | Component | Current release | Status | Download |
 |---|---:|---|---|
 | Desktop / Full Node | **v1.7.13** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) |
-| GPU Miner | **v0.2.1 Alpha** | NVIDIA CUDA / AQM64 | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/gpu-v0.2.1-alpha/AuronQ-GPU-Miner-v0.2.1-alpha-Windows-x64.zip) |
+| GPU Miner | **v0.3.0 Alpha** | NVIDIA CUDA / AQM64 · multi-GPU · Auto Tune · telemetry · Solo/Pool | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.0-alpha/AuronQ-GPU-Miner-v0.3.0-alpha-Windows-x64.zip) |
 | AuronQ Mobile | **0.5.3 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) |
 
 **Project site:** https://promirmir.github.io/AuronQ/
@@ -80,14 +118,17 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 
 ## ⛏️ Mine AURQ
 
-Independent third-party mining options are already available:
+**Official miner:**
+- **AuronQ GPU Miner v0.3.0 Alpha:** https://github.com/promirmir/AuronQ/releases/tag/gpu-v0.3.0-alpha
+- **Direct Windows x64 download:** https://github.com/promirmir/AuronQ/releases/download/gpu-v0.3.0-alpha/AuronQ-GPU-Miner-v0.3.0-alpha-Windows-x64.zip
+- **Miner documentation:** [gpu/cuda/README.md](gpu/cuda/README.md)
 
+**Independent pools and third-party miners:**
 - **MeshPool:** https://meshpool.net/pool/auronq-main
 - **RPlant:** https://pool.rplant.xyz/#auronq#connect
-- **MeshMiner 0.8.35:** https://github.com/totom9000/meshminer/releases/tag/v0.8.35 — published AURQ support for CPU and NVIDIA GPUs
-- **Official AuronQ GPU Miner v0.2.1 Alpha:** https://github.com/promirmir/AuronQ/releases/tag/gpu-v0.2.1-alpha
+- **MeshMiner 0.8.35:** https://github.com/totom9000/meshminer/releases/tag/v.0.8.35 — published AURQ support for CPU and NVIDIA GPUs
 
-Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
+The official AuronQ miner provides the native Solo CUDA path. Its Pool mode is a launcher/bridge for a **user-supplied compatible external pool miner** because the AuronQ full node does not currently expose a native Stratum server. Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
 
 
 ### Current checksums
@@ -95,7 +136,8 @@ Third-party pools/miners are independently operated and are not part of AuronQ c
 ```text
 7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
 2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6  AuronQ-1.7.13-Linux-amd64.tar.gz
-be0717921521b160ec659c064a809a911aefdb0694ad98dbb548dbe2210ecbc9  AuronQ-GPU-Miner-v0.2.1-alpha-Windows-x64.zip
+# GPU Miner v0.3.0 Alpha:
+# verify against SHA256SUMS-GPU-MINER.txt on the gpu-v0.3.0-alpha release page
 913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c  AuronQ-Mobile-0.5.3-alpha.apk
 ```
 
@@ -178,7 +220,7 @@ AURQ is now available through multiple independently operated mining services. T
 
 A third-party AURQ implementation is also available in **MeshMiner 0.8.35**:
 
-https://github.com/totom9000/meshminer/releases/tag/v0.8.35
+https://github.com/totom9000/meshminer/releases/tag/v.0.8.35
 
 The published release announcement reports AURQ support on **CPU and NVIDIA GPUs**. Hardware support, binaries and tuning are maintained independently from the AuronQ project.
 
@@ -262,6 +304,7 @@ It does **not** reconstruct the entire UTXO set from every full block, so it mus
 - **Build integrity:** deterministic/reproducible build checks on Linux and Windows.
 - **Explorer decentralization:** peer-aware links between independently hosted full-node explorers.
 - **Mining correctness:** CLI/Desktop miners now cancel stale templates when the canonical tip advances or reorgs.
+- **GPU mining:** official CUDA miner now supports multi-GPU work partitioning, per-GPU Auto Tune, live NVIDIA telemetry, thermal shutdown and an optional external pool-miner bridge.
 
 Detailed history: [CHANGELOG.md](CHANGELOG.md)
 
