@@ -5,6 +5,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSelectedDeviceIndices(t *testing.T) {
