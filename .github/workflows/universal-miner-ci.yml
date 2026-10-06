@@ -1,0 +1,77 @@
+name: Universal Miner compatibility CI
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/auronq-gpu-miner/**'
+      - 'internal/argon2pure/**'
+      - 'internal/auronq/**'
+      - 'internal/gputelemetry/**'
+      - '.github/workflows/universal-miner-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'cmd/auronq-gpu-miner/**'
+      - 'internal/argon2pure/**'
+      - 'internal/auronq/**'
+      - 'internal/gputelemetry/**'
+      - '.github/workflows/universal-miner-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-fallback-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Test canonical CPU fallback
+        run: |
+          CGO_ENABLED=0 go test ./internal/argon2pure ./cmd/auronq-gpu-miner
+
+  portable-cli-build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            ext: .exe
+          - goos: windows
+            goarch: arm64
+            ext: .exe
+          - goos: linux
+            goarch: amd64
+            ext: ''
+          - goos: linux
+            goarch: arm64
+            ext: ''
+          - goos: darwin
+            goarch: amd64
+            ext: ''
+          - goos: darwin
+            goarch: arm64
+            ext: ''
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build CPU-safe universal CLI
+        shell: bash
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist-ci
+          out="dist-ci/auronq-miner-${GOOS}-${GOARCH}${{ matrix.ext }}"
+          go build -trimpath -o "$out" ./cmd/auronq-gpu-miner
+          test -s "$out"
