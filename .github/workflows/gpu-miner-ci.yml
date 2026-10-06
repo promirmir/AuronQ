@@ -11,6 +11,7 @@ on:
       - 'internal/auronq/upnp.go'
       - 'internal/auronq/*_test.go'
       - 'build-gpu-miner-windows.ps1'
+      - 'build-gpu-miner-linux.sh'
       - 'network.json'
       - 'bootstrap.json'
       - '.github/workflows/gpu-miner-ci.yml'
@@ -34,6 +35,29 @@ jobs:
             nvcc -O3 -std=c++17 -Xcompiler -fPIC --shared \
               gpu/cuda/aqm64_cuda.cu \
               -o /tmp/libauronq-aqm64-cuda.so
+
+  linux-app-compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Test Linux miner code
+        shell: bash
+        run: |
+          CGO_ENABLED=1 go test ./cmd/auronq-gpu-miner
+
+      - name: Build Linux miner without CUDA runtime present
+        shell: bash
+        run: |
+          mkdir -p dist-ci
+          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath -o dist-ci/auronq-gpu-miner ./cmd/auronq-gpu-miner
+          test -x dist-ci/auronq-gpu-miner
+          file dist-ci/auronq-gpu-miner
 
   windows-app-compile:
     runs-on: windows-latest
