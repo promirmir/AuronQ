@@ -116,7 +116,7 @@ button,input,select,textarea{font:inherit}.app{display:grid;grid-template-column
       </section>
 
       <section class="view" id="view-mining">
-        <div class="hero"><div><h2 data-i18n="mining_title">Kopanie GPU</h2><p data-i18n="mining_desc">Wiele kart NVIDIA, automatyczny dobór batch, monitoring temperatury i kopanie solo lub w basenie.</p></div></div>
+        <div class="hero"><div><h2 data-i18n="mining_title">Kopanie AuronQ</h2><p data-i18n="mining_desc">Automatyczny wybór CUDA lub bezpiecznego CPU, monitoring sprzętu i kopanie solo lub w basenie.</p></div></div>
         <div class="grid two">
           <div class="card">
             <div class="section-title"><h3 data-i18n="configuration">Konfiguracja</h3></div>
@@ -126,6 +126,11 @@ button,input,select,textarea{font:inherit}.app{display:grid;grid-template-column
                 <div class="field"><label data-i18n="batch">Batch</label><input id="batch" type="number" min="1" max="64" value="60"></div>
               </div>
               <div class="field"><label data-i18n="reward_address">Adres AURQ</label><input id="address" placeholder="aurq1..."><div class="hint" data-i18n="address_hint">Solo: nagroda za blok. Pool: adres wypłat używany jako login workera.</div></div>
+
+              <div class="row">
+                <div class="field"><label data-i18n="compute_backend">Backend obliczeń Solo</label><select id="soloBackend"><option value="auto" data-i18n="backend_auto">AUTO — najlepszy dostępny</option><option value="cuda" data-i18n="backend_cuda">NVIDIA CUDA</option><option value="cpu" data-i18n="backend_cpu">CPU — uniwersalny fallback</option></select><div class="hint" data-i18n="compute_backend_hint">AUTO używa CUDA, gdy jest dostępna i poprawna; w przeciwnym razie bezpiecznie przechodzi na CPU.</div></div>
+                <div class="field"><label data-i18n="native_cpu_threads">Wątki CPU</label><input id="cpuThreads" type="number" min="0" max="16" value="0"><div class="hint" data-i18n="native_cpu_threads_hint">0 = profil bezpieczny: około połowy logicznych CPU, maks. 4 wątki. Każdy wątek AQM64 używa ok. 64 MiB.</div></div>
+              </div>
 
               <label class="toggle"><input id="allDevices" type="checkbox" checked><span><b data-i18n="all_gpus">Użyj wszystkich kart NVIDIA</b><span data-i18n="all_gpus_hint">Każda karta dostaje osobny zakres nonce. Możesz też wybrać tylko konkretne GPU.</span></span></label>
               <div class="field"><label data-i18n="gpu_selection">Karty GPU</label><div id="gpuList" class="gpu-list"><div class="hint">—</div></div></div>
@@ -151,8 +156,8 @@ button,input,select,textarea{font:inherit}.app{display:grid;grid-template-column
                   <div class="field"><label data-i18n="pool_worker">Nazwa workera</label><input id="poolWorker" value="rig1"></div>
                 </div>
                 <div class="row">
-                  <div class="field"><label data-i18n="pool_backend">Backend MeshMiner</label><select id="poolBackend"><option value="cuda">CUDA / GPU</option><option value="both">CUDA + CPU</option><option value="cpu">Tylko CPU</option></select></div>
-                  <div class="field"><label data-i18n="pool_threads">Wątki CPU</label><input id="poolThreads" type="number" min="0" max="256" value="0"><div class="hint" data-i18n="pool_threads_hint">0 = MeshMiner dobiera automatycznie liczbę wątków do wolnej pamięci RAM.</div></div>
+                  <div class="field"><label data-i18n="pool_backend">Backend MeshMiner</label><select id="poolBackend"><option value="auto" data-i18n="backend_auto">AUTO — najlepszy dostępny</option><option value="cuda">CUDA / GPU</option><option value="both">CUDA + CPU</option><option value="cpu">Tylko CPU</option></select></div>
+                  <div class="field"><label data-i18n="pool_threads">Wątki CPU</label><input id="poolThreads" type="number" min="0" max="16" value="0"><div class="hint" data-i18n="pool_threads_hint">0 = AuronQ ustawia konserwatywny profil CPU; maksymalnie 16 wątków po 64 MiB.</div></div>
                 </div>
                 <label class="toggle"><input id="poolFanAuto" type="checkbox" checked><span><b data-i18n="pool_fan_auto">MeshMiner: poproś sterownik o automatyczny wentylator (--fan auto)</b><span data-i18n="pool_fan_auto_hint">Na części laptopów MeshMiner/NVIDIA może nadal raportować „driver default” albo 0% FAN. Niezależnie od tego AuronQ sam reguluje obciążenie zewnętrznego minera i utrzymuje twardy limit temperatury.</span></span></label>
                 <label class="toggle"><input id="poolRetune" type="checkbox"><span><b data-i18n="pool_retune">Wymuś ponowny autotune MeshMiner przy starcie</b><span data-i18n="pool_retune_hint">Użyj po zmianie sterownika, taktowań lub wersji minera. Normalnie MeshMiner pamięta wynik strojenia każdej karty.</span></span></label>
@@ -268,6 +273,7 @@ function values(){
  const ds=selectedDevices();
  return {
   address:address.value.trim(),device:ds[0]??0,devices:ds,use_all_devices:allDevices.checked,
+  solo_backend:soloBackend.value,cpu_threads:Number(cpuThreads.value||0),
   batch:Number(batch.value||60),auto_tune:autoTune.checked,auto_tune_seconds:Number(autoTuneSeconds.value||1),
   thermal_stop_c:Number(thermalStop.value||85),auto_public:autoPublic.checked,self_test:selfTest.checked,
   mining_mode:miningMode.value,pool_url:poolURL.value.trim(),pool_worker:poolWorker.value.trim(),
@@ -286,22 +292,27 @@ document.getElementById("testBtn").onclick=selfTestRun;document.getElementById("
 document.getElementById("poolRetuneBtn").onclick=async()=>{try{await saveSettings(false);await api("/api/pool/retune",values())}catch(e){alert(e.message)}};
 document.getElementById("reconnectBtn").onclick=async()=>{try{await api("/api/node/reconnect",{})}catch(e){alert(e.message)}};
 document.getElementById("exitBtn").onclick=async()=>{try{await api("/api/exit",{});window.close()}catch(e){alert(e.message)}};
-allDevices.onchange=()=>{const cpuOnly=poolBackend.value==="cpu";document.querySelectorAll(".gpuPick").forEach(x=>{x.disabled=allDevices.checked||cpuOnly;if(allDevices.checked)x.checked=true})};
+allDevices.onchange=()=>{updateComputeUI();if(allDevices.checked)document.querySelectorAll(".gpuPick").forEach(x=>x.checked=true)};
 miningMode.onchange=()=>togglePoolFields();
-poolBackend.onchange=()=>updatePoolBackendUI();
+soloBackend.onchange=()=>updateComputeUI();
+poolBackend.onchange=()=>updateComputeUI();
 poolPreset.onchange=()=>{
  if(poolPreset.value==="meshpool") poolURL.value="pool.meshpool.net:3359";
  else { poolURL.focus(); poolURL.select(); }
 };
 poolURL.addEventListener("input",()=>{poolPreset.value=poolURL.value.trim()==="pool.meshpool.net:3359"?"meshpool":"custom"});
 thermalStop.addEventListener("input",updateThermalHint);
-function togglePoolFields(){poolFields.classList.toggle("hidden",miningMode.value!=="pool");updatePoolBackendUI()}
-function updatePoolBackendUI(){
- const cpuOnly=poolBackend.value==="cpu";
- poolFanAuto.disabled=cpuOnly;
- poolRetune.disabled=cpuOnly;
- poolRetuneBtn.disabled=cpuOnly || !!lastState?.miner?.running;
- document.querySelectorAll(".gpuPick").forEach(x=>x.disabled=allDevices.checked||cpuOnly);
+function togglePoolFields(){poolFields.classList.toggle("hidden",miningMode.value!=="pool");updateComputeUI()}
+function updatePoolBackendUI(){updateComputeUI()}
+function updateComputeUI(){
+ const pool=miningMode.value==="pool";
+ const backend=pool?poolBackend.value:soloBackend.value;
+ const cpuOnly=backend==="cpu";
+ const gpuAvailable=(lastState?.gpus||[]).length>0;
+ poolFanAuto.disabled=pool&&(cpuOnly||(backend==="auto"&&!gpuAvailable));
+ poolRetune.disabled=pool&&(cpuOnly||(backend==="auto"&&!gpuAvailable));
+ poolRetuneBtn.disabled=!!lastState?.miner?.running||cpuOnly||(backend==="auto"&&!gpuAvailable);
+ document.querySelectorAll(".gpuPick").forEach(x=>x.disabled=allDevices.checked||cpuOnly||(backend==="auto"&&!gpuAvailable));
 }
 function updateThermalHint(){
  const limit=Number(thermalStop.value||85);
@@ -332,7 +343,7 @@ function renderGPUChoices(s){
    label.append(cb,name,mem);gpuList.append(label);
   });
  }
- document.querySelectorAll(".gpuPick").forEach(x=>x.disabled=allDevices.checked);
+ updateComputeUI();
 }
 function metric(v,suffix,digits=0){v=Number(v);return Number.isFinite(v)&&v>=0?(digits?v.toFixed(digits):Math.round(v))+suffix:"N/A"}
 function clamp(v,min=0,max=100){v=Number(v);return Number.isFinite(v)?Math.max(min,Math.min(max,v)):0}
@@ -405,15 +416,15 @@ function renderGPUSummary(s){
  sumHash.textContent=liveHash.textContent=fmtRate(hash);
  sumPower.textContent=livePower.textContent=power>0?power.toFixed(1)+" W":"—";
  sumEfficiency.textContent=liveEfficiency.textContent=eff>0?eff.toFixed(2)+" H/W":"—";
- gpuCountBadge.textContent=gs.length?gs.length+" GPU":"—";
- thermalBadge.textContent=gs.length?("NVML DIRECT · AUTO ~"+target+"°C · LIMIT "+limit+"°C"+(hottest>=0?" · "+hottest+"°C":"")):"—";
+ gpuCountBadge.textContent=gs.length?gs.length+" GPU":(s.miner?.backend==="cpu"?"CPU":"—");
+ thermalBadge.textContent=gs.length?("NVML DIRECT · AUTO ~"+target+"°C · LIMIT "+limit+"°C"+(hottest>=0?" · "+hottest+"°C":"")):(s.miner?.backend==="cpu"?"CPU SAFE PROFILE":"—");
 }
 function hydrateControls(s){
  if(controlsHydrated)return;
  const x=s.settings||{};
- address.value=x.address||"";batch.value=x.batch??60;thermalStop.value=x.thermal_stop_c??81;autoTuneSeconds.value=x.auto_tune_seconds??1;
+ address.value=x.address||"";soloBackend.value=(x.solo_backend==="cuda"||x.solo_backend==="cpu")?x.solo_backend:"auto";cpuThreads.value=x.cpu_threads??0;batch.value=x.batch??60;thermalStop.value=x.thermal_stop_c??81;autoTuneSeconds.value=x.auto_tune_seconds??1;
  allDevices.checked=x.use_all_devices!==false;autoTune.checked=x.auto_tune!==false;autoPublic.checked=x.auto_public!==false;selfTest.checked=x.self_test!==false;
- miningMode.value=x.mining_mode==="pool"?"pool":"solo";poolURL.value=x.pool_url||"pool.meshpool.net:3359";poolPreset.value=poolURL.value.trim()==="pool.meshpool.net:3359"?"meshpool":"custom";poolWorker.value=x.pool_worker||"rig1";poolMinerPath.value=x.pool_miner_path||"";poolEngine.value=x.pool_engine==="custom"?"custom":"meshminer";poolBackend.value=(x.pool_backend==="both"||x.pool_backend==="cpu")?x.pool_backend:"cuda";poolFanAuto.checked=x.pool_fan_auto!==false;poolThreads.value=x.pool_threads??0;poolRetune.checked=!!x.pool_retune;
+ miningMode.value=x.mining_mode==="pool"?"pool":"solo";poolURL.value=x.pool_url||"pool.meshpool.net:3359";poolPreset.value=poolURL.value.trim()==="pool.meshpool.net:3359"?"meshpool":"custom";poolWorker.value=x.pool_worker||"rig1";poolMinerPath.value=x.pool_miner_path||"";poolEngine.value=x.pool_engine==="custom"?"custom":"meshminer";poolBackend.value=(x.pool_backend==="cuda"||x.pool_backend==="both"||x.pool_backend==="cpu")?x.pool_backend:"auto";poolFanAuto.checked=x.pool_fan_auto!==false;poolThreads.value=x.pool_threads??0;poolRetune.checked=!!x.pool_retune;
  controlsHydrated=true;togglePoolFields();updateThermalHint();
 }
 function render(s){
@@ -421,7 +432,7 @@ function render(s){
  statHash.textContent=fmtRate(s.miner?.hashrate);statGPU.textContent=s.gpu_name||((s.gpus||[]).map(g=>g.name).join(" | ")||"—");statHeight.textContent=s.height??"—";statPeers.textContent=s.peers??"—";statBlocks.textContent=s.miner?.blocks_found||0;statLastBlock.textContent=short(s.miner?.last_block);
  const synced=s.synchronized;statSync.textContent=s.node_running?(synced?tr("synced"):tr("syncing")+" "+(s.sync_target||"")):tr("offline");
  ovGPU.textContent=s.gpu_name||((s.gpus||[]).length?((s.gpus||[]).length+" GPU"):"—");ovBatch.textContent=s.settings?.auto_tune?"AUTO":(s.settings?.batch??"—");ovAddress.textContent=short(s.settings?.address);ovMiningHeight.textContent=s.miner?.height||"—";ovNodeMode.textContent=nodeMode(s);ovPublic.textContent=s.public_endpoint||tr("outbound");ovNetHash.textContent=fmtRate(s.network_hashrate);ovNetID.textContent=short(s.network_id);
- mState.textContent=minerLabel(s.miner);mHash.textContent=fmtRate(s.miner?.hashrate);mHeight.textContent=s.miner?.height||"—";mBlocks.textContent=s.miner?.blocks_found||0;mLast.textContent=s.miner?.last_block||"—";const cpuPool=s.settings?.mining_mode==="pool"&&s.settings?.pool_backend==="cpu";mError.textContent=s.miner?.last_error||(cpuPool?"—":s.gpu_error)||"—";
+ mState.textContent=minerLabel(s.miner);mHash.textContent=fmtRate(s.miner?.hashrate);mHeight.textContent=s.miner?.height||"—";mBlocks.textContent=s.miner?.blocks_found||0;mLast.textContent=s.miner?.last_block||"—";const cpuActive=s.miner?.backend==="cpu";mError.textContent=s.miner?.last_error||(cpuActive?"—":s.gpu_error)||"—";
  nMode.textContent=nodeMode(s);nHeight.textContent=s.height??"—";nTarget.textContent=s.sync_target??"—";nPeers.textContent=s.peers??"—";nPublic.textContent=s.public_endpoint||tr("outbound");nHash.textContent=fmtRate(s.network_hashrate);nTip.textContent=s.tip||"—";nID.textContent=s.network_id||"—";
  topNode.textContent=s.node_running?(s.synchronized?tr("synced"):tr("syncing")):tr("offline");topMiner.textContent=minerLabel(s.miner);
  sideNetwork.textContent=s.node_running?((s.height??0)+" / "+(s.sync_target??s.height??0)):tr("offline");sidePublic.textContent=s.public_endpoint?(s.public_verified?tr("public_active"):tr("public_pending")):tr("outbound");
@@ -431,7 +442,7 @@ function render(s){
  const pct=Math.min(100,(Number(s.miner?.hashrate||0)/400)*100);hashMeter.style.width=pct+"%";
  networkBanner.className="banner "+(s.public_endpoint?(s.public_verified?"ok":"info"):(s.node_running?"info":"warn"));
  networkBanner.textContent=s.node_error?(tr("node_error")+": "+s.node_error):(s.public_endpoint?((s.public_verified?tr("public_active"):tr("public_pending"))+": "+s.public_endpoint):(s.node_running?tr("outbound"):tr("offline")));
- const running=!!s.miner?.running;startBtn.disabled=running;quickStart.disabled=running;stopBtn.disabled=!running;quickStop.disabled=!running;testBtn.disabled=running;benchBtn.disabled=running;poolRetuneBtn.disabled=running||poolBackend.value==="cpu";
+ const running=!!s.miner?.running;startBtn.disabled=running;quickStart.disabled=running;stopBtn.disabled=!running;quickStop.disabled=!running;testBtn.disabled=running;benchBtn.disabled=running;updateComputeUI();
  logBox.textContent=(s.logs&&s.logs.length)?s.logs.join("\n"):"—";logBox.scrollTop=logBox.scrollHeight;
 }
 async function refresh(){
