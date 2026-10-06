@@ -1,8 +1,15 @@
-# AuronQ GPU Miner v0.3.0 Alpha
+# AuronQ GPU Miner v0.3.1 Alpha
 
-Windows alpha update focused on safer multi-GPU operation, automatic tuning and better observability. This release changes only mining software and UI behavior; it does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID or monetary rules.
+Windows alpha hotfix for v0.3.0 focused on Windows UX stability. It retains the multi-GPU, automatic tuning and observability features introduced in v0.3.0. This release changes only mining software and UI behavior; it does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID or monetary rules.
 
-## New
+## Hotfix in v0.3.1
+
+- fixes repeated Windows CMD/console flashing caused by the GUI launching `nvidia-smi` every telemetry refresh;
+- periodic GPU telemetry and one-shot device discovery now run `nvidia-smi` hidden with `CREATE_NO_WINDOW`;
+- temperature, fan, load, power and VRAM monitoring continue to work normally;
+- no AQM64, consensus, difficulty, network, wallet or monetary-policy changes.
+
+## Features retained from v0.3.0
 
 - **Multi-GPU NVIDIA mining**
   - use every detected NVIDIA card or select individual device IDs;
