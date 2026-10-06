@@ -92,6 +92,9 @@ type appState struct {
 	NetworkHashrate float64    `json:"network_hashrate"`
 	PublicEndpoint  string     `json:"public_endpoint,omitempty"`
 	PublicVerified  bool       `json:"public_verified"`
+	PublicState     string     `json:"public_state"`
+	PublicError     string     `json:"public_error,omitempty"`
+	PublicLastAttempt int64    `json:"public_last_attempt,omitempty"`
 	SyncTarget      uint64     `json:"sync_target"`
 	Synchronized    bool       `json:"synchronized"`
 	GPUName         string     `json:"gpu_name,omitempty"`
@@ -127,6 +130,9 @@ type App struct {
 	portMapping   *aq.PortMapping
 	publicCancel   context.CancelFunc
 	publicVerified bool
+	publicAttempting bool
+	publicError string
+	publicLastAttempt time.Time
 
 	minerCmd           *exec.Cmd
 	miner              minerState
@@ -177,6 +183,13 @@ func main() {
 	go func() {
 		if err := app.ensureNode(); err != nil {
 			app.addLog("Node: " + err.Error())
+		} else {
+			app.mu.RLock()
+			autoPublic := app.cfg.AutoPublic
+			app.mu.RUnlock()
+			if autoPublic {
+				go app.ensurePublicPeer()
+			}
 		}
 		app.monitorNetwork()
 	}()
