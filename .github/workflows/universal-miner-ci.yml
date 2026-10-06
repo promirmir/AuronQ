@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'cmd/auronq-gpu-miner/**'
+      - 'cmd/auronq-gpu-miner-gui/**'
       - 'internal/argon2pure/**'
       - 'internal/auronq/**'
       - 'internal/gputelemetry/**'
@@ -22,6 +23,24 @@ permissions:
   contents: read
 
 jobs:
+  web-ui-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate embedded miner JavaScript syntax
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('cmd/auronq-gpu-miner-gui/web/index.html').read_text(encoding='utf-8')
+          m = re.search(r'<script>(.*?)</script>', html, re.S | re.I)
+          if not m:
+              raise SystemExit('embedded miner script not found')
+          Path('/tmp/auronq-miner-ui.js').write_text(m.group(1), encoding='utf-8')
+          PY
+          node --check /tmp/auronq-miner-ui.js
+
   cpu-fallback-test:
     runs-on: ubuntu-latest
     steps:
