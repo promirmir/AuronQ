@@ -19,6 +19,20 @@
 
 The AuronQ Mainnet is live. The project is designed around **independent full-node validation, replaceable peer discovery, local wallets, local explorers and no privileged founder node**.
 
+### Verify AuronQ yourself
+
+AuronQ is intended to be evaluated through **public code and independently observable network data**, not promotional claims.
+
+- **Source code:** https://github.com/promirmir/AuronQ
+- **Latest releases:** https://github.com/promirmir/AuronQ/releases/latest
+- **Public Explorer:** https://mir.taild63f46.ts.net/explorer
+- **Protocol specification:** [PROTOCOL.md](PROTOCOL.md)
+- **AQM64 specification:** [AQM64.md](AQM64.md)
+- **Mining pools:** [MeshPool](https://meshpool.net/pool/auronq-main) · [RPlant](https://pool.rplant.xyz/#auronq#connect)
+- **Independent tracking:** [MiningChamp](https://miningchamp.com/coin/auronq) · [CPU-Mining.info](https://cpu-mining.info/)
+
+If you want to follow the project rather than actively participate, **Star** or **Watch** the repository to keep AuronQ in your GitHub feed.
+
 > [!WARNING]
 > AuronQ is a young public cryptocurrency network in an early stage of operational maturity. AQM64 and the complete consensus/network implementation have **not** yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not use AuronQ to store or transfer substantial value.
 
