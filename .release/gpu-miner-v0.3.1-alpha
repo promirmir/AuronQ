@@ -1,3 +1,4 @@
 publish=true
 tag=gpu-v0.3.1-alpha
 version=0.3.1-alpha
+publish_revision=2
