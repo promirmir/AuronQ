@@ -53,6 +53,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll") (Join-Path $dist "auronq-aqm64-cuda.dll") -Force
 Copy-Item (Join-Path $root "gpu\cuda\README.md") (Join-Path $dist "README-GPU-MINER.md") -Force
+Copy-Item (Join-Path $root "GPU-MINER-GUIDE.md") (Join-Path $dist "GPU-MINER-GUIDE.md") -Force
 Copy-Item (Join-Path $root "network.json") (Join-Path $dist "network.json") -Force
 Copy-Item (Join-Path $root "bootstrap.json") (Join-Path $dist "bootstrap.json") -Force
 
