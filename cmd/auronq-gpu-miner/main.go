@@ -30,61 +30,76 @@ func defaultCUDAPath() string {
 func main() {
 	nodeURL := flag.String("node", "http://127.0.0.1:18444", "AuronQ full-node URL")
 	address := flag.String("address", "", "AURQ reward address")
+	computeBackend := flag.String("backend", "auto", "compute backend: auto, cuda or cpu")
+	cpuThreads := flag.Int("cpu-threads", 0, "CPU mining threads (0 = conservative automatic profile)")
 	device := flag.Int("device", 0, "CUDA device index")
 	devicesFlag := flag.String("devices", "", "comma-separated CUDA device indices or 'all'; overrides --device")
 	multiChild := flag.Bool("multi-child", false, "internal multi-GPU child worker")
-	batchFlag := flag.Int("batch", 0, "nonces per GPU batch (0 = automatic)")
+	batchFlag := flag.Int("batch", 0, "nonces per compute batch (0 = automatic)")
 	dllPath := flag.String("cuda-dll", defaultCUDAPath(), "path to the AuronQ CUDA backend (.dll on Windows, .so on Linux)")
-	selfTest := flag.Bool("self-test", false, "compare one full AQM64 GPU result with the CPU reference")
+	selfTest := flag.Bool("self-test", false, "verify the selected backend against the canonical AQM64 CPU reference")
 	benchmark := flag.Bool("benchmark", false, "run an offline end-to-end AQM64 throughput benchmark")
 	benchmarkSeconds := flag.Int("benchmark-seconds", 20, "approximate benchmark duration in seconds")
-	autoTune := flag.Bool("auto-tune", false, "benchmark safe batch sizes and automatically select the fastest one before mining")
-	autoTuneSeconds := flag.Int("auto-tune-seconds", 1, "autotune measurement time per batch size in seconds")
-	thermalAuto := flag.Bool("thermal-auto", false, "automatically reduce/increase GPU batch to stay below a temperature target")
-	thermalLimit := flag.Int("thermal-limit", 85, "hard GPU temperature limit in C; reaching it stops mining")
+	autoTune := flag.Bool("auto-tune", false, "benchmark safe CUDA batch sizes and automatically select the fastest one before mining")
+	autoTuneSeconds := flag.Int("auto-tune-seconds", 1, "autotune measurement time per CUDA batch size in seconds")
+	thermalAuto := flag.Bool("thermal-auto", false, "automatically regulate supported GPU backends using local hardware temperature telemetry")
+	thermalLimit := flag.Int("thermal-limit", 81, "hard GPU temperature limit in C for supported GPU telemetry")
 	thermalTarget := flag.Int("thermal-target", 0, "target GPU temperature in C (0 = thermal-limit minus 5 C)")
 	noncePrefix := flag.Uint64("nonce-prefix", 0, "starting nonce prefix/base used to partition work between GPUs")
 	flag.Parse()
 
-	if runtime.GOOS != "windows" && runtime.GOOS != "linux" {
-		fmt.Fprintln(os.Stderr, "AuronQ GPU Miner CUDA currently supports Windows x64 and Linux amd64.")
+	backendMode := normalizeComputeBackend(*computeBackend)
+	if *cpuThreads < 0 || *cpuThreads > 16 {
+		fmt.Fprintln(os.Stderr, "--cpu-threads must be between 0 and 16")
 		os.Exit(2)
 	}
 
-	if !*multiChild && *devicesFlag != "" {
+	// Multi-GPU orchestration is only entered when CUDA devices are definitely
+	// available. In auto mode a missing/unsupported CUDA stack falls through to
+	// the native CPU backend instead of making the miner unusable.
+	if !*multiChild && backendMode != "cpu" && *devicesFlag != "" {
 		devices, err := resolveCUDADevices(*devicesFlag)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "CUDA devices:", err)
-			os.Exit(2)
-		}
-		if len(devices) > 1 {
-			err := runMultiGPU(devices, multiGPUOptions{
-				Node:             *nodeURL,
-				Address:          *address,
-				Batch:            *batchFlag,
-				DLLPath:          *dllPath,
-				SelfTest:         *selfTest,
-				Benchmark:        *benchmark,
-				BenchmarkSeconds: *benchmarkSeconds,
-				AutoTune:         *autoTune,
-				AutoTuneSeconds:  *autoTuneSeconds,
-				ThermalAuto:      *thermalAuto,
-				ThermalLimit:     *thermalLimit,
-				ThermalTarget:    *thermalTarget,
-				NoncePrefix:      *noncePrefix,
-			})
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "MULTI-GPU FAILED:", err)
-				os.Exit(1)
+			if backendMode == "cuda" {
+				fmt.Fprintln(os.Stderr, "CUDA devices:", err)
+				os.Exit(2)
 			}
-			return
+			fmt.Printf("AUTO BACKEND: CUDA device detection unavailable (%v); using safe CPU fallback\n", err)
+		} else {
+			if len(devices) > 1 {
+				err := runMultiGPU(devices, multiGPUOptions{
+					Node:             *nodeURL,
+					Address:          *address,
+					Batch:            *batchFlag,
+					DLLPath:          *dllPath,
+					SelfTest:         *selfTest,
+					Benchmark:        *benchmark,
+					BenchmarkSeconds: *benchmarkSeconds,
+					AutoTune:         *autoTune,
+					AutoTuneSeconds:  *autoTuneSeconds,
+					ThermalAuto:      *thermalAuto,
+					ThermalLimit:     *thermalLimit,
+					ThermalTarget:    *thermalTarget,
+					NoncePrefix:      *noncePrefix,
+				})
+				if err != nil {
+					if backendMode == "cuda" {
+						fmt.Fprintln(os.Stderr, "MULTI-GPU FAILED:", err)
+						os.Exit(1)
+					}
+					fmt.Printf("AUTO BACKEND: multi-GPU CUDA unavailable (%v); using safe CPU fallback\n", err)
+				} else {
+					return
+				}
+			} else if len(devices) == 1 {
+				*device = devices[0]
+			}
 		}
-		*device = devices[0]
 	}
 
-	backend, err := openCUDABackend(*dllPath, *device)
+	backend, backendKind, fallbackReason, err := openSelectedBackend(backendMode, *dllPath, *device, *cpuThreads)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, "backend:", err)
 		os.Exit(1)
 	}
 	defer backend.Close()
@@ -99,13 +114,24 @@ func main() {
 	if batch > 64 {
 		batch = 64
 	}
+	if backendKind == "cpu" {
+		// CPU work is 64 MiB per active lane. Keep one job per safe worker so
+		// template refreshes remain responsive and memory use is predictable.
+		if rec := backend.RecommendedBatch(); batch > rec {
+			batch = rec
+		}
+	}
 
-	fmt.Printf("AuronQ GPU Miner v0.3.6-alpha CUDA\n")
-	fmt.Printf("GPU: %s\n", backend.Name())
+	fmt.Printf("AuronQ Universal Miner v0.4.0-alpha\n")
+	fmt.Printf("Backend: %s\n", backendKind)
+	fmt.Printf("Compute: %s\n", backend.Name())
+	if fallbackReason != "" {
+		fmt.Printf("AUTO FALLBACK: %s\n", fallbackReason)
+	}
 	fmt.Printf("Batch: %d nonces\n", batch)
 
 	if *selfTest {
-		fmt.Println("Running full AQM64 GPU/CPU equivalence self-test...")
+		fmt.Println("Running full AQM64 backend/reference equivalence self-test...")
 		if err := runSelfTest(backend); err != nil {
 			fmt.Fprintln(os.Stderr, "SELF-TEST FAILED:", err)
 			os.Exit(1)
@@ -121,13 +147,17 @@ func main() {
 			fmt.Fprintln(os.Stderr, "--auto-tune-seconds must be at least 1")
 			os.Exit(2)
 		}
-		bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "AUTOTUNE FAILED:", err)
-			os.Exit(1)
+		if backendKind == "cuda" {
+			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "AUTOTUNE FAILED:", err)
+				os.Exit(1)
+			}
+			batch = bestBatch
+			fmt.Printf("AUTOTUNE OK best_batch=%d best=%.3f H/s\n", bestBatch, bestRate)
+		} else {
+			fmt.Printf("AUTOTUNE CPU: using conservative %d-thread profile; CUDA batch autotune skipped\n", safeCPUThreads(*cpuThreads))
 		}
-		batch = bestBatch
-		fmt.Printf("AUTOTUNE OK best_batch=%d best=%.3f H/s\n", bestBatch, bestRate)
 	}
 
 	if *benchmark {
@@ -143,7 +173,7 @@ func main() {
 	}
 
 	var thermal *thermalController
-	if *thermalAuto {
+	if *thermalAuto && backendKind == "cuda" {
 		if *thermalLimit < 60 || *thermalLimit > 95 {
 			fmt.Fprintln(os.Stderr, "--thermal-limit must be between 60 and 95 C")
 			os.Exit(2)
@@ -157,7 +187,13 @@ func main() {
 			os.Exit(2)
 		}
 		thermal = newThermalController(*device, target, *thermalLimit, batch)
+		if thermal == nil {
+			fmt.Fprintln(os.Stderr, "THERMAL FAILSAFE: no trustworthy local GPU telemetry provider is available on this platform")
+			os.Exit(1)
+		}
 		fmt.Printf("THERMAL AUTO target=%dC limit=%dC batch_range=1..%d\n", target, *thermalLimit, batch)
+	} else if *thermalAuto && backendKind == "cpu" {
+		fmt.Printf("CPU SAFE MODE: %d conservative worker(s), 64 MiB each; no universal CPU package-temperature sensor is assumed\n", safeCPUThreads(*cpuThreads))
 	}
 
 	if *address == "" {
@@ -216,7 +252,7 @@ func runSelfTest(backend gpuBackend) error {
 		password, salt, aq.AQM64TimeCost, aq.AQM64MemoryKiB, aq.AQM64Parallelism, 64,
 	)
 	if !bytes.Equal(gpuKey, cpuKey) {
-		return fmt.Errorf("GPU Argon2id result does not match AuronQ CPU reference")
+		return fmt.Errorf("backend Argon2id result does not match AuronQ CPU reference")
 	}
 
 	// Then verify the complete AQM64 pipeline on a deterministic synthetic
@@ -253,7 +289,7 @@ func runSelfTest(backend gpuBackend) error {
 		return err
 	}
 	if gpuHash != cpuHash {
-		return fmt.Errorf("full AQM64 GPU result does not match canonical CPU PowHash")
+		return fmt.Errorf("full AQM64 backend result does not match canonical CPU PowHash")
 	}
 	return nil
 }
