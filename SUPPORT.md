@@ -21,4 +21,4 @@ Do **not** publish exploitable security vulnerabilities in a public issue. Follo
 
 ## Important safety note
 
-AuronQ has not received an independent professional security or cryptographic audit. Do not rely on the project for substantial value without independently evaluating the risks.
+AuronQ is a young public cryptocurrency network and has not yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not rely on it for substantial value without independently evaluating the risks.

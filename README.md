@@ -7,12 +7,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ)](go.mod)
 
-**AuronQ** is an open-source experimental cryptocurrency network written in Go. It combines a **UTXO ledger**, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
+**AuronQ** is an open-source public cryptocurrency network written in Go. It combines a **UTXO ledger**, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
 
 The AuronQ Mainnet is live. The project is designed around **independent full-node validation, replaceable peer discovery, local wallets, local explorers and no privileged founder node**.
 
 > [!WARNING]
-> AuronQ is experimental financial software. AQM64 and the complete consensus/network implementation have **not** received an independent professional security or cryptographic audit. Do not use substantial value.
+> AuronQ is a young public cryptocurrency network in an early stage of operational maturity. AQM64 and the complete consensus/network implementation have **not** yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not use AuronQ to store or transfer substantial value.
 
 ## Long-term direction
 
