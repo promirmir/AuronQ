@@ -1103,7 +1103,7 @@ func (a *App) startWorker(mode string, s settings) error {
 func meshMinerArgs(s settings, devices []int, endpoint, user string) ([]string, error) {
 	backend := s.PoolBackend
 	if backend != "cuda" && backend != "cpu" && backend != "both" {
-		backend = "cuda"
+		return nil, fmt.Errorf("unsupported resolved pool backend %q", backend)
 	}
 	args := []string{
 		"--pool", endpoint,
@@ -1130,6 +1130,30 @@ func meshMinerArgs(s settings, devices []int, endpoint, user string) ([]string, 
 }
 
 func (a *App) startPoolWorker(s settings, devices []int) error {
+	effectiveBackend := s.PoolBackend
+	if effectiveBackend == "auto" {
+		if len(devices) > 0 {
+			effectiveBackend = "cuda"
+		} else {
+			effectiveBackend = "cpu"
+		}
+		a.addLog("POOL AUTO backend resolved to " + effectiveBackend)
+	}
+	if effectiveBackend == "cuda" || effectiveBackend == "both" {
+		if len(devices) == 0 {
+			return errors.New("selected pool backend requires NVIDIA CUDA, but no usable NVIDIA GPU is available")
+		}
+	}
+	if effectiveBackend == "cpu" || effectiveBackend == "both" {
+		if s.PoolThreads <= 0 {
+			s.PoolThreads = safeGUIThreads(s.CPUThreads)
+			a.addLog(fmt.Sprintf("POOL CPU safe profile: %d thread(s)", s.PoolThreads))
+		} else if s.PoolThreads > 16 {
+			s.PoolThreads = 16
+		}
+	}
+	s.PoolBackend = effectiveBackend
+
 	path, err := resolvePoolMinerPath(s.PoolMinerPath)
 	if err != nil {
 		return err
@@ -1152,19 +1176,16 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 	cmd.Dir = filepath.Dir(path)
 	cmd.SysProcAttr = &syscallSysProcAttr
 	a.addLog(fmt.Sprintf("POOL %s: %s endpoint=%s backend=%s devices=%s fan_auto=%t threads=%d retune=%t",
-		s.PoolEngine, filepath.Base(path), endpoint, s.PoolBackend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
-	if s.PoolBackend != "cpu" {
+		s.PoolEngine, filepath.Base(path), endpoint, effectiveBackend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
+	if effectiveBackend != "cpu" {
 		target := s.ThermalStopC - 5
 		if target < 50 {
 			target = 50
 		}
-		if s.PoolFanAuto {
-			a.addLog(fmt.Sprintf("POOL thermal AUTO: MeshMiner --fan auto requested; AuronQ targets ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C", target, s.ThermalStopC, s.ThermalStopC+2))
-		} else {
-			a.addLog(fmt.Sprintf("POOL thermal AUTO: AuronQ targets ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C", target, s.ThermalStopC, s.ThermalStopC+2))
-		}
+		a.addLog(fmt.Sprintf("POOL thermal AUTO: local NVML target ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C",
+			target, s.ThermalStopC, s.ThermalStopC+1))
 	}
-	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)
+	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic, effectiveBackend)
 }
 
 func (a *App) startPoolRetune(s settings) error {
@@ -1200,10 +1221,10 @@ func (a *App) startPoolRetune(s settings) error {
 	cmd.Dir = filepath.Dir(path)
 	cmd.SysProcAttr = &syscallSysProcAttr
 	a.addLog(fmt.Sprintf("MeshMiner retune: devices=%s fan_auto=%t", deviceCSV(devices), s.PoolFanAuto))
-	return a.launchWorkerCommand(cmd, "pool-tune", false)
+	return a.launchWorkerCommand(cmd, "pool-tune", false, "cuda")
 }
 
-func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) error {
+func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool, backend string) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -1222,6 +1243,7 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) e
 	a.miner = minerState{
 		Running:     true,
 		Mode:        mode,
+		Backend:     backend,
 		BlocksFound: a.miner.BlocksFound,
 		LastBlock:   a.miner.LastBlock,
 		StartedAt:   time.Now().Unix(),
@@ -1229,7 +1251,7 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) e
 	a.mu.Unlock()
 	a.addLog(strings.ToUpper(mode) + " started")
 
-	if mode == "pool" {
+	if mode == "pool" && backend != "cpu" {
 		go a.monitorPoolThermals(cmd)
 	}
 	if (mode == "mining" || mode == "pool") && autoPublic {
@@ -1248,6 +1270,7 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) e
 		finishedMode := a.miner.Mode
 		a.miner.Running = false
 		a.miner.Mode = ""
+		a.miner.Backend = ""
 		if finishedMode == "mining" || finishedMode == "pool" {
 			a.miner.Hashrate = 0
 		}
@@ -1290,6 +1313,12 @@ func (a *App) parseWorkerLine(line string) {
 
 	if strings.HasPrefix(line, "GPU: ") {
 		a.gpuName = strings.TrimSpace(strings.TrimPrefix(line, "GPU: "))
+	}
+	if strings.HasPrefix(line, "Compute: ") {
+		a.gpuName = strings.TrimSpace(strings.TrimPrefix(line, "Compute: "))
+	}
+	if strings.HasPrefix(line, "Backend: ") {
+		a.miner.Backend = strings.TrimSpace(strings.TrimPrefix(line, "Backend: "))
 	}
 	if strings.HasPrefix(line, "Mining height ") {
 		fields := strings.Fields(line)
