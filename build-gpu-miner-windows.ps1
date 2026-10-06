@@ -12,7 +12,7 @@ function Need-Command([string]$name, [string]$hint) {
 }
 
 Write-Host ""
-Write-Host "AuronQ GPU Miner v0.2.1-alpha - Windows build"
+Write-Host "AuronQ GPU Miner v0.3.0-alpha - Windows build"
 Write-Host "==========================================="
 Write-Host ""
 
@@ -24,7 +24,7 @@ Write-Host "NVCC: $nvcc"
 & $go version
 & $nvcc --version | Select-Object -Last 4
 
-$dist = Join-Path $root "dist\AuronQ-GPU-Miner-v0.2.1-alpha"
+$dist = Join-Path $root "dist\AuronQ-GPU-Miner-v0.3.0-alpha"
 if (Test-Path $dist) {
     Remove-Item -Recurse -Force $dist
 }
@@ -91,7 +91,7 @@ Write-Host "  $workerExe"
 Write-Host "GUI SHA256:    $guiHash"
 Write-Host "Worker SHA256: $workerHash"
 Write-Host ""
-$zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.2.1-alpha-Windows-x64.zip"
+$zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.3.0-alpha-Windows-x64.zip"
 if (Test-Path $zipOut) { Remove-Item $zipOut -Force }
 Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zipOut -CompressionLevel Optimal
 

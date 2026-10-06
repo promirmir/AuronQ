@@ -6,7 +6,7 @@ not change Mainnet consensus.
 
 ## Status
 
-**v0.2.1-alpha release candidate.** The miner has passed AQM64 GPU/CPU equivalence testing and real Mainnet mining on an RTX 4050 Laptop GPU. It remains alpha software and the CUDA implementation has not received an independent professional audit.
+**v0.3.0-alpha release candidate.** The built-in solo miner retains the validated AQM64 CUDA path and adds multi-GPU orchestration, automatic per-GPU batch tuning, live NVIDIA telemetry, thermal shutdown protection and a GUI pool bridge. It remains alpha software and the CUDA implementation has not received an independent professional audit.
 
 Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
 with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
@@ -84,11 +84,11 @@ The application is designed to be standalone:
 - CGNAT, disabled UPnP or router failure are non-fatal: the node remains
   outbound-only and mining continues.
 
-The application provides reward-address, CUDA-device and batch controls,
-Start/Stop, mandatory GPU/CPU AQM64 self-test, a 15-second offline benchmark,
-live hashrate/block statistics, node height/peer/public-endpoint status and
-technical logs. Non-secret preferences are stored under the user's Windows
-AuronQ configuration directory.
+The application provides reward-address, multi-GPU selection, manual or automatic batch tuning, Start/Stop, GPU/CPU AQM64 self-test, a 15-second offline benchmark, live hashrate/block statistics, node height/peer/public-endpoint status and technical logs. NVIDIA telemetry is read through the installed driver tooling and includes temperature, fan speed when available, utilization, power and VRAM. A configurable thermal limit (85 °C by default) stops the complete worker process tree when a selected GPU reaches the limit.
+
+Solo multi-GPU mining launches isolated CUDA child workers and assigns disjoint nonce ranges so cards do not repeat the same search space. Non-secret preferences are stored under the user's Windows AuronQ configuration directory.
+
+The GUI also offers a **Pool** mode. Pool mode intentionally does not embed or auto-download third-party software. It launches a user-supplied AuronQ-compatible pool miner using the MeshMiner 0.8.35+ command-line layout. The default MeshPool endpoint is `pool.meshpool.net:3359`; a custom endpoint, worker name, CUDA device list and CUDA/CPU backend can be selected. Pool fees, share validation, payouts and availability remain third-party policy.
 
 The GUI launches the sibling `auronq-gpu-worker.exe` CUDA worker with its
 console hidden. The distinct filename is required on Windows because paths are
@@ -104,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File .\build-gpu-miner-windows.ps1
 
 The script builds the CUDA DLL, CLI worker and Windows app, copies the immutable
 Mainnet configuration/bootstrap metadata, performs the mandatory GPU/CPU AQM64
-self-test, and creates `AuronQ-GPU-Miner-v0.2.1-alpha-Windows-x64.zip` under
+self-test, and creates `AuronQ-GPU-Miner-v0.3.0-alpha-Windows-x64.zip` under
 `dist`.
 
 ## Mandatory device self-test before mining
@@ -124,17 +124,36 @@ bit from AQM64 can never produce a valid Mainnet block.
 
 ## Mine
 
+Single GPU:
+
 ~~~powershell
 .\auronq-gpu-worker.exe --node http://127.0.0.1:18444 --address aurq1... --device 0
 ~~~
 
+All selected GPUs can be driven by one parent worker process:
+
+~~~powershell
+.\auronq-gpu-worker.exe --node http://127.0.0.1:18444 --address aurq1... --devices all --auto-tune
+~~~
+
+Or select explicit CUDA device IDs:
+
+~~~powershell
+.\auronq-gpu-worker.exe --node http://127.0.0.1:18444 --address aurq1... --devices 0,1 --auto-tune
+~~~
+
 Optional flags:
 
-- --batch N: candidates processed concurrently; 0 = automatic
+- --device N: one CUDA device
+- --devices LIST: comma-separated CUDA device IDs or `all`; overrides --device
+- --batch N: candidates processed concurrently; 0 = backend recommendation
+- --auto-tune: benchmark several batch sizes before mining and select the fastest measured value per GPU
+- --auto-tune-seconds N: measurement time for each autotune candidate (default 1 second)
 - --cuda-dll PATH: explicit path to auronq-aqm64-cuda.dll
 - --self-test: GPU/CPU equivalence test before mining
 - --benchmark: offline end-to-end AQM64 throughput benchmark; does not connect to a node or submit blocks
 - --benchmark-seconds N: approximate benchmark duration (default 20 seconds)
+- --nonce-prefix N: advanced work-partitioning base used internally by multi-GPU mode
 
 The miner obtains a block template from the local full node, searches nonces on
 the GPU, detects canonical-tip changes between batches, and submits a candidate

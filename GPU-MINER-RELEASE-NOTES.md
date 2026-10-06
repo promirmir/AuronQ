@@ -1,47 +1,67 @@
-# AuronQ GPU Miner v0.2.1 Alpha
+# AuronQ GPU Miner v0.3.0 Alpha
 
-First public Windows alpha of the standalone NVIDIA CUDA miner for AuronQ Mainnet.
+Windows alpha update focused on safer multi-GPU operation, automatic tuning and better observability. This release changes only mining software and UI behavior; it does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID or monetary rules.
 
-## Included
+## New
 
-- native Windows application styled like AuronQ Desktop
-- Polish and English interface
-- NVIDIA CUDA AQM64 mining
-- GPU/CPU AQM64 self-test
-- offline benchmark
-- live hashrate, block and node status
-- use of an existing AuronQ Desktop full node when available
-- own full validating node when Desktop is not running
-- P2P peer discovery and persisted peer store
-- optional UPnP TCP/18444 mapping and peer announcement while mining
-- protection against starting two conflicting local AuronQ nodes
-- distinct GUI and GPU worker executables
-- statically linked CUDA runtime in the packaged DLL
+- **Multi-GPU NVIDIA mining**
+  - use every detected NVIDIA card or select individual device IDs;
+  - the built-in solo miner launches an isolated CUDA worker per GPU;
+  - each worker receives a disjoint 64-bit nonce range so multiple cards do not duplicate the same search space.
 
-## Real hardware validation
+- **Automatic AQM64 batch tuning**
+  - optional pre-mining autotune tests multiple safe batch sizes on each selected GPU;
+  - the fastest measured batch is chosen independently per device;
+  - the existing manual batch value remains available as a fallback and for controlled testing.
 
-Validated on an NVIDIA GeForce RTX 4050 Laptop GPU.
+- **Live GPU telemetry**
+  - temperature;
+  - fan speed when reported by the NVIDIA driver;
+  - GPU utilization;
+  - power draw / power limit when available;
+  - VRAM use / total VRAM.
 
-Full GPU/CPU AQM64 equivalence self-test: PASS.
+- **Thermal emergency stop**
+  - configurable stop temperature from 60–95 °C;
+  - default is 85 °C;
+  - if any selected GPU reaches the configured limit, the miner stops the complete worker process tree.
 
-Measured prototype throughput:
-- batch 20: 118.733 H/s
-- batch 40: 226.263 H/s
-- batch 60: 316.227 H/s
-- batch 64: 299.377 H/s
+- **Pool mode**
+  - GUI can launch a user-supplied AuronQ-compatible external pool miner;
+  - MeshMiner 0.8.35+ command-line layout is supported (`--algo auronq`, pool endpoint, wallet.worker, CUDA device list);
+  - MeshPool default endpoint is pre-filled as `pool.meshpool.net:3359`;
+  - custom pool endpoints can be entered manually;
+  - CUDA-only or CUDA+CPU backend can be selected when supported by the external miner;
+  - AuronQ does **not** auto-download or bundle third-party mining binaries.
 
-Real AuronQ Mainnet blocks were found and accepted through the ordinary full-node validation path.
+- **PL/EN GUI**
+  - all-GPU toggle;
+  - individual GPU selection;
+  - autotune controls;
+  - thermal limit;
+  - live per-GPU telemetry;
+  - Solo / Pool mode and pool settings.
+
+## Existing safety/correctness behavior retained
+
+- full GPU/CPU AQM64 equivalence self-test;
+- all solo-mined candidate blocks still pass through the ordinary AuronQ full-node validation path;
+- Mainnet Network ID verification before solo mining;
+- local chain synchronization checks;
+- optional P2P/UPnP participation;
+- protection against conflicting local AuronQ nodes.
 
 ## Requirements
 
-- Windows x64
-- NVIDIA GPU with CUDA Compute Capability 7.5+
-- current NVIDIA driver
+Built-in AQM64 CUDA miner:
 
-The packaged release does not require the CUDA Toolkit. The Toolkit is only needed to build from source.
+- Windows x64;
+- NVIDIA Turing / RTX 20-series or newer target;
+- current NVIDIA driver;
+- NVIDIA driver tooling (`nvidia-smi`) for device discovery and telemetry.
+
+Pool mode additionally requires a compatible external pool miner supplied by the user. Third-party binaries, fees, pool protocols and payout rules are controlled by their respective operators.
 
 ## Important
 
-This is alpha software. The CUDA implementation has not received an independent professional security/cryptography audit. There are no consensus changes in this release. Every submitted block is validated by the normal AuronQ full node.
-
-If UPnP is unavailable or the machine is behind CGNAT, mining still works, but the node remains outbound-only unless TCP/18444 is made publicly reachable by another method.
+This remains alpha software. The CUDA implementation and miner orchestration have not received an independent professional security or cryptographic audit. Multi-GPU and telemetry behavior should be validated on additional desktop and laptop GPU combinations before being treated as production-hardened.
