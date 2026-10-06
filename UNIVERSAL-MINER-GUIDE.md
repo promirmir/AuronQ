@@ -41,17 +41,34 @@ Run:
 
 Expected: `SELF-TEST OK`.
 
+## Public-node behavior
+
+The bundled full-node CLI now treats inbound P2P reachability as a node-lifecycle feature rather than a mining feature.
+
+By default, `auronq node` uses `--auto-public=true`. When no explicit `--advertise` address is configured and the listen address accepts inbound traffic, the node:
+
+1. uses a directly assigned public IPv4/IPv6 address when one is available;
+2. otherwise attempts UPnP TCP port mapping for the configured listen port;
+3. keeps the mapping for the lifetime of the node and removes it on shutdown;
+4. retries periodically if the router is temporarily unavailable.
+
+Home users behind CGNAT may still remain outbound-only because their ISP does not provide a directly reachable WAN address. Server operators who do not want automatic UPnP can use:
+
+    auronq node ... --auto-public=false
+
+Do not use a loopback-only listen address such as `127.0.0.1:18444` if you intend to run a public peer.
+
 ## Solo mining
 
 Start the bundled full node:
 
 Windows:
 
-    .\auronq.exe node --network .\network.json --data .\node-data --listen 127.0.0.1:18444
+    .\auronq.exe node --network .\network.json --data .\node-data --listen 0.0.0.0:18444
 
 Linux/macOS:
 
-    ./auronq node --network ./network.json --data ./node-data --listen 127.0.0.1:18444
+    ./auronq node --network ./network.json --data ./node-data --listen 0.0.0.0:18444
 
 Then mine:
 
