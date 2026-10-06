@@ -257,11 +257,11 @@ func (a *App) refreshGPUInfo() {
 		// fail-safe only, so it does not race the emergency cooldown path.
 		stopAt := cfg.ThermalStopC
 		if mode == "pool" {
-			stopAt += 2
+			stopAt += 1
 		}
 		if g.TemperatureC >= stopAt {
 			if mode == "pool" {
-				a.addLog(fmt.Sprintf("THERMAL FAILSAFE: GPU %d reached %d C despite pool governor (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))
+				a.addLog(fmt.Sprintf("THERMAL FAILSAFE: GPU %d reached %d C despite direct-NVML pool governor (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))
 			} else {
 				a.addLog(fmt.Sprintf("THERMAL SAFETY: GPU %d reached %d C (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))
 			}
