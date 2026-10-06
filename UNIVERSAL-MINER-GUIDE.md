@@ -86,6 +86,8 @@ On Windows, GPU safety uses direct local NVIDIA NVML telemetry. The dashboard an
 
 Pool/miner websites and remote hashrate services are never trusted as temperature-control inputs.
 
+In Windows Pool mode, the configured temperature is a **hard safety ceiling, not the normal operating target**. The controller targets about 5 °C below the limit, begins soft regulation one degree before that target, changes duty cycle in small steps, and restores performance much more slowly than it removes heat. If the hard limit is reached, the miner is suspended until the GPU is several degrees below target and then held at a conservative duty for 20 seconds before gradual recovery.
+
 ## Portable package contents
 
 Each portable package contains the miner CLI, full-node CLI, network.json, bootstrap.json, this guide and the license when present. Portable CPU packages do not require CUDA.
