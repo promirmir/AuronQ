@@ -11,6 +11,8 @@ For installation, node operation, mining, wallet usage and build questions, firs
 
 If the problem is reproducible and appears to be a software defect, open a GitHub issue using the bug-report template.
 
+For general project, partnership, exchange, pool or infrastructure contact, use the official project email: **auronqnetwork@gmail.com**.
+
 For feature proposals, use the feature-request template and describe the compatibility impact when the proposal touches networking, wallet formats, mining or consensus.
 
 ## Security vulnerabilities

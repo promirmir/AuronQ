@@ -48,6 +48,8 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 
 **Official Discord community:** https://discord.gg/rmmNY9RhA
 
+**Official project email:** auronqnetwork@gmail.com
+
 **Release archive:** [GitHub Releases](https://github.com/promirmir/AuronQ/releases) · **History:** [CHANGELOG.md](CHANGELOG.md)
 
 ## ⛏️ Mine AURQ
