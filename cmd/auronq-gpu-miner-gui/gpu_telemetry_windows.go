@@ -3,9 +3,7 @@
 package main
 
 import (
-	"bytes"
-	"encoding/csv"
-	"errors"
+		"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -29,76 +27,15 @@ type gpuInfo struct {
 	CoreClockMHz   int     `json:"core_clock_mhz"`
 	MemoryClockMHz int     `json:"memory_clock_mhz"`
 	PState         string  `json:"pstate,omitempty"`
-}
-
-func findNvidiaSMI() (string, error) {
-	if p, err := exec.LookPath("nvidia-smi"); err == nil {
-		return p, nil
-	}
-	candidates := []string{
-		filepath.Join(os.Getenv("ProgramW6432"), "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"),
-		filepath.Join(os.Getenv("ProgramFiles"), "NVIDIA Corporation", "NVSMI", "nvidia-smi.exe"),
-	}
-	for _, p := range candidates {
-		if strings.TrimSpace(p) == "" {
-			continue
-		}
-		if st, err := os.Stat(p); err == nil && !st.IsDir() {
-			return p, nil
-		}
-	}
-	return "", errors.New("nvidia-smi not found; install/update the NVIDIA driver")
+	TelemetrySource string  `json:"telemetry_source,omitempty"`
+	SampleUnixMS    int64   `json:"sample_unix_ms,omitempty"`
 }
 
 func queryNVIDIAGPUs() ([]gpuInfo, error) {
-	smi, err := findNvidiaSMI()
-	if err != nil {
-		return nil, err
-	}
-	cmd := exec.Command(smi,
-		"--query-gpu=index,name,temperature.gpu,fan.speed,utilization.gpu,memory.used,memory.total,power.draw,power.limit,clocks.gr,clocks.mem,pstate",
-		"--format=csv,noheader,nounits",
-	)
-	cmd.SysProcAttr = &syscallSysProcAttr
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("nvidia-smi: %w", err)
-	}
-	r := csv.NewReader(bytes.NewReader(out))
-	r.TrimLeadingSpace = true
-	records, err := r.ReadAll()
-	if err != nil {
-		return nil, fmt.Errorf("parse nvidia-smi output: %w", err)
-	}
-	gpus := make([]gpuInfo, 0, len(records))
-	for _, rec := range records {
-		if len(rec) < 12 {
-			continue
-		}
-		idx, err := strconv.Atoi(strings.TrimSpace(rec[0]))
-		if err != nil {
-			continue
-		}
-		gpus = append(gpus, gpuInfo{
-			Index:          idx,
-			Name:           strings.TrimSpace(rec[1]),
-			TemperatureC:   parseSMIInt(rec[2]),
-			FanPercent:     parseSMIInt(rec[3]),
-			UtilPercent:    parseSMIInt(rec[4]),
-			MemoryUsedMiB:  parseSMIInt(rec[5]),
-			MemoryTotalMiB: parseSMIInt(rec[6]),
-			PowerW:         parseSMIFloat(rec[7]),
-			PowerLimitW:    parseSMIFloat(rec[8]),
-			CoreClockMHz:   parseSMIInt(rec[9]),
-			MemoryClockMHz: parseSMIInt(rec[10]),
-			PState:         parseSMIString(rec[11]),
-		})
-	}
-	if len(gpus) == 0 {
-		return nil, errors.New("no NVIDIA CUDA GPUs reported by nvidia-smi")
-	}
-	sort.Slice(gpus, func(i, j int) bool { return gpus[i].Index < gpus[j].Index })
-	return gpus, nil
+	// Safety-critical telemetry is read directly from the local NVIDIA driver
+	// through NVML. Pool/miner stdout, websites and remote services are never
+	// used for temperature control.
+	return queryDirectNVIDIAGPUs()
 }
 
 func parseSMIInt(s string) int {
@@ -247,12 +184,36 @@ func resolvePoolMinerPath(configured string) (string, error) {
 
 
 func (a *App) monitorGPUs() {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		a.refreshGPUInfo()
 		<-ticker.C
 	}
+}
+
+func (a *App) hardwareTelemetrySnapshot(maxAge time.Duration) ([]gpuInfo, error) {
+	a.mu.RLock()
+	gpus := append([]gpuInfo(nil), a.gpus...)
+	at := a.gpuTelemetryAt
+	errText := a.gpuTelemetryErr
+	a.mu.RUnlock()
+
+	if len(gpus) == 0 {
+		if errText != "" {
+			return nil, errors.New(errText)
+		}
+		return nil, errors.New("no direct NVIDIA hardware telemetry sample available")
+	}
+	if at.IsZero() || time.Since(at) > maxAge {
+		return nil, fmt.Errorf("direct NVIDIA hardware telemetry is stale (%s)", time.Since(at).Round(100*time.Millisecond))
+	}
+	for _, g := range gpus {
+		if g.TelemetrySource != "NVML_DIRECT" || g.TemperatureC < 0 {
+			return nil, errors.New("direct NVML temperature sample unavailable")
+		}
+	}
+	return gpus, nil
 }
 
 func (a *App) refreshGPUInfo() {
@@ -267,6 +228,7 @@ func (a *App) refreshGPUInfo() {
 	a.mu.Lock()
 	a.gpus = append([]gpuInfo(nil), gpus...)
 	a.gpuTelemetryErr = ""
+	a.gpuTelemetryAt = time.Now()
 	cfg := a.cfg
 	running := a.miner.Running
 	mode := a.miner.Mode
