@@ -54,6 +54,8 @@ type settings struct {
 	AutoPublic      bool   `json:"auto_public"`
 	SelfTest        bool   `json:"self_test"`
 	MiningMode      string `json:"mining_mode"`
+	SoloBackend     string `json:"solo_backend"`
+	CPUThreads      int    `json:"cpu_threads"`
 	PoolURL         string `json:"pool_url"`
 	PoolWorker      string `json:"pool_worker"`
 	PoolMinerPath   string `json:"pool_miner_path"`
@@ -68,6 +70,7 @@ type settings struct {
 type minerState struct {
 	Running     bool    `json:"running"`
 	Mode        string  `json:"mode,omitempty"`
+	Backend     string  `json:"backend,omitempty"`
 	Hashrate    float64 `json:"hashrate"`
 	Height      uint64  `json:"height"`
 	BlocksFound uint64  `json:"blocks_found"`
@@ -284,10 +287,12 @@ func defaultSettings() settings {
 		AutoPublic:      true,
 		SelfTest:        true,
 		MiningMode:      "solo",
+		SoloBackend:     "auto",
+		CPUThreads:      0,
 		PoolURL:         "pool.meshpool.net:3359",
 		PoolWorker:      "rig1",
 		PoolEngine:      "meshminer",
-		PoolBackend:     "cuda",
+		PoolBackend:     "auto",
 		PoolFanAuto:     true,
 		PoolThreads:     0,
 		Language:        "pl",
@@ -310,6 +315,12 @@ func normalizeSettings(s *settings) {
 	if s.MiningMode != "pool" {
 		s.MiningMode = "solo"
 	}
+	if s.SoloBackend != "cpu" && s.SoloBackend != "cuda" {
+		s.SoloBackend = "auto"
+	}
+	if s.CPUThreads < 0 || s.CPUThreads > 16 {
+		s.CPUThreads = 0
+	}
 	if strings.TrimSpace(s.PoolURL) == "" {
 		s.PoolURL = "pool.meshpool.net:3359"
 	}
@@ -319,8 +330,8 @@ func normalizeSettings(s *settings) {
 	if s.PoolEngine != "custom" {
 		s.PoolEngine = "meshminer"
 	}
-	if s.PoolBackend != "cpu" && s.PoolBackend != "both" {
-		s.PoolBackend = "cuda"
+	if s.PoolBackend != "cpu" && s.PoolBackend != "both" && s.PoolBackend != "cuda" {
+		s.PoolBackend = "auto"
 	}
 	if s.PoolThreads < 0 || s.PoolThreads > 256 {
 		s.PoolThreads = 0
@@ -379,11 +390,17 @@ func (a *App) saveSettings(s settings) error {
 	if s.MiningMode != "solo" && s.MiningMode != "pool" {
 		return errors.New("mining mode must be solo or pool")
 	}
+	if s.SoloBackend != "auto" && s.SoloBackend != "cuda" && s.SoloBackend != "cpu" {
+		return errors.New("solo backend must be auto, cuda or cpu")
+	}
+	if s.CPUThreads < 0 || s.CPUThreads > 16 {
+		return errors.New("CPU threads must be between 0 and 16")
+	}
 	if s.PoolEngine != "" && s.PoolEngine != "meshminer" && s.PoolEngine != "custom" {
 		return errors.New("pool engine must be meshminer or custom")
 	}
-	if s.PoolBackend != "cuda" && s.PoolBackend != "cpu" && s.PoolBackend != "both" {
-		return errors.New("pool backend must be cuda, cpu or both")
+	if s.PoolBackend != "auto" && s.PoolBackend != "cuda" && s.PoolBackend != "cpu" && s.PoolBackend != "both" {
+		return errors.New("pool backend must be auto, cuda, cpu or both")
 	}
 	if s.PoolThreads < 0 || s.PoolThreads > 256 {
 		return errors.New("pool CPU threads must be between 0 and 256")
@@ -532,7 +549,7 @@ func (a *App) state() appState {
 		GPUName:     gpu,
 		GPUs:        gpus,
 		GPUError:    gpuErr,
-		GPUTelemetrySource: "NVML_DIRECT",
+		GPUTelemetrySource: func() string { if len(gpus) > 0 { return "NVML_DIRECT" }; return "" }(),
 		Miner:       miner,
 		Settings:       cfg,
 		Logs:           logs,
