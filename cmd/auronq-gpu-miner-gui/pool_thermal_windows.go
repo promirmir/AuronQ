@@ -301,7 +301,7 @@ func (a *App) emergencyPoolCooldown(cmd *exec.Cmd, devices []int, target, limit 
 
 		// A suspended miner should cool. Continued rise means another workload,
 		// broken direct hardware telemetry or a cooling-system problem, so stop the miner.
-		if temp >= limit+2 {
+		if temp >= limit+1 {
 			a.addLog(fmt.Sprintf("POOL THERMAL FAILSAFE: GPU %d still at %d C while miner is suspended; stopping miner", hottest.Index, temp))
 			a.stopWorker()
 			return false
