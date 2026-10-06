@@ -1,14 +1,16 @@
-# AuronQ bootstrap manifest — Mainnet 1.7.0
+# AuronQ bootstrap manifest — Mainnet
 
 A bootstrap manifest is discovery metadata. It is **not consensus** and changing it does not alter Network ID, genesis, balances, supply or proof-of-work rules.
 
-Current official manifest:
+Current official manifest and registry source of truth:
 
 `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
 
-Current confirmed public bootstrap:
+Human-readable GitHub view:
 
-`https://mir.taild63f46.ts.net`
+`https://github.com/promirmir/AuronQ/blob/main/bootstrap.json`
+
+The peer list is intentionally dynamic. It can contain project rendezvous endpoints and crawler-verified public nodes learned from the live network, so documentation should not hardcode a fixed peer count.
 
 Example shape:
 
@@ -22,7 +24,7 @@ Example shape:
 }
 ```
 
-Rules in 1.7.0:
+Manifest validation rules:
 
 - remote manifest URLs configured in `network.json` must use HTTPS;
 - manifest `network_id` must exactly match the loaded network;

@@ -1,8 +1,8 @@
-# AuronQ 1.7.13 Mainnet — Windows
+# AuronQ Mainnet — Windows
 
 ## Normalny użytkownik
 
-1. Pobierz `AuronQ-1.7.13-Windows-x64.zip` wyłącznie z GitHub Releases.
+1. Otwórz [GitHub Releases](https://github.com/promirmir/AuronQ/releases/latest) i pobierz bieżący `AuronQ-<version>-Windows-x64.zip`.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
@@ -14,18 +14,22 @@ Normalny użytkownik **nie potrzebuje** Tailscale, Cloudflare, Go, Dockera, ręc
 ## Pierwsze uruchomienie / aktualizacja
 
 1. Zamknij starszą wersję AuronQ przyciskiem **Sieć → Zamknij AuronQ**.
-2. Rozpakuj cały oficjalny ZIP 1.7.13 do nowego folderu.
+2. Rozpakuj cały ZIP bieżącego wydania do nowego folderu.
 3. Uruchom `START-AURONQ.cmd` tylko raz.
 4. Poczekaj na uruchomienie pełnego noda i synchronizację.
 5. **Nie usuwaj `%AppData%\AuronQ`** podczas zwykłej aktualizacji — znajdują się tam portfele, blockchain i zapamiętane peery.
 
-## Suma kontrolna oficjalnego v1.7.13
+## Weryfikacja pobranego wydania
 
-```text
-7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
+Każde oficjalne wydanie Desktop / Full Node publikuje plik `SHA256SUMS.txt`. Zweryfikuj pobrany ZIP względem sumy z **tego samego wydania GitHub**, zamiast kopiować sumę kontrolną ze starej instrukcji.
+
+PowerShell:
+
+```powershell
+Get-FileHash .\AuronQ-<version>-Windows-x64.zip -Algorithm SHA256
 ```
 
-Zweryfikuj SHA-256 pobranego archiwum również względem pliku `SHA256SUMS.txt` opublikowanego razem z wydaniem GitHub v1.7.13.
+Porównaj wynik z odpowiednim wpisem w `SHA256SUMS.txt`.
 
 Bieżące binaria Windows nie mają podpisu Authenticode, więc SmartScreen może wyświetlić ostrzeżenie.
 
@@ -67,4 +71,4 @@ Usuwanie portfela dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; 
 
 ## Bezpieczeństwo
 
-AuronQ 1.7.13 jest publicznym mainnetem, ale AQM64 i cały konsensus/network stack **nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa**. Testy CI, fuzzing, race detector i testy sieci rozproszonej istotnie podnoszą jakość, ale nie zastępują zewnętrznego audytu.
+AuronQ Mainnet jest publiczną siecią, ale AQM64 i cały konsensus/network stack **nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa**. Testy CI, fuzzing, race detector i testy sieci rozproszonej istotnie podnoszą jakość, ale nie zastępują zewnętrznego audytu.
