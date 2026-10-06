@@ -22,6 +22,17 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### GPU Miner v0.3.8 Alpha
+
+- Windows thermal safety now uses direct local NVIDIA NVML hardware telemetry instead of temperatures reported by pool/miner software.
+- NVML sensors are mapped to CUDA devices through direct CUDA UUID matching; ambiguous multi-GPU mappings fail safe.
+- Dashboard and Pool governor share one 500 ms hardware sample and expose source/sample age.
+- Missing or stale direct telemetry now stops mining instead of silently continuing.
+- Native Windows Solo CUDA thermal control uses the same direct NVML backend.
+- Pool catastrophic fail-safe tightened to the configured limit + 1 °C.
+- No Mainnet consensus, AQM64, difficulty, Network ID, genesis or monetary-policy changes.
+
+
 ### GPU Miner v0.3.7 Alpha
 
 - Reworked Windows Pool thermal control for autonomous long-running mining.
