@@ -1293,7 +1293,7 @@ func (a *App) startPoolRetune(s settings) error {
 	return a.launchWorkerCommand(cmd, "pool-tune", false, "cuda")
 }
 
-func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool, backend string) error {
+func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, _ bool, backend string) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -1323,9 +1323,6 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool, b
 	if mode == "pool" && backend != "cpu" {
 		go a.monitorPoolThermals(cmd)
 	}
-	if (mode == "mining" || mode == "pool") && autoPublic {
-		go a.ensurePublicPeer()
-	}
 
 	go a.scanWorker(stdout, "")
 	go a.scanWorker(stderr, "ERROR: ")
@@ -1347,9 +1344,6 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool, b
 			a.miner.LastError = err.Error()
 		}
 		a.mu.Unlock()
-		if finishedMode == "mining" || finishedMode == "pool" {
-			a.closePublicMapping()
-		}
 		if err != nil && !stopped {
 			a.addLog("Worker stopped: " + err.Error())
 		} else {
