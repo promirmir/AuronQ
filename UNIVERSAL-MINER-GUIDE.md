@@ -29,7 +29,7 @@ AMD/Intel GPU acceleration can be added later only after byte-for-byte AQM64 sel
 
 ## CPU safe profile
 
-AQM64 requires about 64 MiB per active mining lane. With `--cpu-threads 0`, the miner chooses roughly half of logical CPUs, capped at 4 active lanes. Manual override is 1..16.
+AQM64 requires about 64 MiB per active mining lane. With `--cpu-threads 0`, the miner chooses roughly one quarter of logical CPUs, capped at 2 active lanes. Manual override is 1..16.
 
 There is no single reliable cross-vendor CPU package-temperature API available on every motherboard/OS. AuronQ therefore does not invent a CPU temperature. The safe fallback is conservative concurrency; firmware/OS thermal protection remains authoritative.
 
