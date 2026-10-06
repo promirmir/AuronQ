@@ -22,6 +22,17 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### GPU Miner v0.3.6 Alpha
+
+- Added official Linux amd64 NVIDIA CUDA package alongside Windows x64.
+- Linux supports native AQM64 Solo CUDA mining, multi-GPU, Auto Tune, rolling H/s, self-test, benchmark and smart thermal control.
+- Added Linux CUDA shared-library loader and `libauronq-aqm64-cuda.so` package.
+- Added Linux CUDA/package build scripts and CI compilation coverage.
+- Release workflow now publishes Windows ZIP + Linux tar.gz with one checksum file.
+- Added a complete Windows/Linux GPU Miner user guide.
+- Windows keeps the PL/EN dashboard, MeshMiner integration, custom pools and external-miner thermal governor.
+- No Mainnet consensus, AQM64, difficulty, Network ID, genesis or monetary-policy changes.
+
 ### Desktop / Full Node v1.7.13 — Mainnet patch
 
 - Fixed repeated retries of dead DNS peers learned through P2P gossip or bootstrap metadata.

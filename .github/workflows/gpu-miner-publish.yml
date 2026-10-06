@@ -1,24 +1,24 @@
-name: Publish GPU Miner v0.3.5-alpha
+name: Publish GPU Miner v0.3.6-alpha
 
 on:
   push:
     branches:
       - main
     paths:
-      - '.release/gpu-miner-v0.3.5-alpha'
+      - '.release/gpu-miner-v0.3.6-alpha'
 
 permissions:
   contents: write
 
+env:
+  GPU_VERSION: 0.3.6-alpha
+  GPU_TAG: gpu-v0.3.6-alpha
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
-  publish-windows:
+  build-windows:
     runs-on: windows-2022
     timeout-minutes: 60
-    env:
-      GPU_VERSION: 0.3.5-alpha
-      GPU_TAG: gpu-v0.3.5-alpha
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
     steps:
       - uses: actions/checkout@v5
 
@@ -39,7 +39,7 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
 
-      - name: Build Windows application
+      - name: Build Windows package
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -56,6 +56,7 @@ jobs:
           Copy-Item .\network.json $dist -Force
           Copy-Item .\bootstrap.json $dist -Force
           Copy-Item .\gpu\cuda\README.md (Join-Path $dist "README-GPU-MINER.md") -Force
+          Copy-Item .\GPU-MINER-GUIDE.md $dist -Force
           if (Test-Path .\LICENSE) { Copy-Item .\LICENSE $dist -Force }
 
           $gui = Join-Path $dist "AuronQ-GPU-Miner.exe"
@@ -68,22 +69,78 @@ jobs:
           if (Test-Path $zip) { Remove-Item $zip -Force }
           Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zip -CompressionLevel Optimal
 
-          $sum = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-          "$sum  $(Split-Path $zip -Leaf)" | Set-Content -Encoding ascii .\dist\SHA256SUMS-GPU-MINER.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpu-miner-windows
+          path: dist/AuronQ-GPU-Miner-v0.3.6-alpha-Windows-x64.zip
+          if-no-files-found: error
+
+  build-linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install CUDA Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '13.2.0'
+          method: network
+          use-github-cache: 'true'
+
+      - name: Build Linux amd64 package
+        shell: bash
+        run: |
+          bash ./build-gpu-miner-linux.sh "$GPU_VERSION"
+          test -f "dist/AuronQ-GPU-Miner-v$GPU_VERSION-Linux-amd64.tar.gz"
+          file "dist/AuronQ-GPU-Miner-v$GPU_VERSION-Linux-amd64/auronq-gpu-miner"
+          file "dist/AuronQ-GPU-Miner-v$GPU_VERSION-Linux-amd64/libauronq-aqm64-cuda.so"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gpu-miner-linux
+          path: dist/AuronQ-GPU-Miner-v0.3.6-alpha-Linux-amd64.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Verify and checksum packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd dist
+          test -f "AuronQ-GPU-Miner-v$GPU_VERSION-Windows-x64.zip"
+          test -f "AuronQ-GPU-Miner-v$GPU_VERSION-Linux-amd64.tar.gz"
+          sha256sum             "AuronQ-GPU-Miner-v$GPU_VERSION-Windows-x64.zip"             "AuronQ-GPU-Miner-v$GPU_VERSION-Linux-amd64.tar.gz"             > SHA256SUMS-GPU-MINER.txt
+          cat SHA256SUMS-GPU-MINER.txt
 
       - name: Publish GitHub prerelease
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $ErrorActionPreference = "Stop"
-          $zip = ".\dist\AuronQ-GPU-Miner-v$env:GPU_VERSION-Windows-x64.zip"
-          $sums = ".\dist\SHA256SUMS-GPU-MINER.txt"
-          gh release view $env:GPU_TAG *> $null
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $env:GPU_TAG already exists; replacing packaged assets."
-            gh release upload $env:GPU_TAG $zip $sums --clobber
-            if ($LASTEXITCODE -ne 0) { throw "Failed to replace GPU miner release assets" }
-            exit 0
-          }
-          gh release create $env:GPU_TAG $zip $sums --target $env:GITHUB_SHA --title "AuronQ GPU Miner v0.3.5 Alpha" --notes-file ".\GPU-MINER-RELEASE-NOTES.md" --prerelease
+          set -euo pipefail
+          assets=(
+            "dist/AuronQ-GPU-Miner-v$GPU_VERSION-Windows-x64.zip"
+            "dist/AuronQ-GPU-Miner-v$GPU_VERSION-Linux-amd64.tar.gz"
+            "dist/SHA256SUMS-GPU-MINER.txt"
+          )
+          if gh release view "$GPU_TAG" >/dev/null 2>&1; then
+            gh release upload "$GPU_TAG" "${assets[@]}" --clobber
+          else
+            gh release create "$GPU_TAG" "${assets[@]}"               --target "$GITHUB_SHA"               --title "AuronQ GPU Miner v0.3.6 Alpha"               --notes-file "./GPU-MINER-RELEASE-NOTES.md"               --prerelease
+          fi

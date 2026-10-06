@@ -15,12 +15,16 @@ import (
 
 const mainnetNetworkID = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 
-func defaultDLLPath() string {
+func defaultCUDAPath() string {
+	name := "auronq-aqm64-cuda.dll"
+	if runtime.GOOS == "linux" {
+		name = "libauronq-aqm64-cuda.so"
+	}
 	exe, err := os.Executable()
 	if err != nil {
-		return "auronq-aqm64-cuda.dll"
+		return name
 	}
-	return filepath.Join(filepath.Dir(exe), "auronq-aqm64-cuda.dll")
+	return filepath.Join(filepath.Dir(exe), name)
 }
 
 func main() {
@@ -30,7 +34,7 @@ func main() {
 	devicesFlag := flag.String("devices", "", "comma-separated CUDA device indices or 'all'; overrides --device")
 	multiChild := flag.Bool("multi-child", false, "internal multi-GPU child worker")
 	batchFlag := flag.Int("batch", 0, "nonces per GPU batch (0 = automatic)")
-	dllPath := flag.String("cuda-dll", defaultDLLPath(), "path to auronq-aqm64-cuda.dll")
+	dllPath := flag.String("cuda-dll", defaultCUDAPath(), "path to the AuronQ CUDA backend (.dll on Windows, .so on Linux)")
 	selfTest := flag.Bool("self-test", false, "compare one full AQM64 GPU result with the CPU reference")
 	benchmark := flag.Bool("benchmark", false, "run an offline end-to-end AQM64 throughput benchmark")
 	benchmarkSeconds := flag.Int("benchmark-seconds", 20, "approximate benchmark duration in seconds")
@@ -42,8 +46,8 @@ func main() {
 	noncePrefix := flag.Uint64("nonce-prefix", 0, "starting nonce prefix/base used to partition work between GPUs")
 	flag.Parse()
 
-	if runtime.GOOS != "windows" {
-		fmt.Fprintln(os.Stderr, "AuronQ GPU Miner CUDA v0.1 currently targets Windows x64.")
+	if runtime.GOOS != "windows" && runtime.GOOS != "linux" {
+		fmt.Fprintln(os.Stderr, "AuronQ GPU Miner CUDA currently supports Windows x64 and Linux amd64.")
 		os.Exit(2)
 	}
 
@@ -96,7 +100,7 @@ func main() {
 		batch = 64
 	}
 
-	fmt.Printf("AuronQ GPU Miner v0.3.5-alpha CUDA\n")
+	fmt.Printf("AuronQ GPU Miner v0.3.6-alpha CUDA\n")
 	fmt.Printf("GPU: %s\n", backend.Name())
 	fmt.Printf("Batch: %d nonces\n", batch)
 

@@ -12,7 +12,7 @@ function Need-Command([string]$name, [string]$hint) {
 }
 
 Write-Host ""
-Write-Host "AuronQ GPU Miner v0.3.5-alpha - Windows build"
+Write-Host "AuronQ GPU Miner v0.3.6-alpha - Windows build"
 Write-Host "==========================================="
 Write-Host ""
 
@@ -24,7 +24,7 @@ Write-Host "NVCC: $nvcc"
 & $go version
 & $nvcc --version | Select-Object -Last 4
 
-$dist = Join-Path $root "dist\AuronQ-GPU-Miner-v0.3.5-alpha"
+$dist = Join-Path $root "dist\AuronQ-GPU-Miner-v0.3.6-alpha"
 if (Test-Path $dist) {
     Remove-Item -Recurse -Force $dist
 }
@@ -53,6 +53,7 @@ if ($LASTEXITCODE -ne 0) {
 
 Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll") (Join-Path $dist "auronq-aqm64-cuda.dll") -Force
 Copy-Item (Join-Path $root "gpu\cuda\README.md") (Join-Path $dist "README-GPU-MINER.md") -Force
+Copy-Item (Join-Path $root "GPU-MINER-GUIDE.md") (Join-Path $dist "GPU-MINER-GUIDE.md") -Force
 Copy-Item (Join-Path $root "network.json") (Join-Path $dist "network.json") -Force
 Copy-Item (Join-Path $root "bootstrap.json") (Join-Path $dist "bootstrap.json") -Force
 
@@ -91,7 +92,7 @@ Write-Host "  $workerExe"
 Write-Host "GUI SHA256:    $guiHash"
 Write-Host "Worker SHA256: $workerHash"
 Write-Host ""
-$zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.3.5-alpha-Windows-x64.zip"
+$zipOut = Join-Path $root "dist\AuronQ-GPU-Miner-v0.3.6-alpha-Windows-x64.zip"
 if (Test-Path $zipOut) { Remove-Item $zipOut -Force }
 Compress-Archive -Path (Join-Path $dist "*") -DestinationPath $zipOut -CompressionLevel Optimal
 
