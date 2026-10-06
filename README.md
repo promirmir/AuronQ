@@ -66,6 +66,8 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 
 **Project site:** https://promirmir.github.io/AuronQ/
 
+**New cryptocurrency / AURQ technical overview:** https://promirmir.github.io/AuronQ/new-cryptocurrency.html
+
 **Official Bitcointalk ANN / community discussion:** https://bitcointalk.org/index.php?topic=5595868.0
 
 **Official Discord community:** https://discord.gg/rmmNY9RhA
