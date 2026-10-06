@@ -410,16 +410,18 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 		fmt.Printf("Mining height %d target=%s nonce_base=%d\n", template.Header.Height, template.Header.Target.String(), noncePrefix)
 
 		for {
+			var thermalPause time.Duration
 			if thermal != nil {
-				newBatch, temp, action, err := thermal.Adjust(batch)
+				newBatch, temp, pause, action, err := thermal.Adjust(batch)
 				if err != nil {
 					return err
 				}
 				if action != "" {
-					fmt.Printf("THERMAL temp=%dC target=%dC limit=%dC batch=%d->%d action=%s\n",
-						temp, thermal.Target(), thermal.Limit(), batch, newBatch, action)
+					fmt.Printf("THERMAL temp=%dC target=%dC limit=%dC batch=%d->%d pause=%s action=%s\n",
+						temp, thermal.Target(), thermal.Limit(), batch, newBatch, pause, action)
 				}
 				batch = newBatch
+				thermalPause = pause
 			}
 
 			st, err := client.Status()
@@ -469,6 +471,10 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 			nextNonce += uint64(batch)
 			if nextNonce < prevNonce {
 				break
+			}
+
+			if thermalPause > 0 {
+				time.Sleep(thermalPause)
 			}
 
 			now := time.Now()
