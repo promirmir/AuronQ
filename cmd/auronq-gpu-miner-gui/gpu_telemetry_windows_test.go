@@ -2,7 +2,10 @@
 
 package main
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSelectedDeviceIndices(t *testing.T) {
 	gpus := []gpuInfo{{Index: 0, Name: "A"}, {Index: 2, Name: "B"}}
@@ -66,5 +69,58 @@ func TestParseHashrateText(t *testing.T) {
 		if !ok || got != tc.want {
 			t.Fatalf("%q => %f %v, want %f", tc.line, got, ok, tc.want)
 		}
+	}
+}
+
+
+func TestMeshMinerArgsCUDA(t *testing.T) {
+	s := settings{
+		PoolBackend: "cuda",
+		PoolFanAuto: true,
+		PoolRetune: true,
+	}
+	args, err := meshMinerArgs(s, []int{0, 2}, "pool.meshpool.net:3359", "aurq1test.rig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(args, " ")
+	for _, want := range []string{
+		"--pool pool.meshpool.net:3359",
+		"--user aurq1test.rig",
+		"--backend cuda",
+		"--algo auronq",
+		"--device 0,2",
+		"--fan auto",
+		"--retune",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("args %q missing %q", got, want)
+		}
+	}
+}
+
+func TestMeshMinerArgsCPU(t *testing.T) {
+	s := settings{
+		PoolBackend: "cpu",
+		PoolThreads: 6,
+		PoolFanAuto: true,
+	}
+	args, err := meshMinerArgs(s, nil, "example:1234", "aurq1test.cpu")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(args, " ")
+	if !strings.Contains(got, "--backend cpu") || !strings.Contains(got, "--threads 6") {
+		t.Fatalf("unexpected args: %q", got)
+	}
+	if strings.Contains(got, "--device") || strings.Contains(got, "--fan") {
+		t.Fatalf("CPU args should not include GPU flags: %q", got)
+	}
+}
+
+func TestMeshMinerArgsCUDARequiresGPU(t *testing.T) {
+	_, err := meshMinerArgs(settings{PoolBackend: "cuda"}, nil, "example:1234", "aurq1test.rig")
+	if err == nil {
+		t.Fatal("expected CUDA backend to require a GPU")
 	}
 }
