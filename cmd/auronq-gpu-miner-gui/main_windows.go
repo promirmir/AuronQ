@@ -1008,6 +1008,35 @@ func (a *App) startWorker(mode string, s settings) error {
 	return a.launchWorkerCommand(cmd, mode, s.AutoPublic)
 }
 
+func meshMinerArgs(s settings, devices []int, endpoint, user string) ([]string, error) {
+	backend := s.PoolBackend
+	if backend != "cuda" && backend != "cpu" && backend != "both" {
+		backend = "cuda"
+	}
+	args := []string{
+		"--pool", endpoint,
+		"--user", user,
+		"--backend", backend,
+		"--algo", "auronq",
+	}
+	if backend != "cpu" {
+		if len(devices) == 0 {
+			return nil, errors.New("MeshMiner CUDA backend requires at least one NVIDIA GPU")
+		}
+		args = append(args, "--device", deviceCSV(devices))
+		if s.PoolFanAuto {
+			args = append(args, "--fan", "auto")
+		}
+		if s.PoolRetune {
+			args = append(args, "--retune")
+		}
+	}
+	if backend != "cuda" && s.PoolThreads > 0 {
+		args = append(args, "--threads", strconv.Itoa(s.PoolThreads))
+	}
+	return args, nil
+}
+
 func (a *App) startPoolWorker(s settings, devices []int) error {
 	path, err := resolvePoolMinerPath(s.PoolMinerPath)
 	if err != nil {
@@ -1021,40 +1050,18 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 	if worker == "" || strings.ContainsAny(worker, " \t\r\n") {
 		return errors.New("pool worker name must be a single non-empty token")
 	}
-
-	backend := s.PoolBackend
-	if backend != "cuda" && backend != "cpu" && backend != "both" {
-		backend = "cuda"
-	}
 	user := strings.TrimSpace(s.Address) + "." + worker
-	args := []string{
-		"--pool", endpoint,
-		"--user", user,
-		"--backend", backend,
-		"--algo", "auronq",
-	}
-	if backend != "cpu" {
-		if len(devices) == 0 {
-			return errors.New("MeshMiner CUDA backend requires at least one NVIDIA GPU")
-		}
-		args = append(args, "--device", deviceCSV(devices))
-		if s.PoolFanAuto {
-			args = append(args, "--fan", "auto")
-		}
-		if s.PoolRetune {
-			args = append(args, "--retune")
-		}
-	}
-	if backend != "cuda" && s.PoolThreads > 0 {
-		args = append(args, "--threads", strconv.Itoa(s.PoolThreads))
+	args, err := meshMinerArgs(s, devices, endpoint, user)
+	if err != nil {
+		return err
 	}
 
 	cmd := exec.Command(path, args...)
 	cmd.Dir = filepath.Dir(path)
 	cmd.SysProcAttr = &syscallSysProcAttr
-	a.addLog(fmt.Sprintf("POOL MeshMiner: %s endpoint=%s backend=%s devices=%s fan_auto=%t threads=%d retune=%t",
-		filepath.Base(path), endpoint, backend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
-	if s.PoolFanAuto && backend != "cpu" {
+	a.addLog(fmt.Sprintf("POOL %s: %s endpoint=%s backend=%s devices=%s fan_auto=%t threads=%d retune=%t",
+		s.PoolEngine, filepath.Base(path), endpoint, s.PoolBackend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
+	if s.PoolFanAuto && s.PoolBackend != "cpu" {
 		a.addLog(fmt.Sprintf("POOL thermal: MeshMiner --fan auto enabled; AuronQ hard stop remains %d C", s.ThermalStopC))
 	}
 	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)
