@@ -908,12 +908,19 @@ func (a *App) validateRewardAddress(addr string) error {
 func workerPath() string {
 	exe, err := os.Executable()
 	if err != nil {
-		return "auronq-gpu-worker.exe"
+		return "auronq-miner-worker.exe"
 	}
-	// Windows paths are case-insensitive by default. The GUI executable is
-	// AuronQ-GPU-Miner.exe, so the worker must use a genuinely different base
-	// name rather than only different letter casing.
-	return filepath.Join(filepath.Dir(exe), "auronq-gpu-worker.exe")
+	dir := filepath.Dir(exe)
+	// v0.4 uses the universal worker name. Keep the v0.3 filename as a
+	// compatibility fallback so old extracted packages can still be upgraded
+	// without an ambiguous same-name executable on case-insensitive Windows.
+	for _, name := range []string{"auronq-miner-worker.exe", "auronq-gpu-worker.exe"} {
+		p := filepath.Join(dir, name)
+		if st, statErr := os.Stat(p); statErr == nil && !st.IsDir() {
+			return p
+		}
+	}
+	return filepath.Join(dir, "auronq-miner-worker.exe")
 }
 
 func validateWorkerExecutable() error {
@@ -928,13 +935,14 @@ func validateWorkerExecutable() error {
 	}
 	workerInfo, err := os.Stat(worker)
 	if err != nil {
-		return fmt.Errorf("GPU worker missing: %s", worker)
+		return fmt.Errorf("universal miner worker missing: %s", worker)
 	}
 	if os.SameFile(guiInfo, workerInfo) || strings.EqualFold(filepath.Clean(guiPath), filepath.Clean(worker)) {
-		return errors.New("invalid package: GUI and GPU worker resolve to the same executable")
+		return errors.New("invalid package: GUI and miner worker resolve to the same executable")
 	}
-	if !strings.EqualFold(filepath.Base(worker), "auronq-gpu-worker.exe") {
-		return fmt.Errorf("unexpected GPU worker filename: %s", filepath.Base(worker))
+	base := strings.ToLower(filepath.Base(worker))
+	if base != "auronq-miner-worker.exe" && base != "auronq-gpu-worker.exe" {
+		return fmt.Errorf("unexpected miner worker filename: %s", filepath.Base(worker))
 	}
 	return nil
 }
