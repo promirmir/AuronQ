@@ -6,6 +6,7 @@ package main
 #cgo LDFLAGS: -ldl
 #include <dlfcn.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
