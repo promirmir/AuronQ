@@ -1,4 +1,10 @@
-## Android 0.5.3 Alpha
+# AuronQ Changelog
+
+This file is the concise public history of AuronQ. Detailed historical release notes and old checksum files are preserved under [docs/archive/](docs/archive/).
+
+## Recent Android updates
+
+### Android 0.5.3 Alpha
 
 - fresh installs can use independently verified public IPv4 full nodes advertised as `http://<public-ip>:18444`, not only the two HTTPS bootstrap endpoints;
 - cleartext mobile peers are accepted only as literal globally routable IP addresses; private, loopback, CGNAT and documentation ranges remain rejected, DNS peers still require HTTPS, and redirects remain disabled;
@@ -8,17 +14,13 @@
 - header verification progress is persisted after every successful batch so a flaky peer or app restart resumes from the last verified height instead of replaying AQM64 from genesis;
 - no Mainnet consensus, Network ID, genesis, transaction, PoW or monetary changes.
 
-## Android 0.5.2 Alpha
+### Android 0.5.2 Alpha
 
 - prevents temporary node timeouts or a lagging peer from wiping the locally verified header cache and forcing an expensive full AQM64 replay;
 - mobile peer probing returns quickly after a valid Mainnet peer answers while keeping a short grace window for multi-peer agreement;
 - skips the remote bootstrap-manifest retry when a bundled/learned Mainnet peer is already reachable;
 - updates the UI to show a verified network snapshot immediately instead of waiting for slower wallet balance/history quorum requests;
 - no Mainnet consensus, Network ID, genesis, transaction, PoW or monetary changes.
-
-# AuronQ Changelog
-
-This file is the concise public history of AuronQ. Detailed historical release notes and old checksum files are preserved under [docs/archive/](docs/archive/).
 
 ## Current releases
 
