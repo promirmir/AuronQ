@@ -27,6 +27,9 @@ type multiGPUOptions struct {
 	BenchmarkSeconds int
 	AutoTune         bool
 	AutoTuneSeconds  int
+	ThermalAuto      bool
+	ThermalLimit     int
+	ThermalTarget    int
 	NoncePrefix      uint64
 }
 
@@ -111,6 +114,12 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 		if opt.AutoTune {
 			args = append(args, "--auto-tune", "--auto-tune-seconds", strconv.Itoa(opt.AutoTuneSeconds))
 		}
+		if opt.ThermalAuto && !opt.Benchmark {
+			args = append(args, "--thermal-auto", "--thermal-limit", strconv.Itoa(opt.ThermalLimit))
+			if opt.ThermalTarget > 0 {
+				args = append(args, "--thermal-target", strconv.Itoa(opt.ThermalTarget))
+			}
+		}
 		if opt.Benchmark {
 			args = append(args, "--benchmark", "--benchmark-seconds", strconv.Itoa(opt.BenchmarkSeconds))
 		} else {
@@ -165,7 +174,7 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 			}
 		case <-ticker.C:
 			rate, height := state.snapshot()
-			fmt.Printf("hashes=0 avg=%.2f H/s current_height=%d multi_gpu=%d\n", rate, height, len(devices))
+			fmt.Printf("hashes=0 rate=%.2f H/s avg=%.2f H/s current_height=%d multi_gpu=%d\n", rate, rate, height, len(devices))
 		}
 	}
 
@@ -195,11 +204,16 @@ func scanMultiStream(r io.Reader, device int, state *multiGPUState, stderr bool)
 		if line == "" {
 			continue
 		}
-		if rate, ok := parseMultiNumberAfter(line, "avg="); ok &&
-			(strings.HasPrefix(line, "hashes=") || strings.HasPrefix(line, "BENCHMARK OK")) {
-			state.mu.Lock()
-			state.rates[device] = rate
-			state.mu.Unlock()
+		if strings.HasPrefix(line, "hashes=") || strings.HasPrefix(line, "BENCHMARK OK") {
+			rate, ok := parseMultiNumberAfter(line, "rate=")
+			if !ok {
+				rate, ok = parseMultiNumberAfter(line, "avg=")
+			}
+			if ok {
+				state.mu.Lock()
+				state.rates[device] = rate
+				state.mu.Unlock()
+			}
 		}
 		if h, ok := parseMultiUintAfter(line, "current_height="); ok {
 			state.mu.Lock()
