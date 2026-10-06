@@ -1,0 +1,6 @@
+AuronQ Universal Miner v0.4.1-alpha release trigger
+
+Critical hotfix for the v0.4.0 Windows GUI JavaScript syntax regression.
+Source commit: 3808bf14a65dfacfd7e72bd209fd7fb7008b5e14
+Release requires green protected-branch checks.
+No Mainnet consensus changes.
