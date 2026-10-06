@@ -36,6 +36,9 @@ func main() {
 	benchmarkSeconds := flag.Int("benchmark-seconds", 20, "approximate benchmark duration in seconds")
 	autoTune := flag.Bool("auto-tune", false, "benchmark safe batch sizes and automatically select the fastest one before mining")
 	autoTuneSeconds := flag.Int("auto-tune-seconds", 1, "autotune measurement time per batch size in seconds")
+	thermalAuto := flag.Bool("thermal-auto", false, "automatically reduce/increase GPU batch to stay below a temperature target")
+	thermalLimit := flag.Int("thermal-limit", 85, "hard GPU temperature limit in C; reaching it stops mining")
+	thermalTarget := flag.Int("thermal-target", 0, "target GPU temperature in C (0 = thermal-limit minus 5 C)")
 	noncePrefix := flag.Uint64("nonce-prefix", 0, "starting nonce prefix/base used to partition work between GPUs")
 	flag.Parse()
 
@@ -61,6 +64,9 @@ func main() {
 				BenchmarkSeconds: *benchmarkSeconds,
 				AutoTune:         *autoTune,
 				AutoTuneSeconds:  *autoTuneSeconds,
+				ThermalAuto:      *thermalAuto,
+				ThermalLimit:     *thermalLimit,
+				ThermalTarget:    *thermalTarget,
 				NoncePrefix:      *noncePrefix,
 			})
 			if err != nil {
@@ -90,7 +96,7 @@ func main() {
 		batch = 64
 	}
 
-	fmt.Printf("AuronQ GPU Miner v0.3.1-alpha CUDA\n")
+	fmt.Printf("AuronQ GPU Miner v0.3.2-alpha CUDA\n")
 	fmt.Printf("GPU: %s\n", backend.Name())
 	fmt.Printf("Batch: %d nonces\n", batch)
 
@@ -132,6 +138,24 @@ func main() {
 		return
 	}
 
+	var thermal *thermalController
+	if *thermalAuto {
+		if *thermalLimit < 60 || *thermalLimit > 95 {
+			fmt.Fprintln(os.Stderr, "--thermal-limit must be between 60 and 95 C")
+			os.Exit(2)
+		}
+		target := *thermalTarget
+		if target == 0 {
+			target = *thermalLimit - 5
+		}
+		if target < 50 || target >= *thermalLimit {
+			fmt.Fprintln(os.Stderr, "--thermal-target must be at least 50 C and below --thermal-limit")
+			os.Exit(2)
+		}
+		thermal = newThermalController(*device, target, *thermalLimit, batch)
+		fmt.Printf("THERMAL AUTO target=%dC limit=%dC batch_range=1..%d\n", target, *thermalLimit, batch)
+	}
+
 	if *address == "" {
 		fmt.Fprintln(os.Stderr, "--address is required for mining")
 		os.Exit(2)
@@ -154,7 +178,7 @@ func main() {
 	}
 	fmt.Printf("Node: %s height=%d peers=%d\n", *nodeURL, st.Height, st.Peers)
 
-	if err := mineLoop(client, backend, *address, batch, *noncePrefix); err != nil {
+	if err := mineLoop(client, backend, *address, batch, *noncePrefix, thermal); err != nil {
 		fmt.Fprintln(os.Stderr, "miner stopped:", err)
 		os.Exit(1)
 	}
@@ -367,9 +391,11 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 	return nil
 }
 
-func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, noncePrefix uint64) error {
+func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, noncePrefix uint64, thermal *thermalController) error {
 	var total uint64
 	start := time.Now()
+	lastReport := start
+	var lastReportTotal uint64
 	var nextNonce uint64
 
 	for {
@@ -384,6 +410,20 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 		fmt.Printf("Mining height %d target=%s nonce_base=%d\n", template.Header.Height, template.Header.Target.String(), noncePrefix)
 
 		for {
+			var thermalPause time.Duration
+			if thermal != nil {
+				newBatch, temp, pause, action, err := thermal.Adjust(batch)
+				if err != nil {
+					return err
+				}
+				if action != "" {
+					fmt.Printf("THERMAL temp=%dC target=%dC limit=%dC batch=%d->%d pause=%s action=%s\n",
+						temp, thermal.Target(), thermal.Limit(), batch, newBatch, pause, action)
+				}
+				batch = newBatch
+				thermalPause = pause
+			}
+
 			st, err := client.Status()
 			if err == nil && !aq.MiningTemplateCurrent(template, st) {
 				fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
@@ -433,12 +473,27 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				break
 			}
 
-			if total%uint64(batch*4) == 0 {
-				elapsed := time.Since(start)
-				if elapsed > 0 {
-					fmt.Printf("hashes=%d avg=%.2f H/s current_height=%d\n",
-						total, float64(total)/elapsed.Seconds(), template.Header.Height)
+			if thermalPause > 0 {
+				time.Sleep(thermalPause)
+			}
+
+			now := time.Now()
+			if now.Sub(lastReport) >= time.Second {
+				interval := now.Sub(lastReport)
+				intervalHashes := total - lastReportTotal
+				rate := 0.0
+				if interval > 0 {
+					rate = float64(intervalHashes) / interval.Seconds()
 				}
+				elapsed := now.Sub(start)
+				avg := 0.0
+				if elapsed > 0 {
+					avg = float64(total) / elapsed.Seconds()
+				}
+				fmt.Printf("hashes=%d rate=%.2f H/s avg=%.2f H/s current_height=%d batch=%d\n",
+					total, rate, avg, template.Header.Height, batch)
+				lastReport = now
+				lastReportTotal = total
 			}
 		}
 	}

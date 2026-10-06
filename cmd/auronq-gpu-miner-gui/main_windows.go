@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.3.1-alpha"
+	guiVersion       = "0.3.2-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -963,6 +964,9 @@ func (a *App) startWorker(mode string, s settings) error {
 		if s.AutoTune {
 			args = append(args, "--auto-tune", "--auto-tune-seconds", strconv.Itoa(s.AutoTuneSeconds))
 		}
+		if s.ThermalStopC > 0 {
+			args = append(args, "--thermal-auto", "--thermal-limit", strconv.Itoa(s.ThermalStopC))
+		}
 	default:
 		return errors.New("unknown worker mode")
 	}
@@ -1081,6 +1085,8 @@ func (a *App) scanWorker(r io.Reader, prefix string) {
 	}
 }
 
+var hashrateTextRE = regexp.MustCompile(`(?i)([0-9]+(?:\.[0-9]+)?)\s*([kmgtp]?)h/s`)
+
 func (a *App) parseWorkerLine(line string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -1097,7 +1103,9 @@ func (a *App) parseWorkerLine(line string) {
 		}
 	}
 	if strings.HasPrefix(line, "hashes=") {
-		if v, ok := numberAfter(line, "avg="); ok {
+		if v, ok := numberAfter(line, "rate="); ok {
+			a.miner.Hashrate = v
+		} else if v, ok := numberAfter(line, "avg="); ok {
 			a.miner.Hashrate = v
 		}
 		if v, ok := uintAfter(line, "current_height="); ok {
@@ -1118,9 +1126,47 @@ func (a *App) parseWorkerLine(line string) {
 			a.miner.LastBlock = h
 		}
 	}
+	if a.miner.Mode == "pool" && !strings.Contains(strings.ToLower(line), "network") {
+		if v, ok := parseHashrateText(line); ok {
+			a.miner.Hashrate = v
+		}
+	}
 	if strings.Contains(line, "SELF-TEST FAILED") || strings.Contains(line, "BENCHMARK FAILED") {
 		a.miner.LastError = line
 	}
+}
+
+func parseHashrateText(line string) (float64, bool) {
+	matches := hashrateTextRE.FindAllStringSubmatch(line, -1)
+	if len(matches) == 0 {
+		return 0, false
+	}
+	best := 0.0
+	for _, m := range matches {
+		if len(m) < 3 {
+			continue
+		}
+		v, err := strconv.ParseFloat(m[1], 64)
+		if err != nil {
+			continue
+		}
+		switch strings.ToLower(m[2]) {
+		case "k":
+			v *= 1e3
+		case "m":
+			v *= 1e6
+		case "g":
+			v *= 1e9
+		case "t":
+			v *= 1e12
+		case "p":
+			v *= 1e15
+		}
+		if v > best {
+			best = v
+		}
+	}
+	return best, best > 0
 }
 
 func numberAfter(line, key string) (float64, bool) {
