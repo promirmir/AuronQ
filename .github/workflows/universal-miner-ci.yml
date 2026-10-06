@@ -33,13 +33,18 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
-          html = Path('cmd/auronq-gpu-miner-gui/web/index.html').read_text(encoding='utf-8')
-          m = re.search(r'<script>(.*?)</script>', html, re.S | re.I)
-          if not m:
-              raise SystemExit('embedded miner script not found')
-          Path('/tmp/auronq-miner-ui.js').write_text(m.group(1), encoding='utf-8')
+          for src, dst in [
+              ('cmd/auronq-gpu-miner-gui/web/index.html', '/tmp/auronq-miner-ui.js'),
+              ('cmd/auronq-desktop/web/index.html', '/tmp/auronq-desktop-ui.js'),
+          ]:
+              html = Path(src).read_text(encoding='utf-8')
+              m = re.search(r'<script>(.*?)</script>', html, re.S | re.I)
+              if not m:
+                  raise SystemExit(f'embedded script not found in {src}')
+              Path(dst).write_text(m.group(1), encoding='utf-8')
           PY
           node --check /tmp/auronq-miner-ui.js
+          node --check /tmp/auronq-desktop-ui.js
 
   cpu-fallback-test:
     runs-on: ubuntu-latest
