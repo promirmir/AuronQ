@@ -166,7 +166,10 @@ func deviceCSV(devices []int) string {
 
 func normalizePoolEndpoint(raw string) (string, error) {
 	s := strings.TrimSpace(raw)
-	for _, prefix := range []string{"stratum+tcp://", "stratum+ssl://", "tcp://", "ssl://"} {
+	if strings.HasPrefix(strings.ToLower(s), "stratum+ssl://") || strings.HasPrefix(strings.ToLower(s), "ssl://") {
+		return "", errors.New("TLS pool URLs are not translated by the pool bridge; use a host:port endpoint supported directly by the external miner")
+	}
+	for _, prefix := range []string{"stratum+tcp://", "tcp://"} {
 		s = strings.TrimPrefix(s, prefix)
 	}
 	s = strings.TrimRight(s, "/")
