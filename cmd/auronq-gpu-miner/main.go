@@ -27,6 +27,8 @@ func main() {
 	nodeURL := flag.String("node", "http://127.0.0.1:18444", "AuronQ full-node URL")
 	address := flag.String("address", "", "AURQ reward address")
 	device := flag.Int("device", 0, "CUDA device index")
+	devicesFlag := flag.String("devices", "", "comma-separated CUDA device indices or 'all'; overrides --device")
+	multiChild := flag.Bool("multi-child", false, "internal multi-GPU child worker")
 	batchFlag := flag.Int("batch", 0, "nonces per GPU batch (0 = automatic)")
 	dllPath := flag.String("cuda-dll", defaultDLLPath(), "path to auronq-aqm64-cuda.dll")
 	selfTest := flag.Bool("self-test", false, "compare one full AQM64 GPU result with the CPU reference")
@@ -40,6 +42,34 @@ func main() {
 	if runtime.GOOS != "windows" {
 		fmt.Fprintln(os.Stderr, "AuronQ GPU Miner CUDA v0.1 currently targets Windows x64.")
 		os.Exit(2)
+	}
+
+	if !*multiChild && *devicesFlag != "" {
+		devices, err := resolveCUDADevices(*devicesFlag)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "CUDA devices:", err)
+			os.Exit(2)
+		}
+		if len(devices) > 1 {
+			err := runMultiGPU(devices, multiGPUOptions{
+				Node:             *nodeURL,
+				Address:          *address,
+				Batch:            *batchFlag,
+				DLLPath:          *dllPath,
+				SelfTest:         *selfTest,
+				Benchmark:        *benchmark,
+				BenchmarkSeconds: *benchmarkSeconds,
+				AutoTune:         *autoTune,
+				AutoTuneSeconds:  *autoTuneSeconds,
+				NoncePrefix:      *noncePrefix,
+			})
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "MULTI-GPU FAILED:", err)
+				os.Exit(1)
+			}
+			return
+		}
+		*device = devices[0]
 	}
 
 	backend, err := openCUDABackend(*dllPath, *device)
