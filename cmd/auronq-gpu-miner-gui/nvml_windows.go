@@ -231,7 +231,7 @@ func cudaOrdinalMap() (map[[16]byte]int, error) {
 	if rc, _, _ := api.deviceCount.Call(uintptr(unsafe.Pointer(&count))); uint32(rc) != 0 {
 		return nil, fmt.Errorf("cuDeviceGetCount failed with code %d", uint32(rc))
 	}
-	out := make(map[[16]byte]int, count)
+	out := make(map[[16]byte]int, int(count))
 	for ordinal := int32(0); ordinal < count; ordinal++ {
 		var dev int32
 		if rc, _, _ := api.deviceGet.Call(uintptr(unsafe.Pointer(&dev)), uintptr(ordinal)); uint32(rc) != 0 {
