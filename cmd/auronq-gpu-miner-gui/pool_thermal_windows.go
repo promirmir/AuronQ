@@ -75,7 +75,6 @@ func (a *App) monitorPoolThermals(cmd *exec.Cmd) {
 	defer ticker.Stop()
 
 	lastPause := time.Duration(-1)
-	lastTemp := -1
 	for range ticker.C {
 		a.mu.RLock()
 		active := a.minerCmd == cmd && a.miner.Running && a.miner.Mode == "pool"
@@ -108,7 +107,6 @@ func (a *App) monitorPoolThermals(cmd *exec.Cmd) {
 			target = 50
 		}
 		temp := hottest.TemperatureC
-		lastTemp = temp
 
 		if temp >= limit {
 			a.addLog(fmt.Sprintf("POOL THERMAL SAFETY: GPU %d reached %d C (hard limit %d C); stopping miner", hottest.Index, temp, limit))
@@ -136,7 +134,6 @@ func (a *App) monitorPoolThermals(cmd *exec.Cmd) {
 			return
 		}
 	}
-	_ = lastTemp
 }
 
 func pulseSuspendProcess(pid int, pause time.Duration) error {
