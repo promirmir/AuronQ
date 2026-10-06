@@ -931,6 +931,30 @@ func validateWorkerExecutable() error {
 	return nil
 }
 
+func safeGUIThreads(requested int) int {
+	cpus := runtime.NumCPU()
+	if cpus < 1 {
+		cpus = 1
+	}
+	if requested > 0 {
+		if requested > cpus {
+			requested = cpus
+		}
+		if requested > 16 {
+			requested = 16
+		}
+		return requested
+	}
+	n := cpus / 2
+	if n < 1 {
+		n = 1
+	}
+	if n > 4 {
+		n = 4
+	}
+	return n
+}
+
 func (a *App) isWorkerRunning() bool {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
