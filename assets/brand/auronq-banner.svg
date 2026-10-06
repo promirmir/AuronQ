@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 720" role="img" aria-labelledby="title desc">
+<title id="title">AuronQ banner</title><desc id="desc">AuronQ blockchain banner with quantum-inspired emblem.</desc>
+<defs>
+  <radialGradient id="bg" cx=".5" cy=".45" r=".8"><stop offset="0" stop-color="#081b4a"/><stop offset=".48" stop-color="#04112d"/><stop offset="1" stop-color="#01040d"/></radialGradient>
+  <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset=".42" stop-color="#e7efff"/><stop offset=".7" stop-color="#9db2e7"/><stop offset="1" stop-color="#fff"/></linearGradient>
+  <linearGradient id="neon" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4ff6ff"/><stop offset=".38" stop-color="#1678ff"/><stop offset=".72" stop-color="#7750ff"/><stop offset="1" stop-color="#f15cff"/></linearGradient>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="1920" height="720" fill="url(#bg)"/>
+<g opacity=".7">
+  <circle cx="145" cy="95" r="2" fill="#fff"/><circle cx="238" cy="172" r="1.5" fill="#69dfff"/><circle cx="410" cy="75" r="2" fill="#fff"/>
+  <circle cx="1095" cy="103" r="1.5" fill="#fff"/><circle cx="1290" cy="154" r="2" fill="#7beaff"/><circle cx="1530" cy="82" r="2" fill="#fff"/><circle cx="1784" cy="198" r="1.8" fill="#9c7cff"/>
+  <circle cx="1640" cy="510" r="1.5" fill="#fff"/><circle cx="1320" cy="588" r="2" fill="#63e5ff"/><circle cx="260" cy="560" r="1.7" fill="#a46eff"/>
+</g>
+<path d="M0 565 C255 455 382 635 610 532 C832 431 955 610 1190 515 C1390 434 1612 552 1920 430" fill="none" stroke="#1d6fff" stroke-opacity=".34" stroke-width="3"/>
+<path d="M0 600 C245 490 402 650 620 555 C852 454 1038 620 1230 545 C1450 460 1670 610 1920 505" fill="none" stroke="#a94fff" stroke-opacity=".28" stroke-width="3"/>
+<g transform="translate(75,-15) scale(.67)">
+  <circle cx="512" cy="500" r="330" fill="none" stroke="url(#neon)" stroke-width="8" opacity=".9" filter="url(#glow)"/>
+  <circle cx="512" cy="500" r="292" fill="none" stroke="#2a7dff" stroke-width="3" opacity=".5"/>
+  <ellipse cx="512" cy="500" rx="350" ry="205" fill="none" stroke="#4ddfff" stroke-width="4" opacity=".3" transform="rotate(-24 512 500)"/>
+  <ellipse cx="512" cy="500" rx="350" ry="205" fill="none" stroke="#a856ff" stroke-width="4" opacity=".3" transform="rotate(24 512 500)"/>
+  <path d="M512 92 L126 766 H300 L512 392 L724 766 H898 Z" fill="url(#metal)" stroke="url(#neon)" stroke-width="5"/>
+  <path d="M145 756 C292 610 401 570 512 628 C640 695 754 784 899 651" fill="none" stroke="url(#neon)" stroke-width="82" stroke-linecap="round" filter="url(#glow)"/>
+  <line x1="512" y1="117" x2="512" y2="884" stroke="#68f7ff" stroke-width="5" opacity=".85"/>
+  <circle cx="512" cy="500" r="52" fill="url(#neon)" stroke="#fff" stroke-opacity=".8" stroke-width="3" filter="url(#glow)"/>
+</g>
+<text x="790" y="360" font-family="Arial,Helvetica,sans-serif" font-size="220" font-weight="700" letter-spacing="8" fill="url(#metal)">AURON</text>
+<text x="1640" y="360" font-family="Arial,Helvetica,sans-serif" font-size="220" font-weight="700" fill="url(#neon)" filter="url(#glow)">Q</text>
+<line x1="850" y1="445" x2="1040" y2="445" stroke="#6eefff" stroke-width="2" opacity=".8"/>
+<text x="1080" y="465" font-family="Arial,Helvetica,sans-serif" font-size="56" letter-spacing="24" fill="#dce8ff">BLOCKCHAIN</text>
+<line x1="1558" y1="445" x2="1750" y2="445" stroke="#8a6cff" stroke-width="2" opacity=".8"/>
+</svg>
