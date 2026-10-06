@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.3.2-alpha"
+	guiVersion       = "0.3.3-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -57,7 +57,11 @@ type settings struct {
 	PoolURL         string `json:"pool_url"`
 	PoolWorker      string `json:"pool_worker"`
 	PoolMinerPath   string `json:"pool_miner_path"`
+	PoolEngine      string `json:"pool_engine"`
 	PoolBackend     string `json:"pool_backend"`
+	PoolFanAuto     bool   `json:"pool_fan_auto"`
+	PoolThreads     int    `json:"pool_threads"`
+	PoolRetune      bool   `json:"pool_retune"`
 	Language        string `json:"language"`
 }
 
@@ -279,7 +283,10 @@ func defaultSettings() settings {
 		MiningMode:      "solo",
 		PoolURL:         "pool.meshpool.net:3359",
 		PoolWorker:      "rig1",
+		PoolEngine:      "meshminer",
 		PoolBackend:     "cuda",
+		PoolFanAuto:     true,
+		PoolThreads:     0,
 		Language:        "pl",
 	}
 }
@@ -306,8 +313,14 @@ func normalizeSettings(s *settings) {
 	if strings.TrimSpace(s.PoolWorker) == "" {
 		s.PoolWorker = "rig1"
 	}
-	if s.PoolBackend != "both" {
+	if s.PoolEngine != "custom" {
+		s.PoolEngine = "meshminer"
+	}
+	if s.PoolBackend != "cpu" && s.PoolBackend != "both" {
 		s.PoolBackend = "cuda"
+	}
+	if s.PoolThreads < 0 || s.PoolThreads > 256 {
+		s.PoolThreads = 0
 	}
 	if s.Language != "en" {
 		s.Language = "pl"
@@ -363,8 +376,14 @@ func (a *App) saveSettings(s settings) error {
 	if s.MiningMode != "solo" && s.MiningMode != "pool" {
 		return errors.New("mining mode must be solo or pool")
 	}
-	if s.PoolBackend != "cuda" && s.PoolBackend != "both" {
-		return errors.New("pool backend must be cuda or both")
+	if s.PoolEngine != "" && s.PoolEngine != "meshminer" && s.PoolEngine != "custom" {
+		return errors.New("pool engine must be meshminer or custom")
+	}
+	if s.PoolBackend != "cuda" && s.PoolBackend != "cpu" && s.PoolBackend != "both" {
+		return errors.New("pool backend must be cuda, cpu or both")
+	}
+	if s.PoolThreads < 0 || s.PoolThreads > 256 {
+		return errors.New("pool CPU threads must be between 0 and 256")
 	}
 	if s.MiningMode == "pool" {
 		if _, err := normalizePoolEndpoint(s.PoolURL); err != nil {
@@ -409,6 +428,7 @@ func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/miner/stop", a.guard(a.handleMinerStop))
 	mux.HandleFunc("/api/self-test", a.guard(a.handleSelfTest))
 	mux.HandleFunc("/api/benchmark", a.guard(a.handleBenchmark))
+	mux.HandleFunc("/api/pool/retune", a.guard(a.handlePoolRetune))
 	mux.HandleFunc("/api/node/reconnect", a.guard(a.handleReconnect))
 	mux.HandleFunc("/api/exit", a.guard(a.handleExit))
 }
@@ -901,28 +921,39 @@ func (a *App) startWorker(mode string, s settings) error {
 	if err := a.saveSettings(s); err != nil {
 		return err
 	}
-	gpus, err := queryNVIDIAGPUs()
-	if err != nil {
-		return err
-	}
-	devices, err := selectedDeviceIndices(s, gpus)
-	if err != nil {
-		return err
-	}
-	names := make([]string, 0, len(devices))
-	for _, d := range devices {
-		for _, g := range gpus {
-			if g.Index == d {
-				names = append(names, fmt.Sprintf("GPU %d: %s", d, g.Name))
-				break
+
+	needsGPU := !(mode == "mining" && s.MiningMode == "pool" && s.PoolBackend == "cpu")
+	var gpus []gpuInfo
+	var devices []int
+	if needsGPU {
+		var err error
+		gpus, err = queryNVIDIAGPUs()
+		if err != nil {
+			return err
+		}
+		devices, err = selectedDeviceIndices(s, gpus)
+		if err != nil {
+			return err
+		}
+		names := make([]string, 0, len(devices))
+		for _, d := range devices {
+			for _, g := range gpus {
+				if g.Index == d {
+					names = append(names, fmt.Sprintf("GPU %d: %s", d, g.Name))
+					break
+				}
 			}
 		}
+		a.mu.Lock()
+		a.gpus = append([]gpuInfo(nil), gpus...)
+		a.gpuTelemetryErr = ""
+		a.gpuName = strings.Join(names, " | ")
+		a.mu.Unlock()
+	} else {
+		a.mu.Lock()
+		a.gpuName = "MeshMiner CPU"
+		a.mu.Unlock()
 	}
-	a.mu.Lock()
-	a.gpus = append([]gpuInfo(nil), gpus...)
-	a.gpuTelemetryErr = ""
-	a.gpuName = strings.Join(names, " | ")
-	a.mu.Unlock()
 
 	if mode == "mining" {
 		if err := a.validateRewardAddress(s.Address); err != nil {
@@ -990,8 +1021,9 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 	if worker == "" || strings.ContainsAny(worker, " \t\r\n") {
 		return errors.New("pool worker name must be a single non-empty token")
 	}
+
 	backend := s.PoolBackend
-	if backend != "both" {
+	if backend != "cuda" && backend != "cpu" && backend != "both" {
 		backend = "cuda"
 	}
 	user := strings.TrimSpace(s.Address) + "." + worker
@@ -1000,13 +1032,68 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 		"--user", user,
 		"--backend", backend,
 		"--algo", "auronq",
+	}
+	if backend != "cpu" {
+		if len(devices) == 0 {
+			return errors.New("MeshMiner CUDA backend requires at least one NVIDIA GPU")
+		}
+		args = append(args, "--device", deviceCSV(devices))
+		if s.PoolFanAuto {
+			args = append(args, "--fan", "auto")
+		}
+		if s.PoolRetune {
+			args = append(args, "--retune")
+		}
+	}
+	if backend != "cuda" && s.PoolThreads > 0 {
+		args = append(args, "--threads", strconv.Itoa(s.PoolThreads))
+	}
+
+	cmd := exec.Command(path, args...)
+	cmd.Dir = filepath.Dir(path)
+	cmd.SysProcAttr = &syscallSysProcAttr
+	a.addLog(fmt.Sprintf("POOL MeshMiner: %s endpoint=%s backend=%s devices=%s fan_auto=%t threads=%d retune=%t",
+		filepath.Base(path), endpoint, backend, deviceCSV(devices), s.PoolFanAuto, s.PoolThreads, s.PoolRetune))
+	if s.PoolFanAuto && backend != "cpu" {
+		a.addLog(fmt.Sprintf("POOL thermal: MeshMiner --fan auto enabled; AuronQ hard stop remains %d C", s.ThermalStopC))
+	}
+	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)
+}
+
+func (a *App) startPoolRetune(s settings) error {
+	if a.isWorkerRunning() {
+		return errors.New("stop the current miner before MeshMiner retune")
+	}
+	if err := a.saveSettings(s); err != nil {
+		return err
+	}
+	gpus, err := queryNVIDIAGPUs()
+	if err != nil {
+		return err
+	}
+	devices, err := selectedDeviceIndices(s, gpus)
+	if err != nil {
+		return err
+	}
+	path, err := resolvePoolMinerPath(s.PoolMinerPath)
+	if err != nil {
+		return err
+	}
+	args := []string{
+		"--algo", "auronq",
+		"--backend", "cuda",
 		"--device", deviceCSV(devices),
+		"--tune-only",
+		"--retune",
+	}
+	if s.PoolFanAuto {
+		args = append(args, "--fan", "auto")
 	}
 	cmd := exec.Command(path, args...)
 	cmd.Dir = filepath.Dir(path)
 	cmd.SysProcAttr = &syscallSysProcAttr
-	a.addLog(fmt.Sprintf("POOL bridge: %s endpoint=%s devices=%s backend=%s", filepath.Base(path), endpoint, deviceCSV(devices), backend))
-	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic)
+	a.addLog(fmt.Sprintf("MeshMiner retune: devices=%s fan_auto=%t", deviceCSV(devices), s.PoolFanAuto))
+	return a.launchWorkerCommand(cmd, "pool-tune", false)
 }
 
 func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, autoPublic bool) error {
@@ -1259,6 +1346,19 @@ func (a *App) handleBenchmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := a.startWorker("benchmark", s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true})
+}
+
+func (a *App) handlePoolRetune(w http.ResponseWriter, r *http.Request) {
+	var s settings
+	if err := readBody(r, &s); err != nil {
+		apiError(w, 400, err)
+		return
+	}
+	if err := a.startPoolRetune(s); err != nil {
 		apiError(w, 400, err)
 		return
 	}
