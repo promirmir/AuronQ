@@ -99,6 +99,10 @@ type appState struct {
 	GPUError        string     `json:"gpu_error,omitempty"`
 	GPUTelemetrySource string `json:"gpu_telemetry_source,omitempty"`
 	GPUTelemetryAgeMS int64   `json:"gpu_telemetry_age_ms,omitempty"`
+	CPUCount        int        `json:"cpu_count"`
+	SafeCPUThreads  int        `json:"safe_cpu_threads"`
+	CUDAAvailable   bool       `json:"cuda_available"`
+	Platform        string     `json:"platform"`
 	Miner           minerState `json:"miner"`
 	Settings        settings   `json:"settings"`
 	Logs            []string   `json:"logs"`
@@ -550,6 +554,10 @@ func (a *App) state() appState {
 		GPUs:        gpus,
 		GPUError:    gpuErr,
 		GPUTelemetrySource: func() string { if len(gpus) > 0 { return "NVML_DIRECT" }; return "" }(),
+		CPUCount: runtime.NumCPU(),
+		SafeCPUThreads: safeGUIThreads(cfg.CPUThreads),
+		CUDAAvailable: len(gpus) > 0,
+		Platform: runtime.GOOS + "/" + runtime.GOARCH,
 		Miner:       miner,
 		Settings:       cfg,
 		Logs:           logs,
