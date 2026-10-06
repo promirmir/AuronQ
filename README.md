@@ -297,6 +297,18 @@ AQM64, consensus, networking, wallet behavior and implementation details still r
 
 Please read [SECURITY.md](SECURITY.md) before reporting or evaluating security issues.
 
+## Thank you
+
+AuronQ is becoming a real public network because people are actually using it, testing it and challenging it.
+
+Thank you to everyone who runs a node, mines AURQ, operates or tests a pool, tries the wallets and miners, checks the Explorer, reports bugs, asks difficult technical questions, reviews the code, shares independent measurements, or simply takes the time to follow the project and provide feedback.
+
+Every independent node, miner, test, bug report and honest piece of criticism helps make the network more observable, more resilient and less dependent on any single person or machine.
+
+Special thanks to the community members, pool operators, infrastructure providers and external services that have chosen to support or monitor AuronQ independently.
+
+The project is still young, and that makes real-world participation especially valuable. Thank you to everyone contributing to that process.
+
 ## Contributing
 
 Contributions, reproducible bug reports and independent review are welcome.
