@@ -50,6 +50,8 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 
 **Official project email:** auronqnetwork@gmail.com
 
+**Official brand assets:** [assets/brand/](assets/brand/)
+
 **Release archive:** [GitHub Releases](https://github.com/promirmir/AuronQ/releases) · **History:** [CHANGELOG.md](CHANGELOG.md)
 
 ## ⛏️ Mine AURQ
