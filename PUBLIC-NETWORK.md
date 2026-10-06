@@ -71,7 +71,18 @@ These controls do not replace professional adversarial review or DDoS/Sybil test
 
 ## Becoming an independent public node
 
-Windows source/release packaging includes an opt-in `START-PUBLIC-NODE.cmd`. It opens TCP/18444 in Windows Firewall and starts AuronQ Desktop. A router/public ISP path must still allow inbound TCP/18444; CGNAT normally requires a VPS or public relay. Public reachability is verified by another node before that address is accepted into peer gossip. Once verified and gossiped, the hourly registry crawler can discover the endpoint and add it to the public bootstrap registry through the protected PR/CI process.
+Public reachability is now treated as a **full-node lifecycle function**, not a mining feature. AuronQ Desktop and the Windows Universal Miner automatically try to keep TCP/18444 reachable for as long as their full node is running. The portable CLI defaults to `--auto-public=true`.
+
+The automatic path is:
+1. use a directly assigned public IPv4/IPv6 address when one is available;
+2. otherwise try UPnP/IGD TCP mapping for the node listen port;
+3. advertise the endpoint;
+4. let remote peers callback-verify it before accepting it into public gossip;
+5. retry periodically while the node remains outbound-only.
+
+Stopping a miner no longer closes the public-node mapping. Stopping the full node does.
+
+A router/public ISP path must still allow inbound TCP/18444. If the router has no public WAN address (typical CGNAT), UPnP cannot create Internet reachability and the node correctly remains outbound-only. Windows Firewall may also need to allow the AuronQ executable on the active network profile. Public reachability is verified by another node before that address is accepted into peer gossip. Once verified and gossiped, the hourly registry crawler can discover the endpoint and add it to the public bootstrap registry through the protected PR/CI process.
 
 Normal users do not need inbound connectivity and can keep using `START-AURONQ.cmd`.
 
@@ -99,4 +110,4 @@ AuronQ 1.7.0 is live mainnet software. It is **not independently audited**. AQM6
 
 When `--advertise` is not supplied and the node is listening on a public interface, AuronQ now attempts to advertise that directly assigned public IP and listening port automatically. The receiving peer still callback-verifies the endpoint before admitting it to gossip, so detection alone does not make an endpoint trusted.
 
-This primarily helps VPS/server operators whose public IP is assigned directly to a network interface. Nodes behind home NAT/CGNAT still need port forwarding plus an explicit `--advertise` URL, or another public relay mechanism.
+This directly helps VPS/server operators whose public IP is assigned to an interface. Home NAT users can now become public automatically when their router supports UPnP/IGD and its WAN address is globally routable. CGNAT users still need a public ISP address, IPv6 reachability, a manual/public relay, or equivalent operator-controlled ingress.
