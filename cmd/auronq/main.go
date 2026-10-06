@@ -365,6 +365,10 @@ func cmdBalance(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
+	miningThreads, err := safeCPUMiningThreads(*threads)
+	if err != nil {
+		return err
+	}
 	a := *addr
 	if a == "" && *wallet != "" {
 		b, err := os.ReadFile(*wallet)
@@ -436,12 +440,36 @@ func cmdSend(args []string) error {
 	return nil
 }
 
+func safeCPUMiningThreads(requested int) (int, error) {
+	cpus := runtime.NumCPU()
+	if cpus < 1 {
+		cpus = 1
+	}
+	if requested < 0 || requested > 16 {
+		return 0, fmt.Errorf("--threads must be between 0 and 16")
+	}
+	if requested > 0 {
+		if requested > cpus {
+			requested = cpus
+		}
+		return requested, nil
+	}
+	n := cpus / 4
+	if n < 1 {
+		n = 1
+	}
+	if n > 2 {
+		n = 2
+	}
+	return n, nil
+}
+
 func cmdMine(args []string) error {
 	fs := flag.NewFlagSet("mine", flag.ContinueOnError)
 	node := fs.String("node", "http://127.0.0.1:18444", "node URL")
 	addr := fs.String("address", "", "reward address")
 	wallet := fs.String("wallet", "", "wallet file (public metadata only)")
-	threads := fs.Int("threads", runtime.NumCPU(), "CPU mining threads")
+	threads := fs.Int("threads", 0, "CPU mining threads (0 = conservative automatic profile, max 16)")
 	once := fs.Bool("once", false, "mine one block and exit")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -475,7 +503,7 @@ func cmdMine(args []string) error {
 			return err
 		}
 		fmt.Printf("Mining height %d target %s...\n", tpl.Header.Height, tpl.Header.Target.String()[:16])
-		res, err := aq.MineRemoteTemplate(ctx, cl, tpl, *threads, time.Second, func(h uint64, d time.Duration) {
+		res, err := aq.MineRemoteTemplate(ctx, cl, tpl, miningThreads, time.Second, func(h uint64, d time.Duration) {
 			if d > 0 {
 				fmt.Printf("  %.0f H/s | %d hashes\n", float64(h)/d.Seconds(), h)
 			}
