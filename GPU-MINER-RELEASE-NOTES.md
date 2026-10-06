@@ -1,48 +1,52 @@
-# AuronQ GPU Miner v0.3.7 Alpha
+# AuronQ GPU Miner v0.3.8 Alpha
 
-This release focuses on **safe autonomous pool mining on Windows**, especially laptop GPUs. It does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID, wallet rules or monetary policy.
+This release focuses on **hardware-truth thermal safety on Windows**. It does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID, transaction validation, wallet rules or monetary policy.
 
-## Autonomous pool thermal governor
+## Direct local hardware telemetry
 
-The Windows GUI now wraps external MeshMiner pool mining with a smoother AuronQ-side thermal controller:
+Windows thermal control no longer depends on temperatures reported by MeshMiner, pool software, websites or other external data sources.
 
-- NVIDIA temperature telemetry is sampled every 500 ms;
-- load is reduced with short adaptive duty-cycle pulses instead of long 400–850 ms one-shot pauses;
-- throttling increases quickly when temperature rises, but is released gradually after cooling to avoid thermal oscillation;
-- the recommended/default safety limit is now **81 °C**, with an automatic operating target around **76 °C**;
-- at 81 °C the miner is suspended for an automatic cooldown instead of immediately requiring a manual restart;
-- mining resumes automatically after the GPU is stably cooled below the target;
-- a separate catastrophic fail-safe stops the external miner at approximately **limit + 2 °C** if temperature still rises despite suspension;
-- loss of NVIDIA thermal telemetry or failure of process suspend/resume now fails safe by stopping the miner rather than continuing blind.
+Safety decisions now use the locally installed NVIDIA driver directly through **NVML**:
 
-The goal is stable long-running mining with less hashrate loss and no repeated full-load / long-pause temperature oscillation.
+- GPU temperature is read directly from the NVIDIA driver;
+- NVIDIA utilization, VRAM, power, clocks, P-state and fan telemetry are read from the same local driver interface when supported;
+- NVML devices are mapped to CUDA ordinals through direct CUDA UUID matching;
+- on multi-GPU systems the miner refuses unsafe sensor/device guessing;
+- the same 500 ms hardware sample feeds both the dashboard and the pool thermal governor;
+- the dashboard displays **NVML DIRECT** and the age of the current hardware sample.
 
-## Dashboard
+MeshMiner and pools remain sources of mining work, shares and H/s only. Their temperature data is not used for AuronQ thermal safety decisions.
 
-The PL/EN dashboard now presents the thermal profile as an **AUTO** mode and uses 81 °C as the safe default for new settings. Existing user settings remain under user control.
+## Fail-safe behavior
 
-## Pool mining
+- Recommended thermal limit remains **81 °C**.
+- Automatic target remains about **76 °C** with adaptive load control.
+- At the configured limit, Pool mode performs automatic suspend/cool/resume.
+- The independent catastrophic fail-safe is tightened to approximately **limit + 1 °C**.
+- If direct NVML telemetry becomes stale or unavailable, mining stops instead of continuing with guessed or externally reported temperature data.
+- The native Windows Solo CUDA worker now follows the same direct-telemetry rule and also stops on telemetry loss.
 
-MeshMiner 0.8.35+ integration remains external and optional. AuronQ does not bundle or silently download third-party pool miners. Pool support still includes:
+## Windows x64
 
-- MeshPool preset;
-- custom AuronQ-compatible endpoints;
-- CUDA / CPU / both backends;
-- multi-GPU selection;
-- Retune;
-- live H/s parsing;
-- AuronQ-side safety control independent of MeshMiner fan reporting.
+Windows includes:
 
-## Linux
+- PL/EN dashboard;
+- native AQM64 CUDA Solo miner;
+- MeshMiner 0.8.35+ bridge for pool mining;
+- custom compatible pool endpoints;
+- live H/s and direct local GPU telemetry;
+- autonomous thermal control based on direct NVML hardware samples.
 
-The native Linux amd64 Solo CUDA miner remains available in the release package. v0.3.7 does not claim the Windows external-pool suspend/resume governor as a Linux GUI feature.
+## Linux amd64
+
+The Linux package remains the native CLI-first AQM64 CUDA miner. The direct NVML Windows controller described above is a Windows-specific safety change in v0.3.8; Linux behavior is otherwise unchanged from v0.3.7.
 
 ## Packages
 
-- `AuronQ-GPU-Miner-v0.3.7-alpha-Windows-x64.zip`
-- `AuronQ-GPU-Miner-v0.3.7-alpha-Linux-amd64.tar.gz`
+- `AuronQ-GPU-Miner-v0.3.8-alpha-Windows-x64.zip`
+- `AuronQ-GPU-Miner-v0.3.8-alpha-Linux-amd64.tar.gz`
 - `SHA256SUMS-GPU-MINER.txt`
 
 ## Important
 
-GPU Miner remains alpha software. The CUDA implementation and the external-pool thermal governor have not received an independent professional security audit. The autonomous thermal controller is a software safety layer and does not replace working laptop fans, unobstructed airflow, the NVIDIA driver or hardware thermal protection.
+GPU Miner remains alpha software. Direct NVML telemetry is a software safety layer using the official local NVIDIA driver interface; it does not replace functioning laptop fans, unobstructed airflow, firmware thermal protection or hardware protection.
