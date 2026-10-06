@@ -1,8 +1,22 @@
-# AuronQ Universal Miner v0.4.1 Alpha
+# AuronQ Universal Miner v0.4.2 Alpha
 
+## Strategic public-node lifecycle update
+
+v0.4.2 makes inbound P2P reachability a **full-node lifecycle function** rather than a mining-session function.
+
+- Auto Public TCP/18444 starts with the full node, not with the miner.
+- Stopping Solo/Pool mining no longer closes the public-node mapping.
+- Windows GUI retries public reachability automatically while the node remains outbound-only.
+- The dashboard now reports actionable diagnostics for likely CGNAT, missing UPnP/IGD, router mapping refusal and unverified callback/firewall cases.
+- The bundled portable CLI defaults to `--auto-public=true` and can be explicitly disabled with `--auto-public=false`.
+- CLI Auto Public is skipped for loopback-only listeners and preserves explicit `--advertise` behavior.
+- Portable-node examples now listen on an inbound-capable address instead of `127.0.0.1` when public-node operation is intended.
+- Remote peers still callback-verify an advertised endpoint before admitting it to public gossip.
+
+No Mainnet consensus rules are changed.
 ## Critical GUI hotfix
 
-v0.4.1 fixes a JavaScript syntax error in the Windows GUI shipped in v0.4.0 Alpha. The broken inline script prevented the dashboard controls, refresh loop and actions from running correctly even though the compiled executables and backend self-tests were valid.
+v0.4.2 fixes a JavaScript syntax error in the Windows GUI shipped in v0.4.0 Alpha. The broken inline script prevented the dashboard controls, refresh loop and actions from running correctly even though the compiled executables and backend self-tests were valid.
 
 A mandatory JavaScript syntax check is now part of CI so an invalid embedded dashboard script cannot pass the Universal Miner release gate again.
 
@@ -54,7 +68,7 @@ Each portable package includes the AuronQ miner CLI, full-node CLI, network.json
 
 ## GPU acceleration limits
 
-Official accelerated GPU backend in v0.4.1 remains NVIDIA CUDA. AMD/Intel computers are supported through the native CPU fallback. An AMD/Intel GPU backend will only be promoted after hardware testing and byte-for-byte AQM64 validation; v0.4.1 does not ship an unvalidated OpenCL/HIP/oneAPI implementation.
+Official accelerated GPU backend in v0.4.2 remains NVIDIA CUDA. AMD/Intel computers are supported through the native CPU fallback. An AMD/Intel GPU backend will only be promoted after hardware testing and byte-for-byte AQM64 validation; v0.4.2 does not ship an unvalidated OpenCL/HIP/oneAPI implementation.
 
 ## Consensus unchanged
 

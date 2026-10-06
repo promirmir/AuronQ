@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.4.1-alpha"
+	guiVersion       = "0.4.2-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
