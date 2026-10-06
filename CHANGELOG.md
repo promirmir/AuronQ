@@ -22,6 +22,19 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### Universal Miner v0.4.2 Alpha
+
+- Public TCP/18444 is now a **full-node lifecycle service**, independent of mining.
+- Stopping Solo/Pool mining no longer removes the node's public UPnP mapping.
+- Windows Miner retries Auto Public while the node remains outbound-only and reports CGNAT/UPnP/firewall diagnostics.
+- AuronQ Desktop source now follows the same node-scoped public-node lifecycle instead of enabling UPnP only from CPU mining.
+- Portable `auronq node` defaults to `--auto-public=true`; operators can explicitly opt out.
+- Portable public-node examples use inbound-capable listen addresses; loopback-only listeners are never auto-advertised.
+- Public endpoints remain callback-verified by remote peers before entering peer gossip.
+- CI syntax-checks both embedded Miner and Desktop JavaScript.
+- No Mainnet consensus, genesis, Network ID, AQM64, difficulty, transaction validation or monetary-policy changes.
+
+
 ### Universal Miner v0.4.1 Alpha
 
 - Critical Windows GUI hotfix: repaired an invalid JavaScript string in the CPU fallback card that prevented the embedded dashboard script from parsing.
