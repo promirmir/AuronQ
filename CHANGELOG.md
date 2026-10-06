@@ -22,6 +22,18 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### GPU Miner v0.3.7 Alpha
+
+- Reworked Windows Pool thermal control for autonomous long-running mining.
+- NVIDIA telemetry is sampled every 500 ms and external MeshMiner load is regulated with short adaptive duty-cycle pulses.
+- Added hysteresis: throttling increases quickly on heat but is released gradually after cooling to prevent full-load / long-pause oscillation.
+- Recommended/default thermal limit for new settings is now 81 °C with an automatic target around 76 °C.
+- Reaching the configured limit now triggers an automatic suspend/cool/resume cycle instead of immediately requiring a manual restart.
+- Added catastrophic fail-safe stop if temperature continues to rise despite suspension, if telemetry is lost repeatedly, or if suspend/resume control fails.
+- Updated PL/EN dashboard, documentation and release packaging.
+- No Mainnet consensus, AQM64, difficulty, Network ID, genesis or monetary-policy changes.
+
+
 ### GPU Miner v0.3.6 Alpha
 
 - Added official Linux amd64 NVIDIA CUDA package alongside Windows x64.
