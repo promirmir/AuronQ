@@ -33,15 +33,16 @@ func safeCPUThreads(requested int) int {
 		return requested
 	}
 
-	// Conservative universal default: about half the logical CPUs, but no more
-	// than four simultaneous 64 MiB AQM64 scratchpads. This keeps the fallback
-	// usable on laptops and low-memory PCs instead of blindly saturating them.
-	n := cpus / 2
+	// Conservative universal default: about one quarter of the logical CPUs,
+	// never more than two simultaneous 64 MiB AQM64 scratchpads. Without a
+	// trustworthy cross-vendor CPU temperature sensor, AUTO deliberately leaves
+	// substantial thermal and interactive headroom on laptops and small PCs.
+	n := cpus / 4
 	if n < 1 {
 		n = 1
 	}
-	if n > 4 {
-		n = 4
+	if n > 2 {
+		n = 2
 	}
 	return n
 }
