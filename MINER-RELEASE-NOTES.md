@@ -13,7 +13,7 @@ This release is a miner compatibility and safety update. It does not change Auro
 
 - Works without CUDA and without a discrete GPU.
 - Reuses fixed 64 MiB AQM64 workspaces instead of reallocating each hash.
-- Default CPU profile uses about half of logical CPUs, capped at 4 lanes.
+- Default CPU profile uses about one quarter of logical CPUs, capped at 2 lanes.
 - Explicit CPU concurrency is capped at 16 lanes.
 - Backend output is verified byte-for-byte against canonical AQM64 in CI and by the self-test.
 
