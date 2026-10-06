@@ -6,7 +6,7 @@ not change Mainnet consensus.
 
 ## Status
 
-**v0.3.4-alpha release candidate.** The built-in solo miner retains the validated AQM64 CUDA path and adds multi-GPU orchestration, automatic per-GPU batch tuning, live NVIDIA telemetry, thermal shutdown protection and a GUI pool bridge. It remains alpha software and the CUDA implementation has not received an independent professional audit.
+**v0.3.5-alpha release candidate.** The built-in solo miner retains the validated AQM64 CUDA path, multi-GPU orchestration, automatic tuning and thermal protection, while the Windows GUI now presents GPU telemetry as a full dashboard with temperature state, clocks, utilization, power, VRAM and efficiency. It remains alpha software and the CUDA implementation has not received an independent professional audit.
 
 Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
 with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
@@ -104,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File .\build-gpu-miner-windows.ps1
 
 The script builds the CUDA DLL, CLI worker and Windows app, copies the immutable
 Mainnet configuration/bootstrap metadata, performs the mandatory GPU/CPU AQM64
-self-test, and creates `AuronQ-GPU-Miner-v0.3.4-alpha-Windows-x64.zip` under
+self-test, and creates `AuronQ-GPU-Miner-v0.3.5-alpha-Windows-x64.zip` under
 `dist`.
 
 ## Mandatory device self-test before mining
