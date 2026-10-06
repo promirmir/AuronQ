@@ -894,8 +894,10 @@ func (a *App) startNode() error {
 	} else {
 		a.addLog("Brak publicznych seedów w network.json — node działa, ale świeża instalacja nie ma punktu startowego do globalnego P2P")
 	}
+	go a.publicNodeLoop(ctx, node)
 	go func() {
 		err := node.Run(ctx)
+		a.closePublicMappingForNode(node)
 		a.mu.Lock()
 		a.nodeRun = false
 		if err != nil && ctx.Err() == nil {
@@ -925,12 +927,9 @@ func (a *App) startNode() error {
 func (a *App) stopNode() {
 	a.mu.Lock()
 	c := a.nodeCancel
-	mapping := a.portMapping
-	a.portMapping = nil
+	node := a.node
 	a.mu.Unlock()
-	if mapping != nil {
-		mapping.Close()
-	}
+	a.closePublicMappingForNode(node)
 	if c != nil {
 		c()
 		time.Sleep(150 * time.Millisecond)
@@ -1157,41 +1156,90 @@ func (a *App) handleSend(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true, "txid": res.TXID.String(), "fee": aq.FormatAmount(fee)})
 }
 
-func (a *App) helpNetworkWhileMining() {
-	a.mu.RLock()
-	node := a.node
-	existing := a.portMapping
-	a.mu.RUnlock()
-	if node == nil || node.PublicAdvertise() != "" || existing != nil {
+func (a *App) ensurePublicNode(node *aq.Node) {
+	if node == nil {
 		return
 	}
 	if strings.TrimSpace(os.Getenv("AURONQ_DISABLE_AUTO_PUBLIC")) == "1" {
-		a.addLog("Public node: automatyczne mapowanie portu wyłączone przez AURONQ_DISABLE_AUTO_PUBLIC=1")
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
-	defer cancel()
+
+	a.mu.RLock()
+	current := a.node
+	running := a.nodeRun
+	existing := a.portMapping
+	a.mu.RUnlock()
+	if current != node || !running || existing != nil || node.PublicAdvertise() != "" {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
 	mapping, err := aq.TryUPnPPortMapping(ctx, 18444)
+	cancel()
 	if err != nil {
-		a.addLog("Public node: router nie udostępnił automatycznie TCP/18444 (" + err.Error() + "); mining działa dalej przez połączenia wychodzące")
+		a.addLog("Public node: nie udało się udostępnić TCP/18444 (" + err.Error() + "); node pozostaje tylko wychodzący")
+		return
+	}
+
+	a.mu.Lock()
+	// Node may have been stopped/replaced while UPnP discovery was running.
+	if a.node != node || !a.nodeRun || a.portMapping != nil {
+		a.mu.Unlock()
+		mapping.Close()
 		return
 	}
 	if !node.SetPublicAdvertise(mapping.Advertise) {
+		a.mu.Unlock()
 		mapping.Close()
 		a.addLog("Public node: odrzucono wykryty endpoint")
 		return
 	}
-	a.mu.Lock()
-	if a.portMapping != nil {
-		old := a.portMapping
-		a.mu.Unlock()
-		mapping.Close()
-		_ = old
-		return
-	}
 	a.portMapping = mapping
 	a.mu.Unlock()
-	a.addLog("Public node: mining uruchomił automatyczne mapowanie TCP/18444 → " + mapping.Advertise)
+	a.addLog("Public node: TCP/18444 udostępniony automatycznie → " + mapping.Advertise)
+}
+
+func (a *App) publicNodeLoop(ctx context.Context, node *aq.Node) {
+	// Public reachability belongs to the node lifecycle, not to mining.
+	a.ensurePublicNode(node)
+
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			a.ensurePublicNode(node)
+		}
+	}
+}
+
+func (a *App) closePublicMappingForNode(node *aq.Node) {
+	a.mu.Lock()
+	if node != nil && a.node != nil && a.node != node {
+		a.mu.Unlock()
+		return
+	}
+	mapping := a.portMapping
+	a.portMapping = nil
+	a.mu.Unlock()
+	if mapping != nil {
+		if node != nil {
+			node.ClearPublicAdvertise(mapping.Advertise)
+		}
+		mapping.Close()
+		a.addLog("Public node: mapowanie TCP/18444 zamknięte")
+	}
+}
+
+func (a *App) helpNetworkWhileMining() {
+	// Compatibility wrapper for older UI/API flows. Public reachability is now
+	// maintained automatically for the full node, so mining no longer owns it.
+	a.mu.RLock()
+	node := a.node
+	a.mu.RUnlock()
+	go a.ensurePublicNode(node)
 }
 
 func (a *App) startMiner(wallet string, threads int, helpNetwork bool) error {
