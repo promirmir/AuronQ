@@ -1,18 +1,18 @@
-name: Publish GPU Miner v0.3.7-alpha
+name: Publish GPU Miner v0.3.8-alpha
 
 on:
   push:
     branches:
       - main
     paths:
-      - '.release/gpu-miner-v0.3.7-alpha'
+      - '.release/gpu-miner-v0.3.8-alpha'
 
 permissions:
   contents: write
 
 env:
-  GPU_VERSION: 0.3.7-alpha
-  GPU_TAG: gpu-v0.3.7-alpha
+  GPU_VERSION: 0.3.8-alpha
+  GPU_TAG: gpu-v0.3.8-alpha
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -72,7 +72,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: gpu-miner-windows
-          path: dist/AuronQ-GPU-Miner-v0.3.7-alpha-Windows-x64.zip
+          path: dist/AuronQ-GPU-Miner-v0.3.8-alpha-Windows-x64.zip
           if-no-files-found: error
 
   build-linux:
@@ -104,7 +104,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: gpu-miner-linux
-          path: dist/AuronQ-GPU-Miner-v0.3.7-alpha-Linux-amd64.tar.gz
+          path: dist/AuronQ-GPU-Miner-v0.3.8-alpha-Linux-amd64.tar.gz
           if-no-files-found: error
 
   publish:
@@ -142,5 +142,5 @@ jobs:
           if gh release view "$GPU_TAG" >/dev/null 2>&1; then
             gh release upload "$GPU_TAG" "${assets[@]}" --clobber
           else
-            gh release create "$GPU_TAG" "${assets[@]}"               --target "$GITHUB_SHA"               --title "AuronQ GPU Miner v0.3.7 Alpha"               --notes-file "./GPU-MINER-RELEASE-NOTES.md"               --prerelease
+            gh release create "$GPU_TAG" "${assets[@]}"               --target "$GITHUB_SHA"               --title "AuronQ GPU Miner v0.3.8 Alpha"               --notes-file "./GPU-MINER-RELEASE-NOTES.md"               --prerelease
           fi
