@@ -70,7 +70,7 @@ The official miner now uses **AUTO compute selection**: NVIDIA CUDA acceleration
 | Multi-GPU work | ✅ Separate worker per GPU with disjoint nonce ranges |
 | Automatic tuning | ✅ CUDA Auto Tune + adaptive GPU thermals; CPU fallback uses a conservative automatic thread profile |
 | Live performance | ✅ Rolling H/s, H/W efficiency, temperature state, clocks, fan, GPU load, power, VRAM and P-state |
-| Thermal protection | ✅ Smart Solo governor + AuronQ-side adaptive duty-cycle governor for external GPU pool miners + hard stop |
+| Thermal protection | ✅ Smart Solo governor + stabilized AuronQ-side Pool duty controller, cooldown hold and independent catastrophic hard stop |
 | Solo mining | ✅ Uses the ordinary AuronQ full-node template/validation path |
 | Pool mode | ✅ First-class MeshMiner 0.8.35+ integration, MeshPool preset and compatible custom endpoints |
 | Platforms / UI | ✅ Windows x64 GUI (PL/EN) · Linux amd64 CLI |
