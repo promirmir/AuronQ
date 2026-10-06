@@ -14,6 +14,9 @@ type multiGPUOptions struct {
 	BenchmarkSeconds int
 	AutoTune         bool
 	AutoTuneSeconds  int
+	ThermalAuto      bool
+	ThermalLimit     int
+	ThermalTarget    int
 	NoncePrefix      uint64
 }
 
