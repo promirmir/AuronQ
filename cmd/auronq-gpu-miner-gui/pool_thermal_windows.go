@@ -14,9 +14,13 @@ const (
 	poolThermalPollInterval    = 500 * time.Millisecond
 	poolThermalLogInterval     = 15 * time.Second
 	poolThermalBandLogInterval = 5 * time.Second
-	poolTelemetryFailLimit     = 6
-	poolEmergencyTimeout       = 20 * time.Second
-	poolEmergencyStableSamples = 4
+	poolTelemetryFailLimit       = 6
+	poolEmergencyTimeout         = 30 * time.Second
+	poolEmergencyStableSamples   = 6
+	poolPostCooldownHold         = 20 * time.Second
+	poolPostCooldownMinPause     = 300 * time.Millisecond
+	poolEmergencyMaxOvershootC   = 3
+	poolEmergencyRiseFailSamples = 4
 )
 
 var (
@@ -28,32 +32,38 @@ var (
 	procNtResumeProcessPool  = ntdllPoolThermal.NewProc("NtResumeProcess")
 )
 
-// externalThermalPause returns the requested pulse length for one 500 ms
-// control window. The curve is intentionally progressive: the external pool
-// miner stays close to full speed near the target and is only strongly
-// throttled immediately below the emergency ceiling.
+// externalThermalPause returns the requested pause for one 500 ms control
+// window. Regulation begins before the target instead of waiting until the GPU
+// is already hot. This gives laptop cooling systems time to react and avoids
+// large 100% -> 40% duty-cycle steps near the hard limit.
 func externalThermalPause(temp, target, limit int) time.Duration {
-	if temp < 0 || limit <= 0 || target >= limit || temp < target {
+	if temp < 0 || limit <= 0 || target >= limit {
 		return 0
 	}
 	switch {
 	case temp >= limit:
 		return 0 // emergency cooldown is handled separately
 	case temp >= limit-1:
-		return 300 * time.Millisecond
+		return 350 * time.Millisecond
 	case temp >= target+3:
-		return 175 * time.Millisecond
+		return 300 * time.Millisecond
 	case temp >= target+2:
-		return 100 * time.Millisecond
+		return 225 * time.Millisecond
 	case temp >= target+1:
+		return 150 * time.Millisecond
+	case temp >= target:
+		return 100 * time.Millisecond
+	case temp >= target-1:
 		return 50 * time.Millisecond
 	default:
-		return 25 * time.Millisecond
+		return 0
 	}
 }
 
-// rampThermalPause raises throttling quickly but releases it gradually. This
-// hysteresis prevents the old 75 C -> full speed -> 80 C -> long pause loop.
+// rampThermalPause makes duty changes small and asymmetric. Heat is removed
+// faster than performance is restored: at most 10 percentage points of duty
+// are removed per sample, while only about 2 points are restored per sample.
+// This prevents the governor from hunting around the thermal target.
 func rampThermalPause(current, desired time.Duration) time.Duration {
 	if current < 0 {
 		current = 0
@@ -62,7 +72,7 @@ func rampThermalPause(current, desired time.Duration) time.Duration {
 		desired = 0
 	}
 	if desired > current {
-		const rise = 150 * time.Millisecond
+		const rise = 50 * time.Millisecond
 		next := current + rise
 		if next > desired {
 			next = desired
@@ -70,7 +80,7 @@ func rampThermalPause(current, desired time.Duration) time.Duration {
 		return next
 	}
 	if desired < current {
-		const fall = 25 * time.Millisecond
+		const fall = 10 * time.Millisecond
 		next := current - fall
 		if next < desired {
 			next = desired
@@ -78,6 +88,22 @@ func rampThermalPause(current, desired time.Duration) time.Duration {
 		return next
 	}
 	return current
+}
+
+// stableThermalDesired adds two anti-oscillation rules on top of the static
+// temperature curve:
+//   - never release throttling while temperature is flat/rising near target;
+//   - after an emergency cooldown, hold a conservative minimum pause long
+//     enough for the heatsink/fans to reach a new thermal equilibrium.
+func stableThermalDesired(current time.Duration, temp, previousTemp, target, limit int, postCooldown bool) time.Duration {
+	desired := externalThermalPause(temp, target, limit)
+	if temp >= target-1 && previousTemp >= 0 && temp >= previousTemp && desired < current {
+		desired = current
+	}
+	if postCooldown && desired < poolPostCooldownMinPause {
+		desired = poolPostCooldownMinPause
+	}
+	return desired
 }
 
 func thermalDutyPercent(pause time.Duration) int {
@@ -151,6 +177,8 @@ func (a *App) monitorPoolThermals(cmd *exec.Cmd) {
 	lastBand := ""
 	lastLog := time.Time{}
 	telemetryFailures := 0
+	previousTemp := -1
+	postCooldownUntil := time.Time{}
 
 	for range ticker.C {
 		a.mu.RLock()
@@ -208,14 +236,18 @@ func (a *App) monitorPoolThermals(cmd *exec.Cmd) {
 			}
 			// Resume conservatively and let the hysteresis ramp back toward full
 			// duty only if the card remains cool.
-			currentPause = 150 * time.Millisecond
+			currentPause = poolPostCooldownMinPause
+			postCooldownUntil = time.Now().Add(poolPostCooldownHold)
+			previousTemp = temp
 			lastBand = "cooldown"
 			lastLog = time.Now()
 			continue
 		}
 
-		desired := externalThermalPause(temp, target, limit)
+		postCooldown := !postCooldownUntil.IsZero() && time.Now().Before(postCooldownUntil)
+		desired := stableThermalDesired(currentPause, temp, previousTemp, target, limit, postCooldown)
 		currentPause = rampThermalPause(currentPause, desired)
+		previousTemp = temp
 		band := thermalBand(temp, target, limit)
 		now := time.Now()
 		if lastLog.IsZero() ||
@@ -261,13 +293,15 @@ func (a *App) emergencyPoolCooldown(cmd *exec.Cmd, devices []int, target, limit 
 		return false
 	}
 
-	restartAt := target - 2
+	restartAt := target - 3
 	if restartAt < 45 {
 		restartAt = 45
 	}
 	deadline := time.Now().Add(poolEmergencyTimeout)
 	stable := 0
 	telemetryFailures := 0
+	lastTemp := -1
+	risingHotSamples := 0
 
 	for time.Now().Before(deadline) {
 		time.Sleep(poolThermalPollInterval)
@@ -299,10 +333,23 @@ func (a *App) emergencyPoolCooldown(cmd *exec.Cmd, devices []int, target, limit 
 		}
 		temp := hottest.TemperatureC
 
-		// A suspended miner should cool. Continued rise means another workload,
-		// broken direct hardware telemetry or a cooling-system problem, so stop the miner.
-		if temp >= limit+1 {
-			a.addLog(fmt.Sprintf("POOL THERMAL FAILSAFE: GPU %d still at %d C while miner is suspended; stopping miner", hottest.Index, temp))
+		// A suspended GPU can still rise briefly because heat stored in the die and
+		// heatsink keeps moving after load removal. Allow a small transient
+		// overshoot, but fail closed if temperature keeps climbing for multiple
+		// samples or exceeds the bounded overshoot allowance.
+		if temp > limit+poolEmergencyMaxOvershootC {
+			a.addLog(fmt.Sprintf("POOL THERMAL FAILSAFE: GPU %d reached %d C while miner is suspended (limit %d C); stopping miner", hottest.Index, temp, limit))
+			a.stopWorker()
+			return false
+		}
+		if lastTemp >= 0 && temp > lastTemp && temp >= limit+1 {
+			risingHotSamples++
+		} else if temp <= lastTemp {
+			risingHotSamples = 0
+		}
+		lastTemp = temp
+		if risingHotSamples >= poolEmergencyRiseFailSamples {
+			a.addLog(fmt.Sprintf("POOL THERMAL FAILSAFE: GPU %d kept heating while miner was suspended; stopping miner", hottest.Index))
 			a.stopWorker()
 			return false
 		}

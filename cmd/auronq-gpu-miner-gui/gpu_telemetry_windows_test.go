@@ -134,12 +134,12 @@ func TestExternalThermalPausePolicy(t *testing.T) {
 		want time.Duration
 	}{
 		{70, 0},
-		{75, 0},
-		{76, 25 * time.Millisecond},
-		{77, 50 * time.Millisecond},
-		{78, 100 * time.Millisecond},
-		{79, 175 * time.Millisecond},
-		{80, 300 * time.Millisecond},
+		{75, 50 * time.Millisecond},
+		{76, 100 * time.Millisecond},
+		{77, 150 * time.Millisecond},
+		{78, 225 * time.Millisecond},
+		{79, 300 * time.Millisecond},
+		{80, 350 * time.Millisecond},
 		{81, 0},
 	}
 	for _, tc := range cases {
@@ -154,5 +154,15 @@ func TestParseMeshMinerExactHashrateLine(t *testing.T) {
 	got, ok := parseHashrateText(line)
 	if !ok || got != 426.20 {
 		t.Fatalf("got %f ok=%v", got, ok)
+	}
+}
+
+
+func TestThermalCatastrophicStopEnvelope(t *testing.T) {
+	if got := thermalCatastrophicStopAt(75, "pool"); got != 79 {
+		t.Fatalf("pool catastrophic stop = %d, want 79", got)
+	}
+	if got := thermalCatastrophicStopAt(75, "solo"); got != 75 {
+		t.Fatalf("solo stop = %d, want 75", got)
 	}
 }

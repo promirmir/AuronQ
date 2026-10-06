@@ -1,75 +1,62 @@
-# AuronQ Universal Miner v0.4.2 Alpha
+# AuronQ Universal Miner v0.4.3 Alpha
 
-## Strategic public-node lifecycle update
+## Thermal stability update
 
-v0.4.2 makes inbound P2P reachability a **full-node lifecycle function** rather than a mining-session function.
+v0.4.3 focuses on making Windows Pool-mode GPU regulation **smooth and stable instead of oscillatory**.
 
-- Auto Public TCP/18444 starts with the full node, not with the miner.
-- Stopping Solo/Pool mining no longer closes the public-node mapping.
-- Windows GUI retries public reachability automatically while the node remains outbound-only.
-- The dashboard now reports actionable diagnostics for likely CGNAT, missing UPnP/IGD, router mapping refusal and unverified callback/firewall cases.
-- The bundled portable CLI defaults to `--auto-public=true` and can be explicitly disabled with `--auto-public=false`.
-- CLI Auto Public is skipped for loopback-only listeners and preserves explicit `--advertise` behavior.
-- Portable-node examples now listen on an inbound-capable address instead of `127.0.0.1` when public-node operation is intended.
-- Remote peers still callback-verify an advertised endpoint before admitting it to public gossip.
+The previous controller could react too late near the configured limit, then make large duty-cycle changes and repeatedly enter suspend/cool/resume cycles on thermally constrained laptop GPUs. v0.4.3 changes the control law without changing AQM64 or Mainnet consensus.
 
-No Mainnet consensus rules are changed.
-## Critical GUI hotfix
+### Smoother adaptive governor
 
-v0.4.2 fixes a JavaScript syntax error in the Windows GUI shipped in v0.4.0 Alpha. The broken inline script prevented the dashboard controls, refresh loop and actions from running correctly even though the compiled executables and backend self-tests were valid.
+- regulation now begins **before** the thermal target instead of waiting until the GPU is already at or above it;
+- duty-cycle changes are limited to small steps: throttling can increase by about 10 percentage points per 500 ms sample, while performance is restored much more slowly;
+- throttling is not released while temperature is flat or still rising near the target;
+- the controller therefore converges toward a stable operating point instead of repeatedly jumping between near-full load and deep throttling;
+- all safety decisions still use direct local NVIDIA NVML telemetry, never pool/web-reported temperatures.
 
-A mandatory JavaScript syntax check is now part of CI so an invalid embedded dashboard script cannot pass the Universal Miner release gate again.
+### Stable recovery after a hard-limit cooldown
 
-This release is a miner compatibility and safety update. It does not change AuronQ Mainnet consensus.
+If the configured hard limit is reached:
+
+- the external pool miner is suspended and the GPU is allowed to cool;
+- restart now waits farther below the target and requires more consecutive cool samples;
+- after resume, a conservative minimum throttle is held for 20 seconds so heat soak can settle before performance is restored;
+- a brief 1–3 °C post-suspend thermal overshoot is tolerated as normal thermal inertia, but continued heating while suspended still fails closed;
+- missing/stale local telemetry or suspend/resume control failure still stops mining.
+
+This specifically addresses the repeated **75 °C → suspend → 67 °C → resume → 75 °C** pattern seen on laptop GPUs.
 
 ## AUTO compute backend
 
-- AUTO is the recommended default.
+- AUTO remains the recommended default.
 - Compatible NVIDIA CUDA on Windows/Linux is used when available.
-- If CUDA, the driver, GPU or accelerator library is unavailable, the miner falls back to the built-in CPU AQM64 backend.
+- If CUDA, the NVIDIA driver, GPU or accelerator library is unavailable, the miner falls back to the built-in CPU AQM64 backend.
 - Explicit CUDA mode still fails closed instead of silently changing backends.
 
 ## Native CPU fallback
 
 - Works without CUDA and without a discrete GPU.
-- Reuses fixed 64 MiB AQM64 workspaces instead of reallocating each hash.
-- Default CPU profile uses about one quarter of logical CPUs, capped at 2 lanes.
-- Explicit CPU concurrency is capped at 16 lanes.
-- Backend output is verified byte-for-byte against canonical AQM64 in CI and by the self-test.
+- Uses the canonical AQM64 implementation and fixed 64 MiB workspaces.
+- Default CPU profile remains conservative.
+- Backend output is verified against canonical AQM64 by CI and self-test.
 
-## Hardware safety
+## Public-node lifecycle
 
-- Windows NVIDIA GPU thermals use direct local NVML hardware telemetry.
-- Windows UI and governor use the same 500 ms hardware sample.
-- Linux GPU thermal telemetry loss now stops protected GPU mining rather than silently disabling the limit.
-- CPU fallback does not fabricate a CPU temperature where no trustworthy cross-vendor sensor exists; it uses conservative concurrency instead.
-- Pool or web temperature values are never used as safety-control inputs.
+The v0.4.2 node-lifecycle behavior remains in v0.4.3:
 
-## Windows GUI
+- Auto Public TCP/18444 belongs to the full-node lifecycle, not to a mining session.
+- Stopping Solo/Pool mining does not remove the node's public UPnP mapping.
+- Windows GUI retries public reachability while the node remains outbound-only.
+- Portable `auronq node` defaults to `--auto-public=true` and can be explicitly disabled.
 
-- Solo backend selector: AUTO / NVIDIA CUDA / CPU.
-- Pool backend selector adds AUTO.
-- No NVIDIA GPU is no longer a fatal startup condition in AUTO mode.
-- Clean CPU fallback status is shown instead of a misleading GPU error.
-- Pool CPU defaults are conservative.
+## Supported packages
 
-## Portable packages
+The release continues to provide:
 
-CPU-safe CLI packages are built for:
-
-- Windows x64
-- Windows ARM64
-- Linux x64
-- Linux ARM64
-- macOS Intel x64
-- macOS Apple Silicon ARM64
-
-Each portable package includes the AuronQ miner CLI, full-node CLI, network.json, bootstrap.json and the Universal Miner guide.
-
-## GPU acceleration limits
-
-Official accelerated GPU backend in v0.4.2 remains NVIDIA CUDA. AMD/Intel computers are supported through the native CPU fallback. An AMD/Intel GPU backend will only be promoted after hardware testing and byte-for-byte AQM64 validation; v0.4.2 does not ship an unvalidated OpenCL/HIP/oneAPI implementation.
+- Windows x64 GUI/CUDA package;
+- Linux x64 CUDA package;
+- portable CPU-safe CLI packages for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64.
 
 ## Consensus unchanged
 
-No changes to genesis, Network ID, AQM64 parameters, difficulty, monetary policy or transaction/block validation.
+No changes to genesis, Network ID, AQM64 parameters, difficulty, monetary policy, chain selection or transaction/block validation.

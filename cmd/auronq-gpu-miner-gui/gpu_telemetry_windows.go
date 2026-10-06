@@ -215,6 +215,16 @@ func (a *App) hardwareTelemetrySnapshot(maxAge time.Duration) ([]gpuInfo, error)
 	return gpus, nil
 }
 
+func thermalCatastrophicStopAt(limit int, mode string) int {
+	if limit <= 0 {
+		return limit
+	}
+	if mode == "pool" {
+		return limit + poolEmergencyMaxOvershootC + 1
+	}
+	return limit
+}
+
 func (a *App) refreshGPUInfo() {
 	gpus, err := queryNVIDIAGPUs()
 	if err != nil {
@@ -251,14 +261,12 @@ func (a *App) refreshGPUInfo() {
 			continue
 		}
 
-		// Pool mining has its own 2 Hz autonomous governor. At the configured
-		// limit it first suspends the external miner, cools the GPU and resumes
-		// automatically. Keep this slower monitor as an independent catastrophic
-		// fail-safe only, so it does not race the emergency cooldown path.
-		stopAt := cfg.ThermalStopC
-		if mode == "pool" {
-			stopAt += 1
-		}
+		// Pool mining has its own 2 Hz autonomous governor. That governor owns
+		// the configured limit, cooldown and bounded thermal-inertia overshoot.
+		// Keep this monitor as a wider catastrophic envelope only; otherwise the
+		// two safety loops race each other and can stop a miner during a normal
+		// automatic cooldown.
+		stopAt := thermalCatastrophicStopAt(cfg.ThermalStopC, mode)
 		if g.TemperatureC >= stopAt {
 			if mode == "pool" {
 				a.addLog(fmt.Sprintf("THERMAL FAILSAFE: GPU %d reached %d C despite direct-NVML pool governor (limit %d C); stopping miner", g.Index, g.TemperatureC, cfg.ThermalStopC))

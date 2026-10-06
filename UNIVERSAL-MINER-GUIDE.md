@@ -1,4 +1,4 @@
-# AuronQ Universal Miner v0.4.2 Alpha
+# AuronQ Universal Miner v0.4.3 Alpha
 
 AuronQ Universal Miner is designed to start safely on as many ordinary computers as possible without changing AuronQ Mainnet consensus.
 
@@ -23,7 +23,7 @@ The full Windows x64 graphical package additionally includes the official NVIDIA
 
 ## AMD / Intel graphics
 
-v0.4.2 does not pretend that an unvalidated AMD/Intel GPU accelerator exists. On AMD Radeon, Intel Arc/iGPU, unsupported NVIDIA, missing CUDA, or no discrete GPU, AUTO uses the native CPU backend.
+v0.4.3 does not pretend that an unvalidated AMD/Intel GPU accelerator exists. On AMD Radeon, Intel Arc/iGPU, unsupported NVIDIA, missing CUDA, or no discrete GPU, AUTO uses the native CPU backend.
 
 AMD/Intel GPU acceleration can be added later only after byte-for-byte AQM64 self-tests and hardware validation.
 
@@ -86,6 +86,8 @@ On Windows, GPU safety uses direct local NVIDIA NVML telemetry. The dashboard an
 
 Pool/miner websites and remote hashrate services are never trusted as temperature-control inputs.
 
+In Windows Pool mode, the configured temperature is a **hard safety ceiling, not the normal operating target**. The controller targets about 5 °C below the limit, begins soft regulation one degree before that target, changes duty cycle in small steps, and restores performance much more slowly than it removes heat. If the hard limit is reached, the miner is suspended until the GPU is several degrees below target and then held at a conservative duty for 20 seconds before gradual recovery.
+
 ## Portable package contents
 
 Each portable package contains the miner CLI, full-node CLI, network.json, bootstrap.json, this guide and the license when present. Portable CPU packages do not require CUDA.
@@ -99,4 +101,4 @@ Each portable package contains the miner CLI, full-node CLI, network.json, boots
 
 ## Consensus
 
-Universal Miner v0.4.2 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
+Universal Miner v0.4.3 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
