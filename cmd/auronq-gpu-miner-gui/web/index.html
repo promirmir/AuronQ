@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AuronQ GPU Miner</title>
+<title>AuronQ Universal Miner</title>
 <style>
 :root{--bg:#070b12;--panel:#0e1521;--panel2:#121c2b;--line:#213047;--text:#edf4ff;--muted:#8fa2ba;--accent:#68e2b7;--accent2:#66a6ff;--danger:#ff6f82;--warn:#ffc866;--ok:#68e2b7;--shadow:0 18px 50px rgba(0,0,0,.35);--r:18px}
 *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% -10%,rgba(102,166,255,.12),transparent 34%),radial-gradient(circle at -10% 100%,rgba(104,226,183,.08),transparent 30%),var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
@@ -38,7 +38,7 @@ button,input,select,textarea{font:inherit}.app{display:grid;grid-template-column
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><div class="mark">AQ</div><div><strong>AuronQ</strong><small>GPU Miner</small></div></div>
+    <div class="brand"><div class="mark">AQ</div><div><strong>AuronQ</strong><small>Universal Miner</small></div></div>
     <nav class="nav">
       <button class="active" data-view="overview"><span class="ico">◈</span><span data-i18n="nav_overview">Przegląd</span></button>
       <button data-view="mining"><span class="ico">⚡</span><span data-i18n="nav_mining">Kopanie</span></button>
@@ -60,7 +60,7 @@ button,input,select,textarea{font:inherit}.app{display:grid;grid-template-column
 
   <main class="main">
     <div class="topbar">
-      <h1 id="pageTitle">AuronQ GPU Miner</h1>
+      <h1 id="pageTitle">AuronQ Universal Miner</h1>
       <div class="statusline">
         <div class="pill"><span data-i18n="node">Node</span>: <strong id="topNode">—</strong></div>
         <div class="pill"><span data-i18n="miner">Miner</span>: <strong id="topMiner">—</strong></div>
@@ -70,9 +70,9 @@ button,input,select,textarea{font:inherit}.app{display:grid;grid-template-column
 
     <div class="content">
       <section class="view active" id="view-overview">
-        <div class="hero"><div><h2 data-i18n="overview_title">Panel GPU</h2><p data-i18n="overview_desc">Kopanie AQM64, pełny node i udział w P2P w jednym programie.</p></div></div>
+        <div class="hero"><div><h2 data-i18n="overview_title">Panel minera</h2><p data-i18n="overview_desc">Kopanie AQM64, pełny node i udział w P2P w jednym programie.</p></div></div>
         <div class="grid stats">
-          <div class="card"><div class="stat-label" data-i18n="hashrate">Hashrate GPU</div><div class="stat-value" id="statHash">0 H/s</div><div class="stat-foot" id="statGPU">—</div></div>
+          <div class="card"><div class="stat-label" data-i18n="hashrate">Hashrate</div><div class="stat-value" id="statHash">0 H/s</div><div class="stat-foot" id="statGPU">—</div></div>
           <div class="card"><div class="stat-label" data-i18n="height">Wysokość sieci</div><div class="stat-value" id="statHeight">—</div><div class="stat-foot" id="statSync">—</div></div>
           <div class="card"><div class="stat-label" data-i18n="peers">Peery</div><div class="stat-value" id="statPeers">—</div><div class="stat-foot" data-i18n="peer_foot">znane i aktywnie synchronizowane</div></div>
           <div class="card"><div class="stat-label" data-i18n="blocks">Znalezione bloki</div><div class="stat-value" id="statBlocks">0</div><div class="stat-foot" id="statLastBlock">—</div></div>
