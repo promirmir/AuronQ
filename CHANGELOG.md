@@ -24,6 +24,16 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### Universal Miner v0.4.3 Alpha
+
+- Reworks Windows Pool-mode thermal regulation to reduce oscillation and repeated suspend/resume cycles on thermally constrained GPUs.
+- Starts throttling before the target temperature and changes duty cycle in smaller steps.
+- Prevents throttle release while temperature is flat/rising near the target.
+- After emergency cooldown, resumes farther below target and holds a conservative duty floor for 20 seconds before gradually restoring performance.
+- Allows a small bounded post-suspend thermal overshoot caused by normal thermal inertia, while continued heating still fails closed.
+- Direct local NVML telemetry remains the only source used for GPU safety decisions.
+- No Mainnet consensus, genesis, Network ID, AQM64, difficulty, transaction validation or monetary-policy changes.
+
 ### Universal Miner v0.4.2 Alpha
 
 - Public TCP/18444 is now a **full-node lifecycle service**, independent of mining.
