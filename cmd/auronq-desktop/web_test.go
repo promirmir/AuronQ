@@ -66,20 +66,23 @@ func TestDesktopShowsPublicNodeReadiness(t *testing.T) {
 	}
 }
 
-func TestDesktopMiningCanHelpNetworkAutomatically(t *testing.T) {
+func TestDesktopPublicNodeIsIndependentOfMining(t *testing.T) {
 	b, err := webFS.ReadFile("web/index.html")
 	if err != nil {
 		t.Fatal(err)
 	}
 	html := string(b)
 	for _, want := range []string{
-		`id="minerPublicNode"`,
-		`PublicNode:$('minerPublicNode').checked`,
-		`UPnP`,
+		`Publiczny node działa niezależnie od kopania.`,
+		`Zatrzymanie minera nie wyłącza publicznego peera.`,
+		`PublicNode:true`,
 		`TCP/18444`,
 	} {
 		if !strings.Contains(html, want) {
-			t.Fatalf("automatic public mining UI missing %q", want)
+			t.Fatalf("node-scoped public-node UI missing %q", want)
 		}
+	}
+	if strings.Contains(html, "Wspieraj sieć jako publiczny node podczas kopania") {
+		t.Fatal("legacy mining-scoped public-node control is still visible")
 	}
 }
