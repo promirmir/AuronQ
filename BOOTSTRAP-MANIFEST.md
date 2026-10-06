@@ -2,11 +2,11 @@
 
 A bootstrap manifest is discovery metadata. It is **not consensus** and changing it does not alter Network ID, genesis, balances, supply or proof-of-work rules.
 
-Current official manifest:
+Current official manifest and registry source of truth:
 
 `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
 
-Current registry source of truth:
+Human-readable GitHub view:
 
 `https://github.com/promirmir/AuronQ/blob/main/bootstrap.json`
 
