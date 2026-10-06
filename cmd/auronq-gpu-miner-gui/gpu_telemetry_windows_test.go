@@ -43,3 +43,28 @@ func TestParseSMIValues(t *testing.T) {
 		t.Fatalf("float=%f", got)
 	}
 }
+
+
+func TestNormalizePoolEndpointCaseInsensitiveScheme(t *testing.T) {
+	got, err := normalizePoolEndpoint("STRATUM+TCP://pool.example:4444/")
+	if err != nil || got != "pool.example:4444" {
+		t.Fatalf("got %q err=%v", got, err)
+	}
+}
+
+func TestParseHashrateText(t *testing.T) {
+	cases := []struct {
+		line string
+		want float64
+	}{
+		{"speed 42.5 H/s", 42.5},
+		{"total 1.25 kH/s", 1250},
+		{"GPU 0: 2.5 MH/s accepted", 2500000},
+	}
+	for _, tc := range cases {
+		got, ok := parseHashrateText(tc.line)
+		if !ok || got != tc.want {
+			t.Fatalf("%q => %f %v, want %f", tc.line, got, ok, tc.want)
+		}
+	}
+}
