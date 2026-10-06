@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.3.8-alpha"
+	guiVersion       = "0.4.0-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -235,7 +235,7 @@ func newApp() (*App, error) {
 		return nil, err
 	}
 	a.token = hex.EncodeToString(tokenBytes[:])
-	a.addLog("AuronQ GPU Miner " + guiVersion)
+	a.addLog("AuronQ Universal Miner " + guiVersion)
 	a.addLog(fmt.Sprintf("Mainnet loaded: %s", n.NetworkID().String()))
 	a.addLog(fmt.Sprintf("Bootstrap peers: %d", len(a.bootstrap)))
 	return a, nil
