@@ -972,20 +972,44 @@ func (a *App) startWorker(mode string, s settings) error {
 	if err := a.saveSettings(s); err != nil {
 		return err
 	}
+	normalizeSettings(&s)
 
-	needsGPU := !(mode == "mining" && s.MiningMode == "pool" && s.PoolBackend == "cpu")
+	// Probe local NVIDIA hardware only when the requested mode may use CUDA.
+	// "auto" is deliberately tolerant: if there is no supported NVIDIA stack,
+	// the native worker or pool bridge falls back to a conservative CPU profile.
+	wantsGPU := false
+	explicitGPU := false
+	if mode == "mining" && s.MiningMode == "pool" {
+		wantsGPU = s.PoolBackend == "auto" || s.PoolBackend == "cuda" || s.PoolBackend == "both"
+		explicitGPU = s.PoolBackend == "cuda" || s.PoolBackend == "both"
+	} else {
+		wantsGPU = s.SoloBackend == "auto" || s.SoloBackend == "cuda"
+		explicitGPU = s.SoloBackend == "cuda"
+	}
+
 	var gpus []gpuInfo
 	var devices []int
-	if needsGPU {
+	if wantsGPU {
 		var err error
 		gpus, err = queryNVIDIAGPUs()
 		if err != nil {
-			return err
+			if explicitGPU {
+				return fmt.Errorf("requested NVIDIA CUDA backend is unavailable: %w", err)
+			}
+			a.addLog("AUTO compute: no usable NVIDIA CUDA telemetry/device found; CPU fallback will be used")
+		} else {
+			devices, err = selectedDeviceIndices(s, gpus)
+			if err != nil {
+				if explicitGPU {
+					return err
+				}
+				a.addLog("AUTO compute: selected NVIDIA GPU set unavailable; CPU fallback will be used")
+				devices = nil
+			}
 		}
-		devices, err = selectedDeviceIndices(s, gpus)
-		if err != nil {
-			return err
-		}
+	}
+
+	if len(gpus) > 0 && len(devices) > 0 {
 		names := make([]string, 0, len(devices))
 		for _, d := range devices {
 			for _, g := range gpus {
@@ -1003,7 +1027,7 @@ func (a *App) startWorker(mode string, s settings) error {
 		a.mu.Unlock()
 	} else {
 		a.mu.Lock()
-		a.gpuName = "MeshMiner CPU"
+		a.gpuName = fmt.Sprintf("CPU AQM64 safe mode (%d threads)", safeGUIThreads(s.CPUThreads))
 		a.mu.Unlock()
 	}
 
@@ -1030,7 +1054,14 @@ func (a *App) startWorker(mode string, s settings) error {
 		}
 	}
 
-	args := []string{"--devices", deviceCSV(devices), "--batch", strconv.Itoa(s.Batch)}
+	args := []string{
+		"--backend", s.SoloBackend,
+		"--cpu-threads", strconv.Itoa(safeGUIThreads(s.CPUThreads)),
+		"--batch", strconv.Itoa(s.Batch),
+	}
+	if len(devices) > 0 {
+		args = append(args, "--devices", deviceCSV(devices))
+	}
 	switch mode {
 	case "selftest":
 		args = append(args, "--self-test")
@@ -1057,7 +1088,16 @@ func (a *App) startWorker(mode string, s settings) error {
 	cmd := exec.Command(workerPath(), args...)
 	cmd.Dir = filepath.Dir(workerPath())
 	cmd.SysProcAttr = &syscallSysProcAttr
-	return a.launchWorkerCommand(cmd, mode, s.AutoPublic)
+
+	resolved := s.SoloBackend
+	if resolved == "auto" {
+		if len(devices) > 0 {
+			resolved = "cuda"
+		} else {
+			resolved = "cpu"
+		}
+	}
+	return a.launchWorkerCommand(cmd, mode, s.AutoPublic, resolved)
 }
 
 func meshMinerArgs(s settings, devices []int, endpoint, user string) ([]string, error) {
