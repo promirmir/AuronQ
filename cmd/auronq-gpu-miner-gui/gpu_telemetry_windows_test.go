@@ -5,6 +5,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSelectedDeviceIndices(t *testing.T) {
@@ -122,5 +123,36 @@ func TestMeshMinerArgsCUDARequiresGPU(t *testing.T) {
 	_, err := meshMinerArgs(settings{PoolBackend: "cuda"}, nil, "example:1234", "aurq1test.rig")
 	if err == nil {
 		t.Fatal("expected CUDA backend to require a GPU")
+	}
+}
+
+
+func TestExternalThermalPausePolicy(t *testing.T) {
+	target, limit := 76, 81
+	cases := []struct {
+		temp int
+		want time.Duration
+	}{
+		{70, 0},
+		{75, 0},
+		{76, 100 * time.Millisecond},
+		{77, 220 * time.Millisecond},
+		{78, 400 * time.Millisecond},
+		{79, 600 * time.Millisecond},
+		{80, 850 * time.Millisecond},
+		{81, 0},
+	}
+	for _, tc := range cases {
+		if got := externalThermalPause(tc.temp, target, limit); got != tc.want {
+			t.Fatalf("temp %d: got %s want %s", tc.temp, got, tc.want)
+		}
+	}
+}
+
+func TestParseMeshMinerExactHashrateLine(t *testing.T) {
+	line := "[17:26:52] Total  :   426.20 H/s [    12|    0|    0]"
+	got, ok := parseHashrateText(line)
+	if !ok || got != 426.20 {
+		t.Fatalf("got %f ok=%v", got, ok)
 	}
 }

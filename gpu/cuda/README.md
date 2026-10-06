@@ -6,7 +6,7 @@ not change Mainnet consensus.
 
 ## Status
 
-**v0.3.3-alpha release candidate.** The built-in solo miner retains the validated AQM64 CUDA path and adds multi-GPU orchestration, automatic per-GPU batch tuning, live NVIDIA telemetry, thermal shutdown protection and a GUI pool bridge. It remains alpha software and the CUDA implementation has not received an independent professional audit.
+**v0.3.4-alpha release candidate.** The built-in solo miner retains the validated AQM64 CUDA path and adds multi-GPU orchestration, automatic per-GPU batch tuning, live NVIDIA telemetry, thermal shutdown protection and a GUI pool bridge. It remains alpha software and the CUDA implementation has not received an independent professional audit.
 
 Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
 with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
@@ -88,7 +88,7 @@ The application provides reward-address, multi-GPU selection, automatic performa
 
 Solo multi-GPU mining launches isolated CUDA child workers and assigns disjoint nonce ranges so cards do not repeat the same search space. Non-secret preferences are stored under the user's Windows AuronQ configuration directory.
 
-The GUI also offers a **Pool** mode. Pool mode intentionally does not embed or auto-download third-party software. It launches a user-supplied AuronQ-compatible pool miner using the MeshMiner 0.8.35+ command-line layout. The default MeshPool endpoint is `pool.meshpool.net:3359`, but the endpoint field accepts any compatible `host:port` or `stratum+tcp://host:port` value, so other pools can be entered manually. Worker name, CUDA device list and CUDA/CPU backend can also be selected. Pool fees, share validation, payouts and availability remain third-party policy.
+The GUI also offers a **Pool** mode. Pool mode intentionally does not embed or auto-download third-party software. In v0.3.4, AuronQ can also regulate an external GPU pool miner thermally by applying short Windows process duty-cycle pauses when the selected GPU approaches the configured temperature ceiling; the external miner is returned to full duty cycle after cooling. It launches a user-supplied AuronQ-compatible pool miner using the MeshMiner 0.8.35+ command-line layout. The default MeshPool endpoint is `pool.meshpool.net:3359`, but the endpoint field accepts any compatible `host:port` or `stratum+tcp://host:port` value, so other pools can be entered manually. Worker name, CUDA device list and CUDA/CPU backend can also be selected. Pool fees, share validation, payouts and availability remain third-party policy.
 
 The GUI launches the sibling `auronq-gpu-worker.exe` CUDA worker with its
 console hidden. The distinct filename is required on Windows because paths are
@@ -104,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File .\build-gpu-miner-windows.ps1
 
 The script builds the CUDA DLL, CLI worker and Windows app, copies the immutable
 Mainnet configuration/bootstrap metadata, performs the mandatory GPU/CPU AQM64
-self-test, and creates `AuronQ-GPU-Miner-v0.3.3-alpha-Windows-x64.zip` under
+self-test, and creates `AuronQ-GPU-Miner-v0.3.4-alpha-Windows-x64.zip` under
 `dist`.
 
 ## Mandatory device self-test before mining
