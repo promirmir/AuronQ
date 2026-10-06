@@ -47,3 +47,17 @@ func TestListenPort(t *testing.T) {
 		}
 	}
 }
+
+
+func TestListenAllowsInbound(t *testing.T) {
+	for _, good := range []string{"0.0.0.0:18444", "[::]:18444", "192.168.1.10:18444"} {
+		if !listenAllowsInbound(good) {
+			t.Fatalf("listenAllowsInbound(%q) = false, want true", good)
+		}
+	}
+	for _, bad := range []string{"127.0.0.1:18444", "[::1]:18444", "18444", "localhost:18444"} {
+		if listenAllowsInbound(bad) {
+			t.Fatalf("listenAllowsInbound(%q) = true, want false", bad)
+		}
+	}
+}
