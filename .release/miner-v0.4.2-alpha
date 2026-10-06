@@ -1,0 +1,7 @@
+AuronQ Universal Miner v0.4.2-alpha release trigger
+
+Strategic public-node lifecycle update:
+- TCP/18444 belongs to the full-node lifecycle, not the mining lifecycle
+- persistent Auto Public retries and diagnostics
+- portable CLI auto-public support
+- no Mainnet consensus changes
