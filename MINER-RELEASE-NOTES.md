@@ -1,53 +1,50 @@
-# AuronQ Universal Miner v0.4.3 Alpha
+# AuronQ Universal Miner v0.4.4 Alpha
 
-## Thermal stability update
+## Reliable AUTO fallback
 
-v0.4.3 focuses on making Windows Pool-mode GPU regulation **smooth and stable instead of oscillatory**.
+v0.4.4 fixes an important Windows AUTO-selection problem found on older NVIDIA hardware such as GTX 1050-class Pascal GPUs.
 
-The previous controller could react too late near the configured limit, then make large duty-cycle changes and repeatedly enter suspend/cool/resume cycles on thermally constrained laptop GPUs. v0.4.3 changes the control law without changing AQM64 or Mainnet consensus.
+Previously, the GUI could treat "visible through NVML" as equivalent to "usable by the current AuronQ CUDA backend". That is not always true: an NVIDIA GPU can expose normal telemetry while the bundled CUDA backend still cannot execute its kernels on that architecture.
 
-### Smoother adaptive governor
+v0.4.4 now validates the actual CUDA path before AUTO commits to GPU mining:
 
-- regulation now begins **before** the thermal target instead of waiting until the GPU is already at or above it;
-- duty-cycle changes are limited to small steps: throttling can increase by about 10 percentage points per 500 ms sample, while performance is restored much more slowly;
-- throttling is not released while temperature is flat or still rising near the target;
-- the controller therefore converges toward a stable operating point instead of repeatedly jumping between near-full load and deep throttling;
-- all safety decisions still use direct local NVIDIA NVML telemetry, never pool/web-reported temperatures.
+- each selected NVIDIA device is checked with the official AuronQ CUDA backend and the canonical AQM64 self-test;
+- only devices that report `SELF-TEST OK` are accepted as usable CUDA devices;
+- in AUTO mode, failed CUDA validation automatically switches to the native CPU AQM64 fallback;
+- unsupported/older NVIDIA hardware, driver problems or CUDA backend initialization failures therefore no longer require manual CPU selection;
+- explicit CUDA/BOTH remains fail-closed and reports the validation error instead of silently changing the requested backend.
 
-### Stable recovery after a hard-limit cooldown
+The validation result is cached for the running GUI session so ordinary starts do not repeatedly benchmark the same device.
 
-If the configured hard limit is reached:
+## Windows CPU telemetry
 
-- the external pool miner is suspended and the GPU is allowed to cool;
-- restart now waits farther below the target and requires more consecutive cool samples;
-- after resume, a conservative minimum throttle is held for 20 seconds so heat soak can settle before performance is restored;
-- a brief 1–3 °C post-suspend thermal overshoot is tolerated as normal thermal inertia, but continued heating while suspended still fails closed;
-- missing/stale local telemetry or suspend/resume control failure still stops mining.
+The Windows GUI now shows a dedicated CPU/AQM64 telemetry card even when an NVIDIA GPU is physically present.
 
-This specifically addresses the repeated **75 °C → suspend → 67 °C → resume → 75 °C** pattern seen on laptop GPUs.
+Displayed CPU data comes from local Windows sources:
 
-## AUTO compute backend
+- processor name;
+- whole-system CPU utilization from the native Windows `GetSystemTimes` API;
+- logical processor count;
+- AQM64 worker-thread count;
+- nominal CPU clock reported by the Windows hardware registry;
+- estimated AQM64 working memory at 64 MiB per active lane.
 
-- AUTO remains the recommended default.
-- Compatible NVIDIA CUDA on Windows/Linux is used when available.
-- If CUDA, the NVIDIA driver, GPU or accelerator library is unavailable, the miner falls back to the built-in CPU AQM64 backend.
-- Explicit CUDA mode still fails closed instead of silently changing backends.
+CPU package temperature is intentionally shown as **N/A** when there is no trustworthy universal sensor source. AuronQ does not invent a CPU temperature or reuse unrelated ACPI thermal-zone values.
 
-## Native CPU fallback
+When AUTO falls back to CPU, the dashboard clearly marks **CPU ACTIVE** while still showing any detected NVIDIA hardware separately.
 
-- Works without CUDA and without a discrete GPU.
-- Uses the canonical AQM64 implementation and fixed 64 MiB workspaces.
-- Default CPU profile remains conservative.
-- Backend output is verified against canonical AQM64 by CI and self-test.
+## Existing GPU thermal safety retained
 
-## Public-node lifecycle
+The stabilized v0.4.3 Pool-mode governor remains unchanged in its safety logic:
 
-The v0.4.2 node-lifecycle behavior remains in v0.4.3:
+- direct local NVML telemetry remains authoritative;
+- regulation begins before the target and releases load gradually;
+- emergency cooldown uses suspend/cool/resume with a stabilization hold;
+- a bounded post-suspend thermal-inertia overshoot is tolerated;
+- continued heating while suspended can stop mining earlier;
+- the independent catastrophic envelope is currently around hard limit + 4 °C.
 
-- Auto Public TCP/18444 belongs to the full-node lifecycle, not to a mining session.
-- Stopping Solo/Pool mining does not remove the node's public UPnP mapping.
-- Windows GUI retries public reachability while the node remains outbound-only.
-- Portable `auronq node` defaults to `--auto-public=true` and can be explicitly disabled.
+The GUI/documentation now reports this actual envelope instead of the older +1 °C wording.
 
 ## Supported packages
 
