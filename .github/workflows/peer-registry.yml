@@ -39,7 +39,7 @@ jobs:
         run: go run ./cmd/auronq-peer-crawler -manifest bootstrap.json -mirror bootstrap.mainnet.json
 
       - name: Verify generated registry coherence
-        run: go run ./cmd/auronq-healthcheck -manifest bootstrap.json
+        run: go run ./cmd/auronq-healthcheck -manifest bootstrap.json -min-healthy 3 -min-netgroups 3
 
       - name: Prepare registry update branch
         id: registry
