@@ -14,7 +14,9 @@ The v0.4.4 miner uses **AUTO** compute selection: official NVIDIA CUDA accelerat
 
 For **CPU fallback**: a supported 64-bit Windows/Linux/macOS system and enough RAM for at least one 64 MiB AQM64 lane.
 
-For **NVIDIA CUDA acceleration**: NVIDIA GPU with CUDA Compute Capability 7.5+, current proprietary driver and Windows/Linux. CUDA Toolkit is needed only when building the accelerator from source.
+For **NVIDIA CUDA acceleration**: NVIDIA GPU with CUDA Compute Capability 7.5+, current proprietary driver and Windows/Linux. CUDA Toolkit is needed only when building the accelerator from source; it is **not** required to run the ready-made Windows/Linux CUDA packages.
+
+Older Pascal cards such as GTX 1050/1050 Ti (Compute Capability 6.1) are visible to the NVIDIA driver/NVML but are not supported by the current AuronQ CUDA 13.x kernel targets. In v0.4.4 AUTO validates the real CUDA path first and falls back to CPU automatically instead of treating NVML detection as proof of CUDA compatibility.
 
 Solo mining also needs a synchronized AuronQ Mainnet full node; the v0.4.4 packages include the AuronQ node CLI.
 
