@@ -7,6 +7,7 @@ on:
       - 'cmd/auronq-gpu-miner-gui/**'
       - 'cmd/auronq/**'
       - 'gpu/cuda/**'
+      - 'gpu/opencl/**'
       - 'internal/argon2pure/**'
       - 'internal/gputelemetry/**'
       - 'internal/auronq/node.go'
@@ -33,10 +34,17 @@ jobs:
           docker run --rm \
             -v "$PWD:/src" \
             -w /src \
-            nvidia/cuda:12.6.3-devel-ubuntu24.04 \
+            nvidia/cuda:13.2.0-devel-ubuntu24.04 \
             bash ./gpu/cuda/build-linux.sh
           test -f gpu/cuda/libauronq-aqm64-cuda.so
           file gpu/cuda/libauronq-aqm64-cuda.so
+
+      - name: Compile vendor-neutral OpenCL backend without an OpenCL SDK
+        shell: bash
+        run: |
+          bash ./gpu/opencl/build-linux.sh
+          test -f gpu/opencl/libauronq-aqm64-opencl.so
+          file gpu/opencl/libauronq-aqm64-opencl.so
 
   linux-app-compile:
     runs-on: ubuntu-latest
@@ -76,6 +84,12 @@ jobs:
         shell: pwsh
         run: |
           go test ./cmd/auronq-gpu-miner ./cmd/auronq-gpu-miner-gui ./cmd/auronq ./internal/argon2pure ./internal/gputelemetry ./internal/auronq
+
+      - name: Compile Windows vendor-neutral OpenCL backend
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\opencl\build-windows.ps1
+          if (!(Test-Path .\gpu\opencl\auronq-aqm64-opencl.dll)) { throw "OpenCL backend DLL missing" }
 
       - name: Build Windows CLI and Desktop-style GUI
         shell: pwsh
