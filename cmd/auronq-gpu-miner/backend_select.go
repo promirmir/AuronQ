@@ -29,22 +29,40 @@ func validateAcceleratorBackend(kind string, b gpuBackend) error {
 	return nil
 }
 
-func openSelectedBackend(mode, cudaPath, openclPath string, device, cpuThreads int) (gpuBackend, string, string, error) {
+func openSelectedBackend(mode, cudaPath, legacyCUDAPath, openclPath string, device, cpuThreads int) (gpuBackend, string, string, error) {
 	mode = normalizeComputeBackend(mode)
 
-	openValidatedCUDA := func() (gpuBackend, error) {
+	openValidatedCUDA := func(path, label string) (gpuBackend, error) {
 		if runtime.GOOS != "windows" && runtime.GOOS != "linux" {
-			return nil, fmt.Errorf("CUDA backend is not available on %s", runtime.GOOS)
+			return nil, fmt.Errorf("%s is not available on %s", label, runtime.GOOS)
 		}
-		b, err := openCUDABackend(cudaPath, device)
+		b, err := openCUDABackend(path, device)
 		if err != nil {
 			return nil, err
 		}
-		if err := validateAcceleratorBackend("CUDA", b); err != nil {
+		if err := validateAcceleratorBackend(label, b); err != nil {
 			_ = b.Close()
 			return nil, err
 		}
 		return b, nil
+	}
+
+	openAnyCUDA := func() (gpuBackend, string, error) {
+		var reasons []string
+		if b, err := openValidatedCUDA(cudaPath, "CUDA"); err == nil {
+			return b, "", nil
+		} else {
+			reasons = append(reasons, "CUDA: "+err.Error())
+		}
+
+		if strings.TrimSpace(legacyCUDAPath) != "" && legacyCUDAPath != cudaPath {
+			if b, err := openValidatedCUDA(legacyCUDAPath, "Legacy CUDA"); err == nil {
+				return b, strings.Join(reasons, " | ") + " | selected Legacy CUDA", nil
+			} else {
+				reasons = append(reasons, "Legacy CUDA: "+err.Error())
+			}
+		}
+		return nil, strings.Join(reasons, " | "), fmt.Errorf("%s", strings.Join(reasons, " | "))
 	}
 
 	openValidatedOpenCL := func() (gpuBackend, error) {
@@ -67,11 +85,11 @@ func openSelectedBackend(mode, cudaPath, openclPath string, device, cpuThreads i
 		b, err := openCPUBackend(cpuThreads)
 		return b, "cpu", "", err
 	case "cuda":
-		b, err := openValidatedCUDA()
+		b, reason, err := openAnyCUDA()
 		if err != nil {
 			return nil, "", "", err
 		}
-		return b, "cuda", "", nil
+		return b, "cuda", reason, nil
 	case "opencl":
 		b, err := openValidatedOpenCL()
 		if err != nil {
@@ -81,10 +99,10 @@ func openSelectedBackend(mode, cudaPath, openclPath string, device, cpuThreads i
 	default:
 		var reasons []string
 
-		if b, err := openValidatedCUDA(); err == nil {
-			return b, "cuda", "", nil
-		} else {
-			reasons = append(reasons, "CUDA: "+err.Error())
+		if b, reason, err := openAnyCUDA(); err == nil {
+			return b, "cuda", reason, nil
+		} else if reason != "" {
+			reasons = append(reasons, reason)
 		}
 
 		if b, err := openValidatedOpenCL(); err == nil {
