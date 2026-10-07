@@ -45,6 +45,18 @@ AuronQ is intended to be evaluated through **public code and independently obser
 
 If you want to follow the project rather than actively participate, **Star** or **Watch** the repository to keep AuronQ in your GitHub feed.
 
+## Exchange, listing & third-party integration
+
+**AURQ is open for independent third-party integration.** Exchanges, indexers, wallets, explorers, mining pools and other service providers may integrate or list AURQ **without prior project approval**. The network is public, the implementation is open source under the MIT License, and the canonical Mainnet identifiers and protocol documentation are available for independent verification.
+
+- **Integration / listing policy:** [EXCHANGE-INTEGRATION.md](EXCHANGE-INTEGRATION.md)
+- **Machine-readable project metadata:** [auronq-project.json](auronq-project.json)
+- **Canonical Mainnet specification:** [MAINNET.md](MAINNET.md)
+- **Protocol:** [PROTOCOL.md](PROTOCOL.md)
+- **Source and release history:** this repository and [GitHub Releases](https://github.com/promirmir/AuronQ/releases)
+
+A third-party listing or integration remains independently operated and does not imply endorsement by AuronQ. Integrators are responsible for their own technical review, security controls, legal/regulatory compliance and confirmation/risk policy.
+
 > [!WARNING]
 > AuronQ is a young public cryptocurrency network in an early stage of operational maturity. AQM64 and the complete consensus/network implementation have **not** yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not use AuronQ to store or transfer substantial value.
 
@@ -353,6 +365,8 @@ The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The hig
 | Protocol | [PROTOCOL.md](PROTOCOL.md) |
 | AQM64 Proof-of-Work | [AQM64.md](AQM64.md) |
 | Mining pool integration | [POOL-INTEGRATION.md](POOL-INTEGRATION.md) |
+| Exchange / third-party integration | [EXCHANGE-INTEGRATION.md](EXCHANGE-INTEGRATION.md) |
+| Machine-readable project metadata | [auronq-project.json](auronq-project.json) |
 | Decentralization model | [DECENTRALIZATION.md](DECENTRALIZATION.md) |
 | Network independence | [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md) |
 | Public networking | [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md) |
