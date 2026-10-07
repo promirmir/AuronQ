@@ -15,10 +15,10 @@ import (
 
 const mainnetNetworkID = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 
-func defaultCUDAPath() string {
-	name := "auronq-aqm64-cuda.dll"
+func backendLibraryPath(windowsName, linuxName string) string {
+	name := windowsName
 	if runtime.GOOS == "linux" {
-		name = "libauronq-aqm64-cuda.so"
+		name = linuxName
 	}
 	exe, err := os.Executable()
 	if err != nil {
@@ -27,16 +27,25 @@ func defaultCUDAPath() string {
 	return filepath.Join(filepath.Dir(exe), name)
 }
 
+func defaultCUDAPath() string {
+	return backendLibraryPath("auronq-aqm64-cuda.dll", "libauronq-aqm64-cuda.so")
+}
+
+func defaultOpenCLPath() string {
+	return backendLibraryPath("auronq-aqm64-opencl.dll", "libauronq-aqm64-opencl.so")
+}
+
 func main() {
 	nodeURL := flag.String("node", "http://127.0.0.1:18444", "AuronQ full-node URL")
 	address := flag.String("address", "", "AURQ reward address")
-	computeBackend := flag.String("backend", "auto", "compute backend: auto, cuda or cpu")
+	computeBackend := flag.String("backend", "auto", "compute backend: auto, cuda, opencl or cpu")
 	cpuThreads := flag.Int("cpu-threads", 0, "CPU mining threads (0 = conservative automatic profile)")
-	device := flag.Int("device", 0, "CUDA device index")
-	devicesFlag := flag.String("devices", "", "comma-separated CUDA device indices or 'all'; overrides --device")
+	device := flag.Int("device", 0, "accelerator device index")
+	devicesFlag := flag.String("devices", "", "comma-separated NVIDIA CUDA device indices or 'all'; overrides --device for CUDA multi-GPU")
 	multiChild := flag.Bool("multi-child", false, "internal multi-GPU child worker")
 	batchFlag := flag.Int("batch", 0, "nonces per compute batch (0 = automatic)")
 	dllPath := flag.String("cuda-dll", defaultCUDAPath(), "path to the AuronQ CUDA backend (.dll on Windows, .so on Linux)")
+	openclPath := flag.String("opencl-dll", defaultOpenCLPath(), "path to the AuronQ OpenCL backend (.dll on Windows, .so on Linux)")
 	selfTest := flag.Bool("self-test", false, "verify the selected backend against the canonical AQM64 CPU reference")
 	benchmark := flag.Bool("benchmark", false, "run an offline end-to-end AQM64 throughput benchmark")
 	benchmarkSeconds := flag.Int("benchmark-seconds", 20, "approximate benchmark duration in seconds")
@@ -97,7 +106,7 @@ func main() {
 		}
 	}
 
-	backend, backendKind, fallbackReason, err := openSelectedBackend(backendMode, *dllPath, *device, *cpuThreads)
+	backend, backendKind, fallbackReason, err := openSelectedBackend(backendMode, *dllPath, *openclPath, *device, *cpuThreads)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "backend:", err)
 		os.Exit(1)
@@ -122,7 +131,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("AuronQ Universal Miner v0.4.4-alpha\n")
+	fmt.Printf("AuronQ Universal Miner v0.4.5-alpha\n")
 	fmt.Printf("Backend: %s\n", backendKind)
 	fmt.Printf("Compute: %s\n", backend.Name())
 	if fallbackReason != "" {
@@ -147,7 +156,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "--auto-tune-seconds must be at least 1")
 			os.Exit(2)
 		}
-		if backendKind == "cuda" {
+		if backendKind == "cuda" || backendKind == "opencl" {
 			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "AUTOTUNE FAILED:", err)
@@ -156,7 +165,7 @@ func main() {
 			batch = bestBatch
 			fmt.Printf("AUTOTUNE OK best_batch=%d best=%.3f H/s\n", bestBatch, bestRate)
 		} else {
-			fmt.Printf("AUTOTUNE CPU: using conservative %d-thread profile; CUDA batch autotune skipped\n", safeCPUThreads(*cpuThreads))
+			fmt.Printf("AUTOTUNE CPU: using conservative %d-thread profile; accelerator batch autotune skipped\n", safeCPUThreads(*cpuThreads))
 		}
 	}
 
@@ -173,6 +182,7 @@ func main() {
 	}
 
 	var thermal *thermalController
+	conservativeUnmonitoredGPU := false
 	if *thermalAuto && backendKind == "cuda" {
 		if *thermalLimit < 60 || *thermalLimit > 95 {
 			fmt.Fprintln(os.Stderr, "--thermal-limit must be between 60 and 95 C")
@@ -192,6 +202,9 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("THERMAL AUTO target=%dC limit=%dC batch_range=1..%d\n", target, *thermalLimit, batch)
+	} else if *thermalAuto && backendKind == "opencl" {
+		conservativeUnmonitoredGPU = true
+		fmt.Printf("OPENCL SAFE MODE: no vendor-neutral trustworthy temperature sensor is assumed; using approximately 50%% compute duty and relying on device firmware/driver protection\n")
 	} else if *thermalAuto && backendKind == "cpu" {
 		fmt.Printf("CPU SAFE MODE: %d conservative worker(s), 64 MiB each; no universal CPU package-temperature sensor is assumed\n", safeCPUThreads(*cpuThreads))
 	}
@@ -218,7 +231,7 @@ func main() {
 	}
 	fmt.Printf("Node: %s height=%d peers=%d\n", *nodeURL, st.Height, st.Peers)
 
-	if err := mineLoop(client, backend, *address, batch, *noncePrefix, thermal); err != nil {
+	if err := mineLoop(client, backend, *address, batch, *noncePrefix, thermal, conservativeUnmonitoredGPU); err != nil {
 		fmt.Fprintln(os.Stderr, "miner stopped:", err)
 		os.Exit(1)
 	}
@@ -376,7 +389,7 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration) (int, float64, erro
 		}
 	}
 	if bestBatch == 0 {
-		return 0, 0, fmt.Errorf("no usable CUDA batch size found")
+		return 0, 0, fmt.Errorf("no usable accelerator batch size found")
 	}
 	return bestBatch, bestRate, nil
 }
@@ -431,7 +444,7 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 	return nil
 }
 
-func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, noncePrefix uint64, thermal *thermalController) error {
+func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, noncePrefix uint64, thermal *thermalController, conservativeUnmonitoredGPU bool) error {
 	var total uint64
 	start := time.Now()
 	lastReport := start
@@ -474,9 +487,17 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 			if err != nil {
 				return err
 			}
+			runStarted := time.Now()
 			finals, err := backend.Run(initial, batch)
+			runElapsed := time.Since(runStarted)
 			if err != nil {
 				return err
+			}
+			if conservativeUnmonitoredGPU && runElapsed > thermalPause {
+				// Without a vendor-neutral trustworthy temperature source, keep
+				// generic OpenCL mining deliberately conservative instead of
+				// pretending to know the hardware temperature.
+				thermalPause = runElapsed
 			}
 
 			total += uint64(batch)
