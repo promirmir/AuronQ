@@ -1,4 +1,4 @@
-# AuronQ Universal Miner v0.4.3 Alpha
+# AuronQ Universal Miner v0.4.4 Alpha
 
 AuronQ Universal Miner is designed to start safely on as many ordinary computers as possible without changing AuronQ Mainnet consensus.
 
@@ -23,7 +23,7 @@ The full Windows x64 graphical package additionally includes the official NVIDIA
 
 ## AMD / Intel graphics
 
-v0.4.3 does not pretend that an unvalidated AMD/Intel GPU accelerator exists. On AMD Radeon, Intel Arc/iGPU, unsupported NVIDIA, missing CUDA, or no discrete GPU, AUTO uses the native CPU backend.
+v0.4.4 does not pretend that an unvalidated AMD/Intel GPU accelerator exists. On AMD Radeon, Intel Arc/iGPU, unsupported NVIDIA, missing CUDA, or no discrete GPU, AUTO uses the native CPU backend.
 
 AMD/Intel GPU acceleration can be added later only after byte-for-byte AQM64 self-tests and hardware validation.
 
@@ -101,4 +101,4 @@ Each portable package contains the miner CLI, full-node CLI, network.json, boots
 
 ## Consensus
 
-Universal Miner v0.4.3 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
+Universal Miner v0.4.4 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
