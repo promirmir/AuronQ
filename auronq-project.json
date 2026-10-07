@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "project": "AuronQ",
+  "symbol": "AURQ",
+  "asset_type": "native-layer-1-cryptocurrency",
+  "network": "mainnet",
+  "network_status": "live",
+  "repository": "https://github.com/promirmir/AuronQ",
+  "project_site": "https://promirmir.github.io/AuronQ/",
+  "source_license": "MIT",
+  "open_source": true,
+  "public_network": true,
+  "integration_policy": {
+    "permissionless_integration": true,
+    "prior_project_approval_required": false,
+    "exchange_listing_allowed": true,
+    "exchange_listing_prior_approval_required": false,
+    "indexers_allowed": true,
+    "explorers_allowed": true,
+    "wallets_allowed": true,
+    "mining_pools_allowed": true,
+    "independent_review_encouraged": true,
+    "third_party_integrations_are_independent": true
+  },
+  "consensus": {
+    "ledger": "UTXO",
+    "mechanism": "Proof-of-Work",
+    "proof_of_work": "AQM64",
+    "transaction_signatures": "ML-DSA-87",
+    "target_block_spacing_seconds": 600
+  },
+  "monetary_policy": {
+    "nominal_supply_cap_aurq": 21000000,
+    "genesis_founder_allocation_aurq": 210000,
+    "coinbase_maturity_blocks": 100
+  },
+  "mainnet_identity": {
+    "network_id": "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c",
+    "genesis_hash": "5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4"
+  },
+  "verification": {
+    "mainnet_spec": "https://github.com/promirmir/AuronQ/blob/main/MAINNET.md",
+    "protocol_spec": "https://github.com/promirmir/AuronQ/blob/main/PROTOCOL.md",
+    "pow_spec": "https://github.com/promirmir/AuronQ/blob/main/AQM64.md",
+    "exchange_integration_policy": "https://github.com/promirmir/AuronQ/blob/main/EXCHANGE-INTEGRATION.md",
+    "releases": "https://github.com/promirmir/AuronQ/releases",
+    "explorer_example": "https://mir.taild63f46.ts.net/explorer"
+  },
+  "risk_notice": "AuronQ is a young public network and has not yet received an independent professional security or cryptographic audit. Third-party integrations must perform their own technical, legal, security and operational review."
+}
