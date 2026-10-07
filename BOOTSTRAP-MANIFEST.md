@@ -2,13 +2,12 @@
 
 A bootstrap manifest is discovery metadata. It is **not consensus** and changing it does not alter Network ID, genesis, balances, supply or proof-of-work rules.
 
-Current official manifest and registry source of truth:
+Official discovery manifests:
 
-`https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
+- reviewed fallback: `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
+- automatic live registry: `https://raw.githubusercontent.com/promirmir/AuronQ/automation/peer-registry/bootstrap.json`
 
-Human-readable GitHub view:
-
-`https://github.com/promirmir/AuronQ/blob/main/bootstrap.json`
+The reviewed fallback changes through protected-main review. The live registry is produced by the peer crawler and is health-checked before its branch is published. Both are untrusted discovery metadata; neither has consensus authority.
 
 The peer list is intentionally dynamic. It can contain project rendezvous endpoints and crawler-verified public nodes learned from the live network, so documentation should not hardcode a fixed peer count.
 
@@ -37,4 +36,4 @@ Manifest validation rules:
 
 For Windows releases, a `bootstrap.json` beside `AuronQ-Desktop.exe` uses the same shape. It is only accepted after the bundled network has been validated and the Network ID matches.
 
-A healthy network should have multiple independently operated bootstrap paths and DNS seeds. No seed is a consensus authority.
+A healthy network should have multiple independently operated bootstrap paths and, where possible, independent DNS seeds. The live registry reduces manual maintenance but does not by itself prove operator or hosting-provider diversity. No seed or manifest is a consensus authority.
