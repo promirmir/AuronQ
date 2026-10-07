@@ -68,7 +68,7 @@ The official miner now uses **AUTO compute selection**: validated NVIDIA CUDA fi
 | Portable CPU platforms | ✅ Windows x64/ARM64 · Linux x64/ARM64 · macOS x64/ARM64 |
 | NVIDIA GPUs | ✅ CUDA targets generated from the release toolkit + OpenCL fallback for unsupported CUDA generations |
 | Multi-GPU work | ✅ Separate worker per GPU with disjoint nonce ranges |
-| Automatic tuning | ✅ CUDA Auto Tune + adaptive GPU thermals; CPU fallback uses a conservative automatic thread profile |
+| Automatic tuning | ✅ CUDA/OpenCL batch autotune; NVIDIA uses direct thermal control, generic OpenCL uses a conservative no-sensor duty profile |
 | Live performance | ✅ Rolling H/s + GPU telemetry + Windows CPU utilization/name/logical CPUs/AQM64 threads/nominal clock/memory |
 | Thermal protection | ✅ Smart Solo governor + stabilized AuronQ-side Pool duty controller, cooldown hold and independent catastrophic hard stop |
 | Solo mining | ✅ Uses the ordinary AuronQ full-node template/validation path |
@@ -129,6 +129,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 - **Portable Windows/Linux/macOS CPU-safe builds:** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.5-alpha
 - **Universal user guide:** [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md)
 - **NVIDIA accelerated guide:** [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md)
+- **Hardware support policy:** [HARDWARE-SUPPORT.md](HARDWARE-SUPPORT.md)
 - **Technical CUDA notes:** [gpu/cuda/README.md](gpu/cuda/README.md)
 
 **MeshMiner 0.8.35 integration:**
@@ -144,7 +145,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 - **RPlant:** https://pool.rplant.xyz/#auronq#connect
 - **MeshMiner 0.8.35:** https://github.com/totom9000/meshminer/releases/tag/v.0.8.35 — published AURQ support for CPU and NVIDIA GPUs
 
-The official AuronQ miner provides native Solo CUDA **and native CPU fallback** paths. Its Pool mode is a launcher/bridge for a **user-supplied compatible external pool miner** because the AuronQ full node does not currently expose a native Stratum server. Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
+The official AuronQ miner provides native Solo CUDA, vendor-neutral OpenCL GPU, **and native CPU fallback** paths. Its Pool mode is a launcher/bridge for a **user-supplied compatible external pool miner** because the AuronQ full node does not currently expose a native Stratum server. Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
 
 
 ### Current checksums
@@ -320,7 +321,7 @@ It does **not** reconstruct the entire UTXO set from every full block, so it mus
 - **Build integrity:** deterministic/reproducible build checks on Linux and Windows.
 - **Explorer decentralization:** peer-aware links between independently hosted full-node explorers.
 - **Mining correctness:** CLI/Desktop miners now cancel stale templates when the canonical tip advances or reorgs.
-- **Mining compatibility:** Universal Miner AUTO-selects official NVIDIA CUDA when available and otherwise uses the native CPU AQM64 fallback; portable CPU packages are CI-built for Windows/Linux/macOS x64/ARM64, with Windows Pool/MeshMiner integration and local hardware fail-safes.
+- **Mining compatibility:** Universal Miner AUTO validates NVIDIA CUDA, then vendor-neutral OpenCL GPU, then native CPU AQM64; portable CPU packages are CI-built for Windows/Linux/macOS x64/ARM64, with Windows Pool/MeshMiner integration and local hardware fail-safes.
 
 Detailed history: [CHANGELOG.md](CHANGELOG.md)
 
