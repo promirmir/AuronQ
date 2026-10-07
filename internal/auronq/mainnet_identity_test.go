@@ -63,6 +63,21 @@ func TestMainnetIdentityIsFrozen(t *testing.T) {
 
 
 func TestMainnetDiscoveryHasReviewedAndLiveRegistries(t *testing.T) {
+	// TestMain lowers production PoW parameters for fast consensus tests.
+	// Restore the frozen Mainnet values while loading the real network.json,
+	// exactly as the Mainnet identity test above does.
+	testPowLimit := PowLimit
+	testMemory := aqm64MemoryKiB
+	testTime := aqm64TimeCost
+	PowLimit = TargetFromBig(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 502), big.NewInt(1)))
+	aqm64MemoryKiB = AQM64MemoryKiB
+	aqm64TimeCost = AQM64TimeCost
+	defer func() {
+		PowLimit = testPowLimit
+		aqm64MemoryKiB = testMemory
+		aqm64TimeCost = testTime
+	}()
+
 	n, err := LoadNetwork(filepath.Join("..", "..", "network.json"))
 	if err != nil {
 		t.Fatal(err)
