@@ -64,12 +64,12 @@ The official miner now uses **AUTO compute selection**: NVIDIA CUDA acceleration
 
 | Capability | v0.4.4 Alpha |
 |---|---|
-| AUTO backend | ✅ NVIDIA CUDA when available; otherwise native CPU AQM64 fallback |
+| AUTO backend | ✅ Validates the real CUDA backend first; unsupported/failed NVIDIA automatically falls back to native CPU AQM64 |
 | Portable CPU platforms | ✅ Windows x64/ARM64 · Linux x64/ARM64 · macOS x64/ARM64 |
 | NVIDIA GPUs | ✅ RTX/Turing-class CUDA target; choose specific devices or **all detected GPUs** |
 | Multi-GPU work | ✅ Separate worker per GPU with disjoint nonce ranges |
 | Automatic tuning | ✅ CUDA Auto Tune + adaptive GPU thermals; CPU fallback uses a conservative automatic thread profile |
-| Live performance | ✅ Rolling H/s, H/W efficiency, temperature state, clocks, fan, GPU load, power, VRAM and P-state |
+| Live performance | ✅ Rolling H/s + GPU telemetry + Windows CPU utilization/name/logical CPUs/AQM64 threads/nominal clock/memory |
 | Thermal protection | ✅ Smart Solo governor + stabilized AuronQ-side Pool duty controller, cooldown hold and independent catastrophic hard stop |
 | Solo mining | ✅ Uses the ordinary AuronQ full-node template/validation path |
 | Pool mode | ✅ First-class MeshMiner 0.8.35+ integration, MeshPool preset and compatible custom endpoints |
