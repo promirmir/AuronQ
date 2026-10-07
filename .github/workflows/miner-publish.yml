@@ -46,16 +46,6 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - name: Build legacy CUDA backend with CUDA 12.6 container
-        shell: bash
-        run: |
-          docker run --rm \
-            -v "$PWD:/src" \
-            -w /src \
-            nvidia/cuda:12.6.3-devel-ubuntu24.04 \
-            bash ./gpu/cuda/build-linux-legacy.sh
-          test -f gpu/cuda/libauronq-aqm64-cuda-legacy.so
-
       - name: Install CUDA Toolkit
         uses: Jimver/cuda-toolkit@v0.2.35
         with:
@@ -115,6 +105,15 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      - name: Build legacy CUDA backend with CUDA 12.6 container
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            nvidia/cuda:12.6.3-devel-ubuntu24.04 \
+            bash ./gpu/cuda/build-linux-legacy.sh
+          test -f gpu/cuda/libauronq-aqm64-cuda-legacy.so
       - name: Install CUDA Toolkit
         uses: Jimver/cuda-toolkit@v0.2.35
         with:
