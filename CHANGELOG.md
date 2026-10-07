@@ -24,6 +24,17 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### Universal Miner v0.4.4 Alpha
+
+- AUTO now validates the real AuronQ CUDA backend with the canonical AQM64 self-test before selecting GPU mining.
+- Older/unsupported NVIDIA hardware or CUDA initialization/runtime failures automatically fall back to native CPU mining instead of requiring manual intervention.
+- Explicit CUDA/BOTH remains fail-closed.
+- Windows dashboard adds real CPU telemetry: processor name, whole-system utilization, logical CPUs, AQM64 threads, nominal clock and 64 MiB-per-lane memory estimate.
+- CPU package temperature remains N/A when no trustworthy universal Windows sensor exists; no guessed thermal value is displayed.
+- CPU telemetry is visible even when an unsupported NVIDIA GPU is physically present.
+- Corrects the GUI/documentation wording for the existing Pool catastrophic thermal envelope.
+- No Mainnet consensus, genesis, Network ID, AQM64, difficulty, transaction validation or monetary-policy changes.
+
 ### Universal Miner v0.4.3 Alpha
 
 - Reworks Windows Pool-mode thermal regulation to reduce oscillation and repeated suspend/resume cycles on thermally constrained GPUs.
