@@ -30,6 +30,7 @@ Manifest validation rules:
 - manifest size and peer count are bounded;
 - `expires_at = 0` means no explicit expiry;
 - literal private/loopback/CGNAT addresses from a remote manifest are rejected;
+- newly learned automatic-registry peers require independent gossip endorsements from at least two distinct peer netgroups;
 - DNS peer names learned from a remote manifest require HTTPS;
 - manifests are refreshed periodically;
 - failing learned peers can be pruned and later replaced.
