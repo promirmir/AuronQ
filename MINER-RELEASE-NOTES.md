@@ -1,72 +1,87 @@
 # AuronQ Universal Miner v0.4.6 Alpha
 
-## Broad general-purpose GPU support
+## Legacy NVIDIA GPU support and correct Pool AUTO behavior
 
-v0.4.6 expands the official Solo miner from a CUDA-first implementation into a validated multi-backend miner while leaving AQM64 and Mainnet consensus unchanged.
+v0.4.6 fixes the older-NVIDIA path discovered on GTX 1050-class hardware.
 
-### AUTO backend order
+The previous v0.4.5 release could detect a Pascal GPU through NVML, reject it
+through the modern CUDA 13.x backend, fail OpenCL on some driver combinations
+and then mine on CPU. In Pool mode there was an additional logic error: AuronQ
+used its own native CUDA compatibility test to decide whether a GPU was allowed
+to reach the external MeshMiner process.
 
-AUTO now tries compute backends in this order:
+v0.4.6 separates those concerns and adds a dedicated legacy CUDA backend.
 
-1. **NVIDIA CUDA**
-2. **Vendor-neutral OpenCL GPU**
-3. **Native CPU AQM64**
+## AUTO order
 
-A GPU backend is never accepted from a model name or driver detection alone. Before mining, the selected accelerator must complete the canonical AQM64 equivalence self-test and produce a byte-identical result to the CPU reference implementation.
+Solo AUTO now tries:
 
-### OpenCL GPU backend
+1. **Primary NVIDIA CUDA** — current CUDA 13.2 build for newer NVIDIA generations.
+2. **Legacy NVIDIA CUDA** — CUDA 12.6 build for supported Maxwell / Pascal / Volta targets, including GTX 10xx-class Pascal when the installed driver and hardware pass the canonical AQM64 test.
+3. **Vendor-neutral OpenCL GPU** — AMD / Intel / NVIDIA.
+4. **Native CPU AQM64**.
 
-The accelerated Windows/Linux packages now include a runtime-loaded OpenCL backend designed for ordinary GPUs from:
+Every native accelerator is accepted only after the full canonical byte-for-byte
+AQM64 equivalence self-test.
 
-- AMD Radeon;
-- Intel Arc and compatible Intel GPU runtimes;
-- NVIDIA GPUs whose CUDA path is unavailable or unsupported.
+## GTX 1050 / Pascal
 
-The OpenCL library does not require the OpenCL SDK on the mining machine. It dynamically loads the OpenCL runtime supplied by the installed GPU driver, compiles the AQM64 kernel locally, then runs the mandatory canonical self-test.
+The Windows and Linux accelerated packages now include a second CUDA library:
 
-A card/driver combination is considered usable only if the local OpenCL kernel compiles and the full AQM64 result matches the canonical CPU implementation.
+- Windows: `auronq-aqm64-cuda-legacy.dll`
+- Linux: `libauronq-aqm64-cuda-legacy.so`
 
-### Wider NVIDIA build coverage
+That library is built with CUDA 12.6 against the legacy architecture targets
+still provided by that toolkit. The build script includes the supported subset
+of Maxwell, Pascal and Volta target families and embeds the newest supported
+legacy PTX target.
 
-CUDA build scripts no longer hard-code only sm_75, sm_86 and sm_89. They query the installed CUDA compiler for supported real/virtual architectures and emit all compatible baseline targets from the maintained target list.
+A GTX 1050 is no longer expected to depend on OpenCL first. AUTO attempts the
+legacy CUDA backend before OpenCL.
 
-This allows a release toolkit to include additional NVIDIA generations when supported by that toolkit, while unsupported generations can still fall through to OpenCL and then CPU.
+The physical card still has to pass the runtime AQM64 self-test. A compiled
+`sm_61` target is necessary for Pascal support, but it is not treated as proof
+of correctness by itself.
 
-### Generic GPU safety
+## Pool mode fix
 
-Direct NVIDIA CUDA thermal control still uses trustworthy local NVIDIA telemetry.
+Windows Pool mode launches a user-supplied third-party miner such as MeshMiner.
 
-There is no single trustworthy cross-vendor temperature API available for every AMD/Intel/NVIDIA OpenCL driver. AuronQ therefore does not invent a temperature for generic OpenCL hardware.
+v0.4.5 incorrectly filtered the selected NVIDIA device through AuronQ's own
+native CUDA self-test before launching the external pool miner. That could turn
+an older GPU into a CPU fallback even when the external miner supported the
+card.
 
-When `--thermal-auto` is enabled on the generic OpenCL backend, the miner uses a conservative approximately 50% compute-duty profile instead of pretending to know device temperature. Device firmware/driver thermal protection remains authoritative.
+v0.4.6 no longer applies the native AuronQ CUDA compatibility gate to Pool
+hardware selection. Pool GPU eligibility is based on the locally detected
+NVIDIA device set and the capabilities of the user-supplied pool miner.
 
-### Windows GUI
+AuronQ-side Pool thermal safety still uses direct local NVML telemetry and the
+existing autonomous duty/cooldown controller.
 
-The Windows Solo backend selector now exposes:
+## UI accuracy
 
-- AUTO;
-- NVIDIA CUDA;
-- OpenCL GPU — AMD / Intel / NVIDIA;
-- CPU.
+The Windows GUI no longer labels AUTO as CPU before the worker has finished
+trying legacy CUDA / OpenCL.
 
-AUTO remains recommended.
+It also records the actual AUTO fallback reason reported by the worker, so the
+user can see why a backend was rejected instead of seeing a misleading generic
+CPU label.
 
-CPU telemetry introduced in v0.4.4 remains visible independently from GPU detection.
+## Other hardware
 
-### Multi-GPU
+AMD and Intel GPU support remains through the validated OpenCL backend.
+Newer NVIDIA cards continue to prefer the primary CUDA 13.2 backend.
 
-The existing child-worker orchestration can carry AUTO/OpenCL fallback for explicitly selected device indices. NVIDIA `--devices all` discovery remains available through the NVIDIA path.
+Portable Windows/Linux/macOS packages remain CPU-safe.
 
-### Pool mode
+## No specialized-mining-appliance integration
 
-The native OpenCL backend is currently a **Solo mining backend**. Windows Pool mode still launches a user-supplied third-party compatible pool miner and therefore supports only the backends implemented by that external miner.
-
-## Hardware policy
-
-This release broadens access for ordinary CPUs and GPUs. It does not add a dedicated integration for specialized mining appliances.
-
-All supported general-purpose backends compute the same public AQM64 proof-of-work and remain subject to ordinary full-node block validation.
+The official miner continues to focus on ordinary CPU/GPU participation. No
+dedicated specialized-mining-appliance interface, bridge or privileged work
+path is added.
 
 ## Consensus unchanged
 
-No changes to genesis, Network ID, AQM64 parameters, difficulty, monetary policy, chain selection, transaction validity or block validity.
+No changes to genesis, Network ID, AQM64 consensus parameters, difficulty,
+monetary policy, chain selection, transaction validity or block validity.
