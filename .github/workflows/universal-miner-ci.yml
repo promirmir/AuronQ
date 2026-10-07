@@ -114,11 +114,11 @@ jobs:
           cache: false
       - name: Build all CPU-safe release archives
         run: |
-          bash ./build-universal-miner-packages.sh 0.4.5-alpha
-          test -f dist/universal-v0.4.5-alpha/AuronQ-Universal-Miner-v0.4.5-alpha-windows-amd64.zip
-          test -f dist/universal-v0.4.5-alpha/AuronQ-Universal-Miner-v0.4.5-alpha-windows-arm64.zip
-          test -f dist/universal-v0.4.5-alpha/AuronQ-Universal-Miner-v0.4.5-alpha-linux-amd64.tar.gz
-          test -f dist/universal-v0.4.5-alpha/AuronQ-Universal-Miner-v0.4.5-alpha-linux-arm64.tar.gz
-          test -f dist/universal-v0.4.5-alpha/AuronQ-Universal-Miner-v0.4.5-alpha-darwin-amd64.tar.gz
-          test -f dist/universal-v0.4.5-alpha/AuronQ-Universal-Miner-v0.4.5-alpha-darwin-arm64.tar.gz
-          test -s dist/universal-v0.4.5-alpha/SHA256SUMS-UNIVERSAL-MINER.txt
+          bash ./build-universal-miner-packages.sh 0.4.6-alpha
+          test -f dist/universal-v0.4.6-alpha/AuronQ-Universal-Miner-v0.4.6-alpha-windows-amd64.zip
+          test -f dist/universal-v0.4.6-alpha/AuronQ-Universal-Miner-v0.4.6-alpha-windows-arm64.zip
+          test -f dist/universal-v0.4.6-alpha/AuronQ-Universal-Miner-v0.4.6-alpha-linux-amd64.tar.gz
+          test -f dist/universal-v0.4.6-alpha/AuronQ-Universal-Miner-v0.4.6-alpha-linux-arm64.tar.gz
+          test -f dist/universal-v0.4.6-alpha/AuronQ-Universal-Miner-v0.4.6-alpha-darwin-amd64.tar.gz
+          test -f dist/universal-v0.4.6-alpha/AuronQ-Universal-Miner-v0.4.6-alpha-darwin-arm64.tar.gz
+          test -s dist/universal-v0.4.6-alpha/SHA256SUMS-UNIVERSAL-MINER.txt
