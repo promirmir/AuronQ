@@ -17,10 +17,12 @@ import (
 )
 
 type multiGPUOptions struct {
+	Backend          string
 	Node             string
 	Address          string
 	Batch            int
 	DLLPath          string
+	OpenCLPath       string
 	SelfTest         bool
 	Benchmark        bool
 	BenchmarkSeconds int
@@ -101,10 +103,11 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 		prefix := opt.NoncePrefix + (uint64(slot) << 56)
 		args := []string{
 			"--multi-child",
-			"--backend", "cuda",
+			"--backend", opt.Backend,
 			"--device", strconv.Itoa(device),
 			"--batch", strconv.Itoa(opt.Batch),
 			"--cuda-dll", opt.DLLPath,
+			"--opencl-dll", opt.OpenCLPath,
 			"--nonce-prefix", strconv.FormatUint(prefix, 10),
 		}
 		if opt.SelfTest {
