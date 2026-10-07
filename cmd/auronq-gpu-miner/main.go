@@ -35,6 +35,10 @@ func defaultLegacyCUDAPath() string {
 	return backendLibraryPath("auronq-aqm64-cuda-legacy.dll", "libauronq-aqm64-cuda-legacy.so")
 }
 
+func defaultKeplerCUDAPath() string {
+	return backendLibraryPath("auronq-aqm64-cuda-kepler.dll", "libauronq-aqm64-cuda-kepler.so")
+}
+
 func defaultOpenCLPath() string {
 	return backendLibraryPath("auronq-aqm64-opencl.dll", "libauronq-aqm64-opencl.so")
 }
@@ -50,6 +54,7 @@ func main() {
 	batchFlag := flag.Int("batch", 0, "nonces per compute batch (0 = automatic)")
 	dllPath := flag.String("cuda-dll", defaultCUDAPath(), "path to the primary AuronQ CUDA backend (.dll on Windows, .so on Linux)")
 	legacyDLLPath := flag.String("cuda-legacy-dll", defaultLegacyCUDAPath(), "path to the legacy Maxwell/Pascal/Volta CUDA backend")
+	keplerDLLPath := flag.String("cuda-kepler-dll", defaultKeplerCUDAPath(), "path to the CUDA 11.8 Kepler sm_35/sm_37 backend")
 	openclPath := flag.String("opencl-dll", defaultOpenCLPath(), "path to the AuronQ OpenCL backend (.dll on Windows, .so on Linux)")
 	selfTest := flag.Bool("self-test", false, "verify the selected backend against the canonical AQM64 CPU reference")
 	benchmark := flag.Bool("benchmark", false, "run an offline end-to-end AQM64 throughput benchmark")
@@ -88,6 +93,7 @@ func main() {
 					Batch:            *batchFlag,
 					DLLPath:          *dllPath,
 					LegacyDLLPath:    *legacyDLLPath,
+					KeplerDLLPath:    *keplerDLLPath,
 					OpenCLPath:       *openclPath,
 					SelfTest:         *selfTest,
 					Benchmark:        *benchmark,
@@ -114,7 +120,7 @@ func main() {
 		}
 	}
 
-	backend, backendKind, fallbackReason, err := openSelectedBackend(backendMode, *dllPath, *legacyDLLPath, *openclPath, *device, *cpuThreads)
+	backend, backendKind, fallbackReason, err := openSelectedBackend(backendMode, *dllPath, *legacyDLLPath, *keplerDLLPath, *openclPath, *device, *cpuThreads)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "backend:", err)
 		os.Exit(1)
