@@ -41,7 +41,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $name = "AuronQ-Miner-v$env:MINER_VERSION-Windows-x64-GUI-CUDA"
+          $name = "AuronQ-Miner-v$env:MINER_VERSION-Windows-x64-GUI-GPU"
           $dir = Join-Path $PWD "dist\$name"
           New-Item -ItemType Directory -Force -Path $dir | Out-Null
 
@@ -66,7 +66,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: miner-windows-full
-          path: dist/AuronQ-Miner-v0.4.5-alpha-Windows-x64-GUI-CUDA.zip
+          path: dist/AuronQ-Miner-v0.4.5-alpha-Windows-x64-GUI-GPU.zip
           if-no-files-found: error
 
   linux-x64-full:
@@ -92,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          name="AuronQ-Miner-v$MINER_VERSION-Linux-x64-CUDA"
+          name="AuronQ-Miner-v$MINER_VERSION-Linux-x64-GPU"
           dir="dist/$name"
           mkdir -p "$dir"
           CGO_ENABLED=1 go build -trimpath -o "$dir/auronq-miner" ./cmd/auronq-gpu-miner
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: miner-linux-full
-          path: dist/AuronQ-Miner-v0.4.5-alpha-Linux-x64-CUDA.tar.gz
+          path: dist/AuronQ-Miner-v0.4.5-alpha-Linux-x64-GPU.tar.gz
           if-no-files-found: error
 
   portable-cpu:
@@ -144,8 +144,8 @@ jobs:
         run: |
           set -euo pipefail
           cd dist
-          test -f "AuronQ-Miner-v$MINER_VERSION-Windows-x64-GUI-CUDA.zip"
-          test -f "AuronQ-Miner-v$MINER_VERSION-Linux-x64-CUDA.tar.gz"
+          test -f "AuronQ-Miner-v$MINER_VERSION-Windows-x64-GUI-GPU.zip"
+          test -f "AuronQ-Miner-v$MINER_VERSION-Linux-x64-GPU.tar.gz"
           test -f "AuronQ-Universal-Miner-v$MINER_VERSION-windows-amd64.zip"
           test -f "AuronQ-Universal-Miner-v$MINER_VERSION-windows-arm64.zip"
           test -f "AuronQ-Universal-Miner-v$MINER_VERSION-linux-amd64.tar.gz"
