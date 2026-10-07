@@ -1376,8 +1376,8 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 		if target < 50 {
 			target = 50
 		}
-		a.addLog(fmt.Sprintf("POOL thermal AUTO: local NVML target ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C",
-			target, s.ThermalStopC, s.ThermalStopC+1))
+		a.addLog(fmt.Sprintf("POOL thermal AUTO: local NVML target ~%d C, emergency cooldown at %d C, catastrophic envelope at %d C (continued heating can stop earlier)",
+			target, s.ThermalStopC, thermalCatastrophicStopAt(s.ThermalStopC, "pool")))
 	}
 	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic, effectiveBackend)
 }
