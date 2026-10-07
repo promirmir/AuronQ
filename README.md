@@ -26,10 +26,10 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 | Run the network | Mine AURQ | Inspect the chain |
 |---|---|---|
 | **AuronQ Desktop / Full Node v1.7.13** | **AuronQ Universal Miner v0.4.6 Alpha** | **Public Explorer** |
-| Windows + Linux full validating node, wallet and local Explorer | AUTO CUDA→Legacy CUDA→OpenCL→CPU fallback, Windows GUI, portable Windows/Linux/macOS CPU builds, Solo/Pool | Blocks, transactions, peers and network state |
+| Windows + Linux full validating node, wallet and local Explorer | AUTO CUDA→12.x Legacy→11.8 Kepler→OpenCL→CPU fallback, Windows GUI, portable Windows/Linux/macOS CPU builds, Solo/Pool | Blocks, transactions, peers and network state |
 | [⬇️ Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) | [⬇️ Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [All portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) | [🌐 Open Explorer](https://mir.taild63f46.ts.net/explorer) |
 
-> **Universal miner:** AUTO tries validated primary NVIDIA CUDA first, then the packaged legacy CUDA backend for older Maxwell/Pascal/Volta-class NVIDIA hardware, then vendor-neutral OpenCL GPU for AMD/Intel/NVIDIA, and finally the built-in CPU AQM64 backend. The CPU fallback uses a conservative memory/thread profile and is self-tested against canonical AQM64. Windows NVIDIA thermals use direct local NVML data. Portable CPU-safe CLI packages are CI-built for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64. Pool mode can use a user-supplied compatible external miner; AuronQ does not silently download third-party binaries.
+> **Universal miner:** AUTO keeps the newest NVIDIA CUDA backend for current/new GPUs, then tries separate compatibility backends for Maxwell/Pascal/Volta (CUDA 12.x) and Kepler sm_35/sm_37 (CUDA 11.8), then vendor-neutral OpenCL for AMD/Intel/NVIDIA, and finally CPU AQM64. The CPU fallback uses a conservative memory/thread profile and is self-tested against canonical AQM64. Windows NVIDIA thermals use direct local NVML data. Portable CPU-safe CLI packages are CI-built for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64. Pool mode can use a user-supplied compatible external miner; AuronQ does not silently download third-party binaries.
 
 ### Verify AuronQ yourself
 
@@ -50,7 +50,7 @@ If you want to follow the project rather than actively participate, **Star** or 
 
 ## ⛏️ Official AuronQ Universal Miner v0.4.6 Alpha
 
-The official miner now uses **AUTO compute selection**: primary NVIDIA CUDA → legacy NVIDIA CUDA → vendor-neutral OpenCL GPU → native CPU AQM64. The portable release matrix covers Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64; Windows x64 also has the PL/EN GUI.
+The official miner now uses **AUTO compute selection**: current NVIDIA CUDA → CUDA 12.x legacy → CUDA 11.8 Kepler → vendor-neutral OpenCL GPU → native CPU AQM64. The portable release matrix covers Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64; Windows x64 also has the PL/EN GUI.
 
 <p align="center">
   <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip"><strong>⬇️ Windows x64</strong></a>
@@ -64,9 +64,9 @@ The official miner now uses **AUTO compute selection**: primary NVIDIA CUDA → 
 
 | Capability | v0.4.6 Alpha |
 |---|---|
-| AUTO backend | ✅ Canonical validation chain: primary CUDA → legacy CUDA (Maxwell/Pascal/Volta) → OpenCL GPU (AMD/Intel/NVIDIA) → CPU |
+| AUTO backend | ✅ Current CUDA → CUDA 12.x Maxwell/Pascal/Volta → CUDA 11.8 Kepler → OpenCL GPU (AMD/Intel/NVIDIA) → CPU |
 | Portable CPU platforms | ✅ Windows x64/ARM64 · Linux x64/ARM64 · macOS x64/ARM64 |
-| NVIDIA GPUs | ✅ CUDA 13.2 for newer generations + CUDA 12.6 legacy backend for supported Maxwell/Pascal/Volta targets + OpenCL fallback |
+| NVIDIA GPUs | ✅ Current CUDA 13.2 path for modern/new targets + CUDA 12.6 Maxwell/Pascal/Volta + CUDA 11.8 Kepler + OpenCL fallback |
 | Multi-GPU work | ✅ Separate worker per GPU with disjoint nonce ranges |
 | Automatic tuning | ✅ CUDA/OpenCL batch autotune; NVIDIA uses direct thermal control, generic OpenCL uses a conservative no-sensor duty profile |
 | Live performance | ✅ Rolling H/s + GPU telemetry + Windows CPU utilization/name/logical CPUs/AQM64 threads/nominal clock/memory |
@@ -103,7 +103,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 | Component | Current release | Status | Download |
 |---|---:|---|---|
 | Desktop / Full Node | **v1.7.13** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) |
-| Universal Miner | **v0.4.6 Alpha** | AUTO CUDA→Legacy CUDA→OpenCL→CPU · Windows GUI · portable Windows/Linux/macOS · safe fallback | [Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
+| Universal Miner | **v0.4.6 Alpha** | AUTO CUDA→12.x Legacy→11.8 Kepler→OpenCL→CPU · Windows GUI · portable Windows/Linux/macOS · safe fallback | [Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
 | AuronQ Mobile | **0.5.3 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) |
 
 **Project site:** https://promirmir.github.io/AuronQ/
@@ -145,7 +145,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 - **RPlant:** https://pool.rplant.xyz/#auronq#connect
 - **MeshMiner 0.8.35:** https://github.com/totom9000/meshminer/releases/tag/v.0.8.35 — published AURQ support for CPU and NVIDIA GPUs
 
-The official AuronQ miner provides primary CUDA, a packaged legacy CUDA path for older NVIDIA GPUs, vendor-neutral OpenCL GPU, **and native CPU fallback** paths. Its Pool mode is a launcher/bridge for a **user-supplied compatible external pool miner** because the AuronQ full node does not currently expose a native Stratum server. Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
+The official AuronQ miner provides separate current, CUDA 12.x legacy, CUDA 11.8 Kepler, OpenCL GPU, **and native CPU fallback** paths. Its Pool mode is a launcher/bridge for a **user-supplied compatible external pool miner** because the AuronQ full node does not currently expose a native Stratum server. Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
 
 
 ### Current checksums
@@ -321,7 +321,7 @@ It does **not** reconstruct the entire UTXO set from every full block, so it mus
 - **Build integrity:** deterministic/reproducible build checks on Linux and Windows.
 - **Explorer decentralization:** peer-aware links between independently hosted full-node explorers.
 - **Mining correctness:** CLI/Desktop miners now cancel stale templates when the canonical tip advances or reorgs.
-- **Mining compatibility:** Universal Miner AUTO validates primary CUDA, then legacy CUDA for older NVIDIA generations, then OpenCL GPU, then native CPU AQM64; portable CPU packages are CI-built for Windows/Linux/macOS x64/ARM64, with Windows Pool/MeshMiner integration and local hardware fail-safes.
+- **Mining compatibility:** Universal Miner AUTO keeps current CUDA for new GPUs, then validates CUDA 12.x legacy, CUDA 11.8 Kepler, OpenCL GPU, and finally native CPU AQM64; portable CPU packages are CI-built for Windows/Linux/macOS x64/ARM64, with Windows Pool/MeshMiner integration and local hardware fail-safes.
 
 Detailed history: [CHANGELOG.md](CHANGELOG.md)
 
