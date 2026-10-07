@@ -14,27 +14,32 @@ OUT="$HERE/libauronq-aqm64-cuda.so"
 echo "NVCC: $NVCC"
 echo "Building AuronQ AQM64 CUDA backend for Linux amd64..."
 
-SUPPORTED_CODE="$("$NVCC" --list-gpu-code 2>/dev/null | tr '\n' ' ')"
-SUPPORTED_ARCH="$("$NVCC" --list-gpu-arch 2>/dev/null | tr '\n' ' ')"
-WANTED=(61 70 72 75 80 86 87 88 89 90 100 103 110 120 121)
+mapfile -t SUPPORTED_CODE < <("$NVCC" --list-gpu-code 2>/dev/null | sed -n -E 's/^[[:space:]]*(sm_[0-9]+[a-z]?)[[:space:]]*$/\1/p')
+mapfile -t SUPPORTED_ARCH < <("$NVCC" --list-gpu-arch 2>/dev/null | sed -n -E 's/^[[:space:]]*(compute_[0-9]+[a-z]?)[[:space:]]*$/\1/p')
+
+declare -A ARCH_SET=()
+for arch in "${SUPPORTED_ARCH[@]}"; do ARCH_SET["$arch"]=1; done
+
 GENCODE=()
-LATEST=""
-for cc in "${WANTED[@]}"; do
-  if grep -Eq "(^|[[:space:]])sm_${cc}([[:space:]]|$)" <<<"$SUPPORTED_CODE"; then
-    GENCODE+=( -gencode "arch=compute_${cc},code=sm_${cc}" )
-  fi
-  if grep -Eq "(^|[[:space:]])compute_${cc}([[:space:]]|$)" <<<"$SUPPORTED_ARCH"; then
-    LATEST="$cc"
+for code in "${SUPPORTED_CODE[@]}"; do
+  suffix="${code#sm_}"
+  arch="compute_${suffix}"
+  if [[ -n "${ARCH_SET[$arch]:-}" ]]; then
+    GENCODE+=( -gencode "arch=${arch},code=${code}" )
   fi
 done
-if [[ -n "$LATEST" ]]; then
-  GENCODE+=( -gencode "arch=compute_${LATEST},code=compute_${LATEST}" )
+
+LATEST=""
+if [[ "${#SUPPORTED_ARCH[@]}" -gt 0 ]]; then
+  LATEST="$(printf '%s\n' "${SUPPORTED_ARCH[@]}" | sort -V | tail -n1)"
+  GENCODE+=( -gencode "arch=${LATEST},code=${LATEST}" )
 fi
+
 if [[ "${#GENCODE[@]}" -eq 0 ]]; then
-  echo "No supported CUDA GPU architecture targets detected from nvcc." >&2
+  echo "No CUDA GPU architecture targets detected from nvcc." >&2
   exit 1
 fi
-echo "CUDA targets: ${GENCODE[*]}"
+echo "CUDA targets from installed toolkit: ${GENCODE[*]}"
 
 "$NVCC" -O3 -std=c++17 -shared --cudart static -Xcompiler "-O2,-fPIC" "${GENCODE[@]}" "$SRC" -o "$OUT"
 
