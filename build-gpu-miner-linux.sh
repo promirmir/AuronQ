@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-0.4.5-alpha}"
+VERSION="${1:-0.4.6-alpha}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$ROOT/dist"
 DIR="$DIST/AuronQ-Miner-v$VERSION-Linux-amd64"
@@ -12,6 +12,7 @@ rm -rf "$DIR" "$ARCHIVE"
 mkdir -p "$DIR"
 
 CUDA_BUILT=0
+LEGACY_CUDA_BUILT=0
 OPENCL_BUILT=0
 if command -v nvcc >/dev/null 2>&1; then
   echo "Building optional NVIDIA CUDA backend..."
@@ -43,6 +44,9 @@ echo "Building Linux Universal Miner..."
 if [[ "$CUDA_BUILT" == "1" ]]; then
   cp "$ROOT/gpu/cuda/libauronq-aqm64-cuda.so" "$DIR/"
 fi
+if [[ "$LEGACY_CUDA_BUILT" == "1" ]]; then
+  cp "$ROOT/gpu/cuda/libauronq-aqm64-cuda-legacy.so" "$DIR/"
+fi
 if [[ "$OPENCL_BUILT" == "1" ]]; then
   cp "$ROOT/gpu/opencl/libauronq-aqm64-opencl.so" "$DIR/"
 fi
@@ -66,8 +70,8 @@ AuronQ Universal Miner - Linux amd64
 3. Solo mining:
    ./auronq-miner --backend auto --node http://127.0.0.1:18444 --address aurq1... --self-test --thermal-auto --thermal-limit 81
 
-AUTO uses validated NVIDIA CUDA first, then validated vendor-neutral OpenCL GPU,
-then the native CPU AQM64 fallback. Generic OpenCL GPU mining uses a conservative
+AUTO uses validated NVIDIA CUDA first, then validated legacy CUDA for older
+NVIDIA generations, then vendor-neutral OpenCL GPU, then native CPU AQM64. Generic OpenCL GPU mining uses a conservative
 no-temperature-sensor duty profile unless a vendor-specific safety path exists.
 
 For a completely portable CPU-only build, use build-universal-miner-packages.sh.
