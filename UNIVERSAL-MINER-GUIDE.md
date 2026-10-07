@@ -1,4 +1,4 @@
-# AuronQ Universal Miner v0.4.5 Alpha
+# AuronQ Universal Miner v0.4.6 Alpha
 
 AuronQ Universal Miner is designed to start safely on as many ordinary computers as possible without changing AuronQ Mainnet consensus.
 
@@ -113,4 +113,4 @@ Each portable package contains the miner CLI, full-node CLI, network.json, boots
 
 ## Consensus
 
-Universal Miner v0.4.5 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
+Universal Miner v0.4.6 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
