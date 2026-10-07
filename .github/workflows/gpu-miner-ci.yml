@@ -70,6 +70,18 @@ jobs:
           file dist-ci/auronq-miner
           dist-ci/auronq-miner --backend cpu --cpu-threads 1 --self-test
 
+      - name: Validate OpenCL kernel against canonical AQM64 through PoCL
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pocl-opencl-icd ocl-icd-libopencl1
+          bash ./gpu/opencl/build-linux.sh
+          test -f gpu/opencl/libauronq-aqm64-opencl.so
+          AURONQ_OPENCL_TEST_ALL=1 dist-ci/auronq-miner \
+            --backend opencl \
+            --opencl-dll "$PWD/gpu/opencl/libauronq-aqm64-opencl.so" \
+            --self-test
+
   windows-app-compile:
     runs-on: windows-latest
     steps:
