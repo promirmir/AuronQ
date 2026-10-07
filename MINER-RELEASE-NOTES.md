@@ -10,26 +10,30 @@ and then mine on CPU. In Pool mode there was an additional logic error: AuronQ
 used its own native CUDA compatibility test to decide whether a GPU was allowed
 to reach the external MeshMiner process.
 
-v0.4.6 separates those concerns and adds a dedicated legacy CUDA backend.
+v0.4.6 separates those concerns and uses **three NVIDIA CUDA generations in parallel** so older-card support does not reduce support for new cards.
 
 ## AUTO order
 
 Solo AUTO now tries:
 
-1. **Primary NVIDIA CUDA** — current CUDA 13.2 build for newer NVIDIA generations.
-2. **Legacy NVIDIA CUDA** — CUDA 12.6 build for supported Maxwell / Pascal / Volta targets, including GTX 10xx-class Pascal when the installed driver and hardware pass the canonical AQM64 test.
-3. **Vendor-neutral OpenCL GPU** — AMD / Intel / NVIDIA.
-4. **Native CPU AQM64**.
+1. **Primary NVIDIA CUDA** — CUDA 13.2 build for current/newer NVIDIA generations; its build script emits every maintained architecture target supported by the release toolkit, including current Blackwell-era targets.
+2. **Legacy NVIDIA CUDA** — CUDA 12.6 build for supported Maxwell / Pascal / Volta targets, including GTX 10xx-class Pascal.
+3. **Kepler NVIDIA CUDA** — CUDA 11.8 build for supported Kepler `sm_35` / `sm_37` targets.
+4. **Vendor-neutral OpenCL GPU** — AMD / Intel / NVIDIA.
+5. **Native CPU AQM64**.
 
 Every native accelerator is accepted only after the full canonical byte-for-byte
 AQM64 equivalence self-test.
 
 ## GTX 1050 / Pascal
 
-The Windows and Linux accelerated packages now include a second CUDA library:
+The Windows and Linux accelerated packages now include generation-specific CUDA libraries rather than downgrading the primary backend:
 
-- Windows: `auronq-aqm64-cuda-legacy.dll`
-- Linux: `libauronq-aqm64-cuda-legacy.so`
+- primary Windows/Linux CUDA 13.2 library for newer GPUs;
+- Windows: `auronq-aqm64-cuda-legacy.dll` (CUDA 12.6 Maxwell/Pascal/Volta);
+- Linux: `libauronq-aqm64-cuda-legacy.so`;
+- Windows: `auronq-aqm64-cuda-kepler.dll` (CUDA 11.8 Kepler);
+- Linux: `libauronq-aqm64-cuda-kepler.so`.
 
 That library is built with CUDA 12.6 against the legacy architecture targets
 still provided by that toolkit. The build script includes the supported subset
@@ -37,7 +41,8 @@ of Maxwell, Pascal and Volta target families and embeds the newest supported
 legacy PTX target.
 
 A GTX 1050 is no longer expected to depend on OpenCL first. AUTO attempts the
-legacy CUDA backend before OpenCL.
+CUDA 12.6 legacy backend before OpenCL. Older supported Kepler cards get their
+own CUDA 11.8 path.
 
 The physical card still has to pass the runtime AQM64 self-test. A compiled
 `sm_61` target is necessary for Pascal support, but it is not treated as proof
@@ -71,7 +76,9 @@ CPU label.
 ## Other hardware
 
 AMD and Intel GPU support remains through the validated OpenCL backend.
-Newer NVIDIA cards continue to prefer the primary CUDA 13.2 backend.
+New NVIDIA cards continue to prefer the primary CUDA 13.2 backend and are not
+forced onto any legacy runtime. Future CUDA architecture targets can be picked
+up by the primary build script when the release toolkit exposes them.
 
 Portable Windows/Linux/macOS packages remain CPU-safe.
 
