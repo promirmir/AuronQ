@@ -60,3 +60,42 @@ func TestMainnetIdentityIsFrozen(t *testing.T) {
 		t.Fatalf("mainnet founder allocation changed: %d", got)
 	}
 }
+
+
+func TestMainnetDiscoveryHasReviewedAndLiveRegistries(t *testing.T) {
+	// TestMain lowers production PoW parameters for fast consensus tests.
+	// Restore the frozen Mainnet values while loading the real network.json,
+	// exactly as the Mainnet identity test above does.
+	testPowLimit := PowLimit
+	testMemory := aqm64MemoryKiB
+	testTime := aqm64TimeCost
+	PowLimit = TargetFromBig(new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 502), big.NewInt(1)))
+	aqm64MemoryKiB = AQM64MemoryKiB
+	aqm64TimeCost = AQM64TimeCost
+	defer func() {
+		PowLimit = testPowLimit
+		aqm64MemoryKiB = testMemory
+		aqm64TimeCost = testTime
+	}()
+
+	n, err := LoadNetwork(filepath.Join("..", "..", "network.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{
+		"https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json": true,
+		"https://raw.githubusercontent.com/promirmir/AuronQ/automation/peer-registry/bootstrap.json": true,
+	}
+	for _, raw := range n.BootstrapManifests {
+		delete(want, raw)
+	}
+	if len(want) != 0 {
+		t.Fatalf("mainnet discovery is missing required bootstrap manifest(s): %v", want)
+	}
+
+	// Discovery metadata must remain outside immutable Mainnet identity.
+	const frozen = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
+	if got := n.NetworkID().String(); got != frozen {
+		t.Fatalf("discovery metadata changed Mainnet Network ID: got %s want %s", got, frozen)
+	}
+}

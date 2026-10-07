@@ -11,13 +11,14 @@ A node can use four discovery sources:
 - `dns_seeds`;
 - bounded HTTPS `bootstrap_manifests`.
 
-The official mainnet manifest is:
+AuronQ uses two official HTTPS discovery manifests:
 
-`https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
+- reviewed fallback: `https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json`
+- live supplemental registry: `https://raw.githubusercontent.com/promirmir/AuronQ/automation/peer-registry/bootstrap.json`
 
 Bootstrap metadata is **not consensus** and is excluded from Network ID. It can therefore be rotated without a hard fork.
 
-The manifest is a **dynamic public registry** and should be treated as the source of truth for current bootstrap endpoints. It may contain project-operated HTTPS rendezvous endpoints together with crawler-verified public IP nodes learned from the live network.
+The reviewed manifest is the durable fallback. Releases also carry multiple reviewed public seed hints in `network.json`, so first contact does not require GitHub to be online. The live registry is regenerated from reachable Mainnet gossip peers and health-checked before publication, so a fresh release can learn newly reachable public nodes without waiting for a manual protected-main merge. It may contain project-operated HTTPS rendezvous endpoints together with crawler-verified public IP nodes learned from the live network.
 
 Do not copy a fixed peer count from this document: the registry can change as public nodes appear, disappear or fail verification. Every listed endpoint is still only a rendezvous path to an ordinary full node; it cannot create coins, approve invalid blocks or override cumulative-work selection.
 
@@ -39,7 +40,7 @@ AuronQ does not have a founder/master node. Once full nodes know each other, the
 
 A completely fresh installation still needs at least one discovery route. To reduce dependence on manual operator maintenance, the repository now contains an autonomous peer-registry crawler. GitHub Actions runs the registry crawler hourly. It starts from the current `bootstrap.json`, follows AuronQ peer gossip, callback-checks reachable candidates, requires the exact Mainnet Network ID/protocol, rejects private/CGNAT/documentation addresses, applies network-group diversity (including grouping DNS peers by parent domain) and appends verified public peers to the bootstrap manifest.
 
-The crawler never changes consensus and never makes a peer trusted for blocks: every full node still validates the chain locally. It also deliberately preserves existing manifest entries during transient outages instead of deleting the registry.
+The crawler never changes consensus and never makes a peer trusted for blocks: every full node still validates the chain locally. A newly learned peer must be reachable, report the exact Mainnet Network ID and be advertised by at least two distinct peer netgroups before it can enter the automatic live registry; self-advertisement does not count as an independent endorsement. Before the live registry is published, the normal public-network health checker verifies height coherence, tip agreement at the top height and common canonical history among reachable peers. The reviewed `main` manifest remains an independent fallback.
 
 The public registry now includes project rendezvous endpoints and crawler-verified public nodes learned from the network. That improves first-contact resilience, but raw endpoint count is not the same as operator independence. The stronger target is sustained diversity across independently controlled operators, networks and discovery routes. Existing nodes can already continue with persisted/gossiped peers when any particular bootstrap endpoint is unavailable.
 
@@ -79,7 +80,7 @@ The automatic path is:
 
 Stopping a miner no longer closes the public-node mapping. Stopping the full node does.
 
-A router/public ISP path must still allow inbound TCP/18444. If the router has no public WAN address (typical CGNAT), UPnP cannot create Internet reachability and the node correctly remains outbound-only. Windows Firewall may also need to allow the AuronQ executable on the active network profile. Public reachability is verified by another node before that address is accepted into peer gossip. Once verified and gossiped, the hourly registry crawler can discover the endpoint and add it to the public bootstrap registry through the protected PR/CI process.
+A router/public ISP path must still allow inbound TCP/18444. If the router has no public WAN address (typical CGNAT), UPnP cannot create Internet reachability and the node correctly remains outbound-only. Windows Firewall may also need to allow the AuronQ executable on the active network profile. Public reachability is verified by another node before that address is accepted into peer gossip. Once verified and gossiped, the hourly registry crawler can discover the endpoint and publish it to the supplemental live registry automatically after the health gate. A reviewed snapshot can still be promoted to protected `main`, but it is no longer on the critical path for fresh-node discovery.
 
 Normal users do not need inbound connectivity and can keep using `START-AURONQ.cmd`.
 

@@ -32,4 +32,4 @@ jobs:
         run: go test ./cmd/auronq-healthcheck
 
       - name: Verify public Mainnet peers and Explorer
-        run: go run ./cmd/auronq-healthcheck -manifest bootstrap.json
+        run: go run ./cmd/auronq-healthcheck -manifest bootstrap.json -min-healthy 3 -min-netgroups 3

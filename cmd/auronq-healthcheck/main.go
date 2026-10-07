@@ -6,7 +6,9 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -31,6 +33,39 @@ type result struct {
 type headersResponse struct {
 	Start   uint64           `json:"start"`
 	Headers []aq.BlockHeader `json:"headers"`
+}
+
+func healthNetgroup(raw string) string {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Hostname() == "" {
+		return ""
+	}
+	host := strings.Trim(strings.ToLower(u.Hostname()), "[]")
+	if ip := net.ParseIP(host); ip != nil {
+		if v4 := ip.To4(); v4 != nil {
+			return fmt.Sprintf("v4:%d.%d", v4[0], v4[1])
+		}
+		v6 := ip.To16()
+		if v6 != nil {
+			return fmt.Sprintf("v6:%02x%02x:%02x%02x", v6[0], v6[1], v6[2], v6[3])
+		}
+		return ""
+	}
+	parts := strings.Split(strings.TrimSuffix(host, "."), ".")
+	if len(parts) >= 2 {
+		host = strings.Join(parts[len(parts)-2:], ".")
+	}
+	return "dns:" + host
+}
+
+func healthyNetgroupCount(healthy []result) int {
+	groups := map[string]struct{}{}
+	for _, r := range healthy {
+		if g := healthNetgroup(r.Peer); g != "" {
+			groups[g] = struct{}{}
+		}
+	}
+	return len(groups)
 }
 
 func checkPeer(client *http.Client, peer string) (result, error) {
@@ -148,7 +183,14 @@ func readManifest(path string) (manifest, error) {
 
 func main() {
 	manifestPath := flag.String("manifest", "bootstrap.json", "bootstrap manifest to verify")
+	minHealthy := flag.Int("min-healthy", 1, "minimum number of healthy public peers required")
+	minNetgroups := flag.Int("min-netgroups", 1, "minimum number of distinct healthy network groups required")
 	flag.Parse()
+
+	if *minHealthy < 1 || *minNetgroups < 1 {
+		fmt.Fprintln(os.Stderr, "minimum health thresholds must be at least 1")
+		os.Exit(1)
+	}
 
 	m, err := readManifest(*manifestPath)
 	if err != nil {
@@ -172,6 +214,15 @@ func main() {
 	if len(healthy) == 0 {
 		fmt.Fprintln(os.Stderr, "no healthy public AuronQ peers")
 		os.Exit(2)
+	}
+	if len(healthy) < *minHealthy {
+		fmt.Fprintf(os.Stderr, "too few healthy public AuronQ peers: got=%d need=%d\n", len(healthy), *minHealthy)
+		os.Exit(6)
+	}
+	netgroups := healthyNetgroupCount(healthy)
+	if netgroups < *minNetgroups {
+		fmt.Fprintf(os.Stderr, "public peer network diversity too low: netgroups=%d need=%d\n", netgroups, *minNetgroups)
+		os.Exit(7)
 	}
 
 	sort.Slice(healthy, func(i, j int) bool { return healthy[i].Hello.Height < healthy[j].Hello.Height })
@@ -198,6 +249,6 @@ func main() {
 		os.Exit(5)
 	}
 
-	fmt.Printf("AuronQ public network health OK: %d/%d peers healthy, height range %d-%d, common history verified\n",
-		len(healthy), len(m.Peers), minHeight, maxHeight)
+	fmt.Printf("AuronQ public network health OK: %d/%d peers healthy, %d netgroups, height range %d-%d, common history verified\n",
+		len(healthy), len(m.Peers), netgroups, minHeight, maxHeight)
 }

@@ -24,6 +24,7 @@ const (
 	maxManifestPeers = 64
 	maxCrawlCandidates = 256
 	maxPerNetgroup = 2
+	minIndependentEndorsements = 2
 )
 
 type manifest struct {
@@ -38,6 +39,7 @@ type crawler struct {
 	queue []string
 	verified map[string]aq.Hello
 	permanentDead map[string]bool
+	endorsements map[string]map[string]bool
 }
 
 func normalizePeer(raw string) string {
@@ -222,6 +224,37 @@ func (c *crawler) enqueue(p string) {
 	c.queue = append(c.queue, p)
 }
 
+func (c *crawler) endorse(candidate, source string) {
+	candidate = normalizePeer(candidate)
+	source = normalizePeer(source)
+	if candidate == "" || source == "" || candidate == source || !publicGossipPeer(candidate) {
+		return
+	}
+	group := netgroup(source)
+	if group == "" {
+		return
+	}
+	if c.endorsements == nil {
+		c.endorsements = map[string]map[string]bool{}
+	}
+	if c.endorsements[candidate] == nil {
+		c.endorsements[candidate] = map[string]bool{}
+	}
+	c.endorsements[candidate][group] = true
+}
+
+func (c *crawler) endorsementCount(candidate string) int {
+	candidate = normalizePeer(candidate)
+	return len(c.endorsements[candidate])
+}
+
+func (c *crawler) eligibleLearnedPeer(candidate string, existing bool) bool {
+	if existing {
+		return true
+	}
+	return c.endorsementCount(candidate) >= minIndependentEndorsements
+}
+
 func (c *crawler) hello(peer string) (aq.Hello, error) {
 	var h aq.Hello
 	req, err := http.NewRequest(http.MethodGet, peer+"/p2p/hello", nil)
@@ -295,6 +328,7 @@ func main() {
 		seen: map[string]bool{},
 		verified: map[string]aq.Hello{},
 		permanentDead: map[string]bool{},
+		endorsements: map[string]map[string]bool{},
 	}
 
 	// Existing manifest entries are trusted only as initial rendezvous metadata.
@@ -321,14 +355,19 @@ func main() {
 		c.verified[p] = h
 		fmt.Printf("verified %s height=%d peers=%d\n", p, h.Height, len(h.Peers))
 
-		learned := append([]string{}, h.Peers...)
-		if h.Advertise != "" {
-			learned = append(learned, h.Advertise)
-		}
-		for _, q := range learned {
+		for _, q := range h.Peers {
 			if publicGossipPeer(q) {
+				// A learned peer is promoted to the automatic live registry only
+				// after independent peer groups have advertised it. Reachability
+				// and Network ID are still verified separately below.
+				c.endorse(q, p)
 				c.enqueue(q)
 			}
+		}
+		if h.Advertise != "" && publicGossipPeer(h.Advertise) {
+			// A node's own advertise field is a self-claim: crawl/verify it, but
+			// do not count it as an independent endorsement.
+			c.enqueue(h.Advertise)
 		}
 	}
 
@@ -359,6 +398,13 @@ func main() {
 		}
 	}
 
+	existing := map[string]bool{}
+	for _, p := range m.Peers {
+		if q := normalizePeer(p); q != "" {
+			existing[q] = true
+		}
+	}
+
 	verified := make([]string, 0, len(c.verified))
 	for p := range c.verified {
 		if publicGossipPeer(p) {
@@ -367,6 +413,11 @@ func main() {
 	}
 	sort.Strings(verified)
 	for _, p := range verified {
+		if !c.eligibleLearnedPeer(p, existing[normalizePeer(p)]) {
+			fmt.Printf("pending peer %s: verified but only %d independent netgroup endorsement(s), need %d\n",
+				p, c.endorsementCount(p), minIndependentEndorsements)
+			continue
+		}
 		add(p, true)
 	}
 
