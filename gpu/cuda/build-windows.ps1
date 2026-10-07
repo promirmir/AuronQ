@@ -115,27 +115,35 @@ Write-Host "MSVC: $cl"
 Write-Host "NVCC: $nvcc"
 Write-Host "Building AuronQ AQM64 CUDA backend..."
 
-$supportedCode = @(& $nvcc --list-gpu-code 2>$null) -join " "
-$supportedArch = @(& $nvcc --list-gpu-arch 2>$null) -join " "
-$wanted = @("61","70","72","75","80","86","87","88","89","90","100","103","110","120","121")
+$supportedCodeLines = @(& $nvcc --list-gpu-code 2>$null) | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^sm_[0-9]+[a-z]?$' }
+$supportedArchLines = @(& $nvcc --list-gpu-arch 2>$null) | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^compute_[0-9]+[a-z]?$' }
+$archSet = @{}
+foreach ($arch in $supportedArchLines) { $archSet[$arch] = $true }
+
 $gencode = @()
-foreach ($cc in $wanted) {
-    if ($supportedCode -match "(^|\s)sm_$cc(\s|$)") {
-        $gencode += @("-gencode", "arch=compute_$cc,code=sm_$cc")
+foreach ($code in $supportedCodeLines) {
+    $suffix = $code.Substring(3)
+    $arch = "compute_$suffix"
+    if ($archSet.ContainsKey($arch)) {
+        $gencode += @("-gencode", "arch=$arch,code=$code")
     }
 }
-$virtual = @()
-foreach ($cc in $wanted) {
-    if ($supportedArch -match "(^|\s)compute_$cc(\s|$)") { $virtual += [int]$cc }
-}
+
+# Embed PTX for the newest virtual architecture exposed by this nvcc.
+# Numeric+letter suffixes are sorted by numeric capability first, then suffix.
+$virtual = $supportedArchLines | ForEach-Object {
+    if ($_ -match '^compute_([0-9]+)([a-z]?)$') {
+        [pscustomobject]@{ Name=$_; Num=[int]$Matches[1]; Suffix=$Matches[2] }
+    }
+} | Sort-Object Num,Suffix
 if ($virtual.Count -gt 0) {
-    $latest = ($virtual | Measure-Object -Maximum).Maximum
-    $gencode += @("-gencode", "arch=compute_$latest,code=compute_$latest")
+    $latest = $virtual[-1].Name
+    $gencode += @("-gencode", "arch=$latest,code=$latest")
 }
 if ($gencode.Count -eq 0) {
-    throw "No supported CUDA GPU architecture targets were detected from nvcc."
+    throw "No CUDA GPU architecture targets were detected from nvcc."
 }
-Write-Host "CUDA targets: $($gencode -join ' ')"
+Write-Host "CUDA targets from installed toolkit: $($gencode -join ' ')"
 
 $args = @(
     "-O3",
