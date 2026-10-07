@@ -109,3 +109,25 @@ func TestVerifyCommonHistoryDetectsForkAtCommonHeight(t *testing.T) {
 		t.Fatal("forked common history was not detected")
 	}
 }
+
+
+func TestHealthNetgroupGroupsIPv4BySlash16(t *testing.T) {
+	if a, b := healthNetgroup("http://8.8.1.1:18444"), healthNetgroup("http://8.8.9.9:18444"); a == "" || a != b {
+		t.Fatalf("same IPv4 /16 should share health netgroup: %q %q", a, b)
+	}
+	if a, b := healthNetgroup("http://8.8.1.1:18444"), healthNetgroup("http://1.1.1.1:18444"); a == b {
+		t.Fatalf("different IPv4 /16 should differ: %q", a)
+	}
+}
+
+func TestHealthyNetgroupCount(t *testing.T) {
+	healthy := []result{
+		{Peer: "http://8.8.1.1:18444"},
+		{Peer: "http://8.8.2.2:18444"},
+		{Peer: "http://1.1.1.1:18444"},
+		{Peer: "https://node.example.com"},
+	}
+	if got := healthyNetgroupCount(healthy); got != 3 {
+		t.Fatalf("healthy netgroups=%d want 3", got)
+	}
+}
