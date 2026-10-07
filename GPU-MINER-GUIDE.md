@@ -1,8 +1,8 @@
 # AuronQ Miner — Windows and Linux accelerated guide
 
-Current release: **v0.4.3 Alpha**
+Current release: **v0.4.4 Alpha**
 
-The v0.4.3 miner uses **AUTO** compute selection: official NVIDIA CUDA acceleration on supported Windows/Linux systems, with a native CPU AQM64 fallback when CUDA is unavailable. See `UNIVERSAL-MINER-GUIDE.md` for portable Windows/Linux/macOS CPU-safe packages.
+The v0.4.4 miner uses **AUTO** compute selection: official NVIDIA CUDA acceleration on supported Windows/Linux systems, with a native CPU AQM64 fallback when CUDA is unavailable. See `UNIVERSAL-MINER-GUIDE.md` for portable Windows/Linux/macOS CPU-safe packages.
 
 ## Packages
 
@@ -14,9 +14,11 @@ The v0.4.3 miner uses **AUTO** compute selection: official NVIDIA CUDA accelerat
 
 For **CPU fallback**: a supported 64-bit Windows/Linux/macOS system and enough RAM for at least one 64 MiB AQM64 lane.
 
-For **NVIDIA CUDA acceleration**: NVIDIA GPU with CUDA Compute Capability 7.5+, current proprietary driver and Windows/Linux. CUDA Toolkit is needed only when building the accelerator from source.
+For **NVIDIA CUDA acceleration**: NVIDIA GPU with CUDA Compute Capability 7.5+, current proprietary driver and Windows/Linux. CUDA Toolkit is needed only when building the accelerator from source; it is **not** required to run the ready-made Windows/Linux CUDA packages.
 
-Solo mining also needs a synchronized AuronQ Mainnet full node; the v0.4.3 packages include the AuronQ node CLI.
+Older Pascal cards such as GTX 1050/1050 Ti (Compute Capability 6.1) are visible to the NVIDIA driver/NVML but are not supported by the current AuronQ CUDA 13.x kernel targets. In v0.4.4 AUTO validates the real CUDA path first and falls back to CPU automatically instead of treating NVML detection as proof of CUDA compatibility.
+
+Solo mining also needs a synchronized AuronQ Mainnet full node; the v0.4.4 packages include the AuronQ node CLI.
 
 Check NVIDIA acceleration, when applicable:
 
@@ -37,7 +39,7 @@ sha256sum -c SHA256SUMS-AURONQ-MINER.txt --ignore-missing
 Windows PowerShell:
 
 ~~~powershell
-Get-FileHash .\AuronQ-Miner-v0.4.3-alpha-Windows-x64-GUI-CUDA.zip -Algorithm SHA256
+Get-FileHash .\AuronQ-Miner-v0.4.4-alpha-Windows-x64-GUI-CUDA.zip -Algorithm SHA256
 ~~~
 
 Compare the value with the release checksum.
@@ -58,8 +60,8 @@ In Solo mode the app uses an existing local AuronQ full node on `127.0.0.1:18444
 ## Linux quick start
 
 ~~~bash
-tar -xzf AuronQ-Miner-v0.4.3-alpha-Linux-x64-CUDA.tar.gz
-cd AuronQ-Miner-v0.4.3-alpha-Linux-x64-CUDA
+tar -xzf AuronQ-Miner-v0.4.4-alpha-Linux-x64-CUDA.tar.gz
+cd AuronQ-Miner-v0.4.4-alpha-Linux-x64-CUDA
 chmod +x auronq-miner
 ~~~
 
@@ -122,7 +124,7 @@ Recommended options:
 
 The configured limit is the emergency-cooldown threshold. Normal operation targets about 5 °C below it. On Windows, thermal decisions use direct local NVIDIA NVML hardware telemetry only. The Pool governor samples the shared NVML hardware state twice per second, applies short adaptive duty-cycle pulses and restores performance gradually with hysteresis instead of repeatedly jumping between full load and long pauses. MeshMiner/pool-reported temperatures are not used for safety control.
 
-At the configured limit (81 °C in the recommended profile), the external pool miner is suspended automatically until the GPU is stably cooled below the target, then the same process resumes with a conservative duty cycle. A separate catastrophic fail-safe stops the miner at approximately limit + 1 °C if temperature keeps rising despite suspension. Stale/missing direct NVML telemetry or a suspend/resume control failure also stops mining rather than allowing operation with guessed data.
+At the configured limit (81 °C in the recommended profile), the external pool miner is suspended automatically until the GPU is stably cooled below the target, then the same process resumes with a conservative duty cycle. A separate catastrophic envelope stops the miner if the suspended GPU exceeds the bounded thermal-inertia allowance (currently up to about limit + 4 °C), while sustained rising temperature during suspension can stop it earlier. Stale/missing direct NVML telemetry or a suspend/resume control failure also stops mining rather than allowing operation with guessed data.
 
 Recommended profile for laptop GPUs:
 
@@ -130,12 +132,12 @@ Recommended profile for laptop GPUs:
 thermal limit: 81 °C
 automatic target: ~76 °C
 emergency cooldown: 81 °C
-catastrophic fail-safe: 82 °C
+catastrophic envelope: 85 °C (continued rise can stop earlier)
 ~~~
 
 No manual restart is normally required after an ordinary thermal excursion.
 
-v0.4.3 further reduces thermal oscillation: Pool mode begins regulation before the target, limits each duty-cycle change to small steps, refuses to release throttling while temperature is flat/rising near target, and uses a 20-second conservative stabilization hold after an emergency cooldown. This is designed to avoid repeated full-load → hard-pause → full-load cycles on laptop GPUs.
+v0.4.4 further reduces thermal oscillation: Pool mode begins regulation before the target, limits each duty-cycle change to small steps, refuses to release throttling while temperature is flat/rising near target, and uses a 20-second conservative stabilization hold after an emergency cooldown. This is designed to avoid repeated full-load → hard-pause → full-load cycles on laptop GPUs.
 
 On Linux, driver telemetry can also be watched with:
 
@@ -163,7 +165,7 @@ MeshMiner is independently developed and is not bundled or automatically downloa
 - MeshPool: https://meshpool.net/pool/auronq-main
 - RPlant: https://pool.rplant.xyz/#auronq#connect
 
-On Linux, compatible third-party pool miners can be run directly. The official v0.4.3 Linux miner provides **Solo AUTO**, native NVIDIA CUDA acceleration when available, and the native CPU fallback otherwise.
+On Linux, compatible third-party pool miners can be run directly. The official v0.4.4 Linux miner provides **Solo AUTO**, native NVIDIA CUDA acceleration when available, and the native CPU fallback otherwise.
 
 ## Main CLI options
 
@@ -216,7 +218,7 @@ bash ./gpu/cuda/build-linux.sh
 Linux package:
 
 ~~~bash
-bash ./build-gpu-miner-linux.sh 0.4.3-alpha
+bash ./build-gpu-miner-linux.sh 0.4.4-alpha
 ~~~
 
 ## Status

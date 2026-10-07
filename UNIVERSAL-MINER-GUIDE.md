@@ -1,4 +1,4 @@
-# AuronQ Universal Miner v0.4.3 Alpha
+# AuronQ Universal Miner v0.4.4 Alpha
 
 AuronQ Universal Miner is designed to start safely on as many ordinary computers as possible without changing AuronQ Mainnet consensus.
 
@@ -8,10 +8,13 @@ Recommended compute backend: `--backend auto`.
 
 AUTO follows this order:
 
-1. On Windows/Linux, try the official AuronQ NVIDIA CUDA backend when it is present and initializes correctly.
-2. If CUDA, the NVIDIA driver, the CUDA device or the accelerator library is unavailable, fall back to the built-in CPU AQM64 backend.
-3. Never substitute pool/web-reported temperatures for local hardware sensors.
-4. If GPU thermal safety was requested and trustworthy local GPU telemetry disappears, stop GPU mining rather than continue blind.
+1. On Windows/Linux, try the official AuronQ NVIDIA CUDA backend.
+2. Before AUTO commits to GPU mining, validate the selected CUDA device against the canonical AQM64 self-test.
+3. If the driver/DLL/device/kernel cannot produce the exact canonical AQM64 result, close the CUDA backend and fall back to the built-in CPU AQM64 backend automatically.
+4. Never substitute pool/web-reported temperatures for local hardware sensors.
+5. If GPU thermal safety was requested and trustworthy local GPU telemetry disappears, stop GPU mining rather than continue blind.
+
+The Windows GUI applies the same validation before it resolves Pool AUTO to CUDA, so an NVIDIA card that is visible through NVML but unsupported by the current CUDA kernel no longer requires manual CPU selection.
 
 The CPU fallback uses the same AQM64 initialization/finalization logic and is checked against the canonical AuronQ CPU proof-of-work implementation.
 
@@ -23,15 +26,17 @@ The full Windows x64 graphical package additionally includes the official NVIDIA
 
 ## AMD / Intel graphics
 
-v0.4.3 does not pretend that an unvalidated AMD/Intel GPU accelerator exists. On AMD Radeon, Intel Arc/iGPU, unsupported NVIDIA, missing CUDA, or no discrete GPU, AUTO uses the native CPU backend.
+v0.4.4 does not pretend that an unvalidated AMD/Intel GPU accelerator exists. On AMD Radeon, Intel Arc/iGPU, unsupported NVIDIA, missing CUDA, or no discrete GPU, AUTO uses the native CPU backend.
 
 AMD/Intel GPU acceleration can be added later only after byte-for-byte AQM64 self-tests and hardware validation.
 
-## CPU safe profile
+## CPU safe profile and telemetry
 
 AQM64 requires about 64 MiB per active mining lane. With `--cpu-threads 0`, the miner chooses roughly one quarter of logical CPUs, capped at 2 active lanes. Manual override is 1..16.
 
-There is no single reliable cross-vendor CPU package-temperature API available on every motherboard/OS. AuronQ therefore does not invent a CPU temperature. The safe fallback is conservative concurrency; firmware/OS thermal protection remains authoritative.
+On Windows, the GUI shows a dedicated CPU card even when an NVIDIA GPU is physically present. It reports the processor name, whole-system CPU utilization from the native Windows `GetSystemTimes` API, logical CPU count, AQM64 thread count, nominal clock and the 64 MiB-per-lane AQM64 memory estimate.
+
+There is no single reliable cross-vendor CPU package-temperature API available on every Windows motherboard/firmware stack. AuronQ therefore shows CPU temperature as **N/A** unless a trustworthy source exists; it does not invent a value or reuse unrelated ACPI thermal-zone readings. The safe fallback is conservative concurrency; firmware/OS thermal protection remains authoritative.
 
 ## Self-test
 
@@ -101,4 +106,4 @@ Each portable package contains the miner CLI, full-node CLI, network.json, boots
 
 ## Consensus
 
-Universal Miner v0.4.3 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
+Universal Miner v0.4.4 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.

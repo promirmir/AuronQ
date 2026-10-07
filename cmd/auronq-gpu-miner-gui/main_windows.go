@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.4.3-alpha"
+	guiVersion       = "0.4.4-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -104,6 +104,7 @@ type appState struct {
 	GPUTelemetryAgeMS int64   `json:"gpu_telemetry_age_ms,omitempty"`
 	CPUCount        int        `json:"cpu_count"`
 	SafeCPUThreads  int        `json:"safe_cpu_threads"`
+	CPU             cpuTelemetry `json:"cpu"`
 	CUDAAvailable   bool       `json:"cuda_available"`
 	Platform        string     `json:"platform"`
 	Miner           minerState `json:"miner"`
@@ -141,6 +142,8 @@ type App struct {
 	gpus               []gpuInfo
 	gpuTelemetryErr    string
 	gpuTelemetryAt     time.Time
+	cpuSampler         *cpuSampler
+	cudaProbe          map[int]cudaProbeResult
 
 	cfg        settings
 	syncTarget uint64
@@ -220,6 +223,8 @@ func newApp() (*App, error) {
 		nodeDir:      filepath.Join(base, "node"),
 		settingsPath: filepath.Join(base, "settings.json"),
 		exit:         make(chan struct{}, 1),
+		cpuSampler:   newCPUSampler(),
+		cudaProbe:    map[int]cudaProbeResult{},
 	}
 	if err := os.MkdirAll(a.nodeDir, 0700); err != nil {
 		return nil, err
@@ -572,6 +577,7 @@ func (a *App) state() appState {
 		GPUTelemetrySource: func() string { if len(gpus) > 0 { return "NVML_DIRECT" }; return "" }(),
 		CPUCount: runtime.NumCPU(),
 		SafeCPUThreads: safeGUIThreads(cfg.CPUThreads),
+		CPU: a.cpuSampler.Sample(runtime.NumCPU(), activeCPUThreads(cfg, miner)),
 		CUDAAvailable: len(gpus) > 0,
 		Platform: runtime.GOOS + "/" + runtime.GOARCH,
 		Miner:       miner,
@@ -1024,6 +1030,115 @@ func safeGUIThreads(requested int) int {
 	return n
 }
 
+func activeCPUThreads(cfg settings, miner minerState) int {
+	if miner.Running && miner.Mode == "pool" && (miner.Backend == "cpu" || miner.Backend == "both") {
+		if cfg.PoolThreads > 0 {
+			n := cfg.PoolThreads
+			if n > runtime.NumCPU() {
+				n = runtime.NumCPU()
+			}
+			if n > 16 {
+				n = 16
+			}
+			if n < 1 {
+				n = 1
+			}
+			return n
+		}
+	}
+	return safeGUIThreads(cfg.CPUThreads)
+}
+
+type cudaProbeResult struct {
+	Done bool
+	Err  string
+}
+
+func compactWorkerError(out []byte) string {
+	lines := strings.Split(strings.ReplaceAll(string(out), "\r", ""), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		if len(line) > 240 {
+			line = line[:240]
+		}
+		return line
+	}
+	return "CUDA self-test failed without diagnostic output"
+}
+
+func (a *App) probeCUDADevice(device int) error {
+	a.mu.RLock()
+	cached, ok := a.cudaProbe[device]
+	a.mu.RUnlock()
+	if ok && cached.Done {
+		if cached.Err != "" {
+			return errors.New(cached.Err)
+		}
+		return nil
+	}
+
+	if err := validateWorkerExecutable(); err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, workerPath(),
+		"--backend", "cuda",
+		"--device", strconv.Itoa(device),
+		"--self-test",
+	)
+	cmd.Dir = filepath.Dir(workerPath())
+	cmd.SysProcAttr = &syscallSysProcAttr
+	out, err := cmd.CombinedOutput()
+
+	msg := ""
+	switch {
+	case ctx.Err() == context.DeadlineExceeded:
+		msg = "CUDA self-test timed out"
+	case err != nil:
+		msg = compactWorkerError(out)
+	case !strings.Contains(string(out), "SELF-TEST OK"):
+		msg = "CUDA self-test did not report SELF-TEST OK"
+	}
+
+	a.mu.Lock()
+	a.cudaProbe[device] = cudaProbeResult{Done: true, Err: msg}
+	a.mu.Unlock()
+
+	if msg != "" {
+		return errors.New(msg)
+	}
+	return nil
+}
+
+func (a *App) usableCUDADevices(devices []int, explicit bool) ([]int, error) {
+	if len(devices) == 0 {
+		return nil, nil
+	}
+	usable := make([]int, 0, len(devices))
+	var failed []string
+	for _, d := range devices {
+		if err := a.probeCUDADevice(d); err != nil {
+			failed = append(failed, fmt.Sprintf("GPU %d: %v", d, err))
+			a.addLog(fmt.Sprintf("CUDA probe GPU %d failed: %v", d, err))
+			continue
+		}
+		usable = append(usable, d)
+		a.addLog(fmt.Sprintf("CUDA probe GPU %d: SELF-TEST OK", d))
+	}
+	if explicit && len(failed) > 0 {
+		return nil, fmt.Errorf("requested CUDA device failed validation: %s", strings.Join(failed, "; "))
+	}
+	if len(usable) == 0 && len(failed) > 0 {
+		a.addLog("AUTO compute: CUDA validation failed; switching to CPU fallback")
+	}
+	return usable, nil
+}
+
 func (a *App) isWorkerRunning() bool {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
@@ -1094,7 +1209,17 @@ func (a *App) startWorker(mode string, s settings) error {
 		a.gpuTelemetryAt = time.Now()
 		a.gpuName = strings.Join(names, " | ")
 		a.mu.Unlock()
-	} else {
+	}
+
+	if len(devices) > 0 && wantsGPU {
+		validated, err := a.usableCUDADevices(devices, explicitGPU)
+		if err != nil {
+			return err
+		}
+		devices = validated
+	}
+
+	if len(devices) == 0 {
 		a.mu.Lock()
 		a.gpuName = fmt.Sprintf("CPU AQM64 safe mode (%d threads)", safeGUIThreads(s.CPUThreads))
 		a.mu.Unlock()
@@ -1251,8 +1376,8 @@ func (a *App) startPoolWorker(s settings, devices []int) error {
 		if target < 50 {
 			target = 50
 		}
-		a.addLog(fmt.Sprintf("POOL thermal AUTO: local NVML target ~%d C, emergency cooldown at %d C, catastrophic fail-safe at %d C",
-			target, s.ThermalStopC, s.ThermalStopC+1))
+		a.addLog(fmt.Sprintf("POOL thermal AUTO: local NVML target ~%d C, emergency cooldown at %d C, catastrophic envelope at %d C (continued heating can stop earlier)",
+			target, s.ThermalStopC, thermalCatastrophicStopAt(s.ThermalStopC, "pool")))
 	}
 	return a.launchWorkerCommand(cmd, "pool", s.AutoPublic, effectiveBackend)
 }

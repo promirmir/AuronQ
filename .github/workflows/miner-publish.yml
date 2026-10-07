@@ -1,18 +1,18 @@
-name: Publish AuronQ Universal Miner v0.4.3-alpha
+name: Publish AuronQ Universal Miner v0.4.4-alpha
 
 on:
   push:
     branches:
       - main
     paths:
-      - '.release/miner-v0.4.3-alpha'
+      - '.release/miner-v0.4.4-alpha'
 
 permissions:
   contents: write
 
 env:
-  MINER_VERSION: 0.4.3-alpha
-  MINER_TAG: miner-v0.4.3-alpha
+  MINER_VERSION: 0.4.4-alpha
+  MINER_TAG: miner-v0.4.4-alpha
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
@@ -62,7 +62,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: miner-windows-full
-          path: dist/AuronQ-Miner-v0.4.3-alpha-Windows-x64-GUI-CUDA.zip
+          path: dist/AuronQ-Miner-v0.4.4-alpha-Windows-x64-GUI-CUDA.zip
           if-no-files-found: error
 
   linux-x64-full:
@@ -101,7 +101,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: miner-linux-full
-          path: dist/AuronQ-Miner-v0.4.3-alpha-Linux-x64-CUDA.tar.gz
+          path: dist/AuronQ-Miner-v0.4.4-alpha-Linux-x64-CUDA.tar.gz
           if-no-files-found: error
 
   portable-cpu:
@@ -119,8 +119,8 @@ jobs:
         with:
           name: miner-portable
           path: |
-            dist/universal-v0.4.3-alpha/*.zip
-            dist/universal-v0.4.3-alpha/*.tar.gz
+            dist/universal-v0.4.4-alpha/*.zip
+            dist/universal-v0.4.4-alpha/*.tar.gz
           if-no-files-found: error
 
   publish:
@@ -159,7 +159,7 @@ jobs:
           else
             gh release create "$MINER_TAG" "${assets[@]}" \
               --target "$GITHUB_SHA" \
-              --title "AuronQ Universal Miner v0.4.3 Alpha" \
+              --title "AuronQ Universal Miner v0.4.4 Alpha" \
               --notes-file "./MINER-RELEASE-NOTES.md" \
               --prerelease
           fi

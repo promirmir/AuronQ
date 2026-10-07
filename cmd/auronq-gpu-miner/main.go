@@ -122,7 +122,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("AuronQ Universal Miner v0.4.2-alpha\n")
+	fmt.Printf("AuronQ Universal Miner v0.4.4-alpha\n")
 	fmt.Printf("Backend: %s\n", backendKind)
 	fmt.Printf("Compute: %s\n", backend.Name())
 	if fallbackReason != "" {

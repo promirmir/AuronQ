@@ -20,6 +20,10 @@ func TestUniversalMinerWebControlsPresent(t *testing.T) {
 		`id="poolBackend"`,
 		`AuronQ Universal Miner`,
 		`cpu_fallback_ready`,
+		`cpu_usage`,
+		`cpu_threads_live`,
+		`aqm64_memory`,
+		`cpu_temp_na`,
 	} {
 		if !strings.Contains(html, needle) {
 			t.Fatalf("universal miner UI missing %q", needle)
@@ -55,5 +59,22 @@ func TestSafeGUIThreads(t *testing.T) {
 	}
 	if got := safeGUIThreads(999); got < 1 || got > 16 {
 		t.Fatalf("explicit GUI CPU cap = %d, want 1..16", got)
+	}
+}
+
+
+func TestActiveCPUThreadsUsesPoolOverride(t *testing.T) {
+	cfg := settings{CPUThreads: 1, PoolThreads: 3}
+	miner := minerState{Running: true, Mode: "pool", Backend: "cpu"}
+	got := activeCPUThreads(cfg, miner)
+	if got < 1 || got > 3 {
+		t.Fatalf("active pool CPU threads = %d, want 1..3 depending on logical CPU count", got)
+	}
+}
+
+func TestCompactWorkerErrorUsesLastDiagnosticLine(t *testing.T) {
+	got := compactWorkerError([]byte("line one\nCUDA batch failed: no kernel image is available\n"))
+	if got != "CUDA batch failed: no kernel image is available" {
+		t.Fatalf("compact error = %q", got)
 	}
 }

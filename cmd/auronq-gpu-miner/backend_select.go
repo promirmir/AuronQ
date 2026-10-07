@@ -34,15 +34,22 @@ func openSelectedBackend(mode, cudaPath string, device, cpuThreads int) (gpuBack
 		return b, "cuda", "", nil
 	default:
 		if runtime.GOOS == "windows" || runtime.GOOS == "linux" {
+			var cudaErr error
 			if b, err := openCUDABackend(cudaPath, device); err == nil {
-				return b, "cuda", "", nil
-			} else {
-				cpu, cpuErr := openCPUBackend(cpuThreads)
-				if cpuErr != nil {
-					return nil, "", "", fmt.Errorf("CUDA unavailable (%v) and CPU fallback failed: %w", err, cpuErr)
+				if testErr := runSelfTest(b); testErr == nil {
+					return b, "cuda", "", nil
+				} else {
+					_ = b.Close()
+					cudaErr = fmt.Errorf("CUDA backend failed canonical AQM64 validation: %w", testErr)
 				}
-				return cpu, "cpu", err.Error(), nil
+			} else {
+				cudaErr = err
 			}
+			cpu, cpuErr := openCPUBackend(cpuThreads)
+			if cpuErr != nil {
+				return nil, "", "", fmt.Errorf("CUDA unavailable (%v) and CPU fallback failed: %w", cudaErr, cpuErr)
+			}
+			return cpu, "cpu", cudaErr.Error(), nil
 		}
 		cpu, err := openCPUBackend(cpuThreads)
 		if err != nil {
