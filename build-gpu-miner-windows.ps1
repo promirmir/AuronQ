@@ -11,7 +11,7 @@ function Need-Command([string]$name, [string]$hint) {
     return $cmd.Source
 }
 
-$version = "0.4.3-alpha"
+$version = "0.4.4-alpha"
 
 Write-Host ""
 Write-Host "AuronQ Universal Miner v$version - Windows build"
