@@ -1,0 +1,10 @@
+AuronQ Universal Miner v0.4.5-alpha release trigger
+
+Broad general-purpose hardware update:
+- validated NVIDIA CUDA -> vendor-neutral OpenCL GPU -> CPU AUTO chain
+- OpenCL GPU backend for AMD / Intel / NVIDIA on accelerated Windows/Linux packages
+- canonical byte-for-byte AQM64 self-test required for every accelerator
+- wider CUDA architecture generation from the release toolkit
+- conservative generic OpenCL thermal-auto duty when no trusted cross-vendor sensor exists
+- no dedicated specialized-mining-appliance integration
+- no Mainnet consensus changes
