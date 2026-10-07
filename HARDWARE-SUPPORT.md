@@ -11,9 +11,10 @@ marketing list of model names.
 
 AUTO order on accelerated Windows/Linux packages:
 
-1. NVIDIA CUDA
-2. vendor-neutral OpenCL GPU
-3. native CPU AQM64
+1. primary NVIDIA CUDA (CUDA 13.2 release backend)
+2. legacy NVIDIA CUDA (CUDA 12.6 Maxwell/Pascal/Volta backend)
+3. vendor-neutral OpenCL GPU
+4. native CPU AQM64
 
 Every GPU backend must pass the canonical byte-for-byte AQM64 self-test before
 it is allowed to mine.
@@ -23,8 +24,9 @@ it is allowed to mine.
 | Hardware | Backend | Current status |
 |---|---|---|
 | x86-64 / ARM64 CPU | Native Go AQM64 | Supported; canonical reference/fallback |
-| NVIDIA RTX / modern CUDA-capable GPU | CUDA | Preferred when the packaged CUDA target and driver pass AQM64 self-test |
-| Older NVIDIA, including CUDA generations not present in the packaged CUDA binary | OpenCL fallback | Attempted automatically when the installed NVIDIA OpenCL runtime is available; must pass local AQM64 self-test |
+| NVIDIA RTX / modern CUDA-capable GPU | Primary CUDA | Preferred when the CUDA 13.2 target and driver pass AQM64 self-test |
+| NVIDIA Maxwell / Pascal / Volta supported by CUDA 12.6 legacy targets | Legacy CUDA | Packaged second CUDA backend; GTX 10xx/Pascal is tried here before OpenCL |
+| Older NVIDIA not usable through either packaged CUDA backend | OpenCL fallback | Attempted automatically when the installed NVIDIA OpenCL runtime is available; must pass local AQM64 self-test |
 | AMD Radeon | OpenCL | Runtime-detected and accepted only after local kernel compile + canonical AQM64 self-test |
 | Intel Arc / compatible Intel GPU runtimes | OpenCL | Runtime-detected and accepted only after local kernel compile + canonical AQM64 self-test |
 | macOS GPU | — | Current portable macOS package remains CPU-only |
@@ -32,9 +34,11 @@ it is allowed to mine.
 
 ## CUDA coverage
 
-The CUDA build scripts query the installed `nvcc` for available real and
-virtual architecture targets and compile the maintained baseline targets that
-the installed CUDA Toolkit actually supports. This avoids hard-coding support
+The primary CUDA build scripts query the installed `nvcc` for available real
+and virtual architecture targets and compile the maintained targets that CUDA
+13.2 supports. The separate legacy release backend is built with CUDA 12.6 and
+targets the supported subset of Maxwell, Pascal and Volta architecture families
+still emitted by that toolkit. This avoids hard-coding support
 to only one GPU generation.
 
 The release package still verifies the backend at runtime. A compiled target
