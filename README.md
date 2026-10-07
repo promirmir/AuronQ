@@ -38,6 +38,7 @@ AuronQ is intended to be evaluated through **public code and independently obser
 - **Source code:** https://github.com/promirmir/AuronQ
 - **Latest releases:** https://github.com/promirmir/AuronQ/releases/latest
 - **Public Explorer:** https://mir.taild63f46.ts.net/explorer
+- **Technical whitepaper:** [WHITEPAPER.md](WHITEPAPER.md)
 - **Protocol specification:** [PROTOCOL.md](PROTOCOL.md)
 - **AQM64 specification:** [AQM64.md](AQM64.md)
 - **Mining pools:** [MeshPool](https://meshpool.net/pool/auronq-main) · [RPlant](https://pool.rplant.xyz/#auronq#connect)
@@ -348,6 +349,7 @@ The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The hig
 
 | Topic | Document |
 |---|---|
+| Technical whitepaper | [WHITEPAPER.md](WHITEPAPER.md) |
 | Mainnet specification | [MAINNET.md](MAINNET.md) |
 | Stabilization / finalization gate | [STABILIZATION.md](STABILIZATION.md) |
 | Protocol | [PROTOCOL.md](PROTOCOL.md) |
