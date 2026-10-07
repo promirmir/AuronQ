@@ -1,0 +1,13 @@
+AuronQ Universal Miner v0.4.6-alpha release trigger
+
+Broad NVIDIA + cross-vendor GPU update:
+- keeps current CUDA 13.2 backend for modern/new NVIDIA targets
+- packages CUDA 12.6 compatibility backend for supported Maxwell/Pascal/Volta
+- packages CUDA 11.8 compatibility backend for supported Kepler sm_35/sm_37
+- GTX 10xx/Pascal can use native CUDA 12.x compatibility path when canonical AQM64 self-test passes
+- AMD/Intel/NVIDIA generic fallback remains OpenCL
+- Solo AUTO: current CUDA -> CUDA 12.x legacy -> CUDA 11.8 Kepler -> OpenCL GPU -> CPU
+- Pool mode no longer rejects older NVIDIA GPUs using AuronQ native CUDA eligibility
+- GUI shows actual AUTO fallback reason
+- no dedicated ASIC integration
+- no Mainnet consensus changes

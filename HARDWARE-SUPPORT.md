@@ -7,13 +7,15 @@ canonical result accepted by ordinary full-node validation. The official miner
 therefore treats hardware support as a **runtime correctness property**, not a
 marketing list of model names.
 
-## Official Universal Miner v0.4.5 Alpha
+## Official Universal Miner v0.4.6 Alpha
 
 AUTO order on accelerated Windows/Linux packages:
 
-1. NVIDIA CUDA
-2. vendor-neutral OpenCL GPU
-3. native CPU AQM64
+1. primary NVIDIA CUDA (current CUDA 13.2 release backend for modern/new GPUs)
+2. legacy NVIDIA CUDA (CUDA 12.6 Maxwell/Pascal/Volta backend)
+3. Kepler NVIDIA CUDA (CUDA 11.8 sm_35/sm_37 backend)
+4. vendor-neutral OpenCL GPU
+5. native CPU AQM64
 
 Every GPU backend must pass the canonical byte-for-byte AQM64 self-test before
 it is allowed to mine.
@@ -23,8 +25,10 @@ it is allowed to mine.
 | Hardware | Backend | Current status |
 |---|---|---|
 | x86-64 / ARM64 CPU | Native Go AQM64 | Supported; canonical reference/fallback |
-| NVIDIA RTX / modern CUDA-capable GPU | CUDA | Preferred when the packaged CUDA target and driver pass AQM64 self-test |
-| Older NVIDIA, including CUDA generations not present in the packaged CUDA binary | OpenCL fallback | Attempted automatically when the installed NVIDIA OpenCL runtime is available; must pass local AQM64 self-test |
+| NVIDIA modern/current GPU, including targets exposed by CUDA 13.2 | Primary CUDA | Preferred path; dynamically emits maintained architecture targets supported by the release toolkit |
+| NVIDIA Maxwell / Pascal / Volta supported by CUDA 12.6 legacy targets | Legacy CUDA | Packaged second CUDA backend; GTX 10xx/Pascal is tried here before OpenCL |
+| NVIDIA Kepler sm_35 / sm_37 | Kepler CUDA | Separate CUDA 11.8 backend; tried before OpenCL |
+| Older NVIDIA not usable through either packaged CUDA backend | OpenCL fallback | Attempted automatically when the installed NVIDIA OpenCL runtime is available; must pass local AQM64 self-test |
 | AMD Radeon | OpenCL | Runtime-detected and accepted only after local kernel compile + canonical AQM64 self-test |
 | Intel Arc / compatible Intel GPU runtimes | OpenCL | Runtime-detected and accepted only after local kernel compile + canonical AQM64 self-test |
 | macOS GPU | — | Current portable macOS package remains CPU-only |
@@ -32,9 +36,14 @@ it is allowed to mine.
 
 ## CUDA coverage
 
-The CUDA build scripts query the installed `nvcc` for available real and
-virtual architecture targets and compile the maintained baseline targets that
-the installed CUDA Toolkit actually supports. This avoids hard-coding support
+The primary CUDA build scripts query the installed `nvcc` for available real
+and virtual architecture targets and compile the maintained targets that the
+current release toolkit supports. It is deliberately kept on the newest release
+toolkit so adding old-card compatibility does not reduce new-card support.
+
+Separate compatibility libraries are packaged for older NVIDIA generations:
+CUDA 12.6 for the supported Maxwell/Pascal/Volta subset and CUDA 11.8 for
+Kepler sm_35/sm_37. This avoids hard-coding support
 to only one GPU generation.
 
 The release package still verifies the backend at runtime. A compiled target
@@ -69,7 +78,7 @@ AuronQ does not invent hardware telemetry.
 
 ## Specialized mining hardware
 
-The official v0.4.5 miner is intentionally focused on general-purpose CPU/GPU
+The official v0.4.6 miner is intentionally focused on general-purpose CPU/GPU
 participation. It does not add a dedicated integration for specialized mining
 appliances.
 

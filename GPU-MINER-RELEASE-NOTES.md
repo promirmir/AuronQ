@@ -1,7 +1,7 @@
 # AuronQ GPU Miner v0.3.8 Alpha
 
 > [!NOTE]
-> This file documents the historical standalone GPU Miner v0.3.8 Alpha release. The current official mining package is **AuronQ Universal Miner v0.4.5 Alpha**, which uses validated CUDA → OpenCL GPU → CPU AUTO selection, includes accelerated Windows/Linux packages, and retains portable CPU-safe builds for Windows/Linux/macOS. See [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md) and [HARDWARE-SUPPORT.md](HARDWARE-SUPPORT.md).
+> This file documents the historical standalone GPU Miner v0.3.8 Alpha release. The current official mining package is **AuronQ Universal Miner v0.4.6 Alpha**, which uses validated primary CUDA → legacy CUDA → OpenCL GPU → CPU AUTO selection, includes accelerated Windows/Linux packages, and retains portable CPU-safe builds for Windows/Linux/macOS. See [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md) and [HARDWARE-SUPPORT.md](HARDWARE-SUPPORT.md).
 
 This release focuses on **hardware-truth thermal safety on Windows**. It does **not** change AuronQ Mainnet consensus, AQM64, difficulty, genesis, Network ID, transaction validation, wallet rules or monetary policy.
 

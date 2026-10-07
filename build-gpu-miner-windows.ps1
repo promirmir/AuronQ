@@ -11,7 +11,7 @@ function Need-Command([string]$name, [string]$hint) {
     return $cmd.Source
 }
 
-$version = "0.4.5-alpha"
+$version = "0.4.6-alpha"
 
 Write-Host ""
 Write-Host "AuronQ Universal Miner v$version - Windows build"
@@ -25,6 +25,8 @@ Write-Host "Go:   $go"
 & $go version
 
 $cudaBuilt = $false
+$legacyCudaBuilt = $false
+$keplerCudaBuilt = $false
 $openclBuilt = $false
 if ($nvccCmd) {
     Write-Host "NVCC: $($nvccCmd.Source)"
@@ -36,8 +38,33 @@ if ($nvccCmd) {
         throw "CUDA backend build failed with exit code $LASTEXITCODE"
     }
     $cudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll")
+
+    $supportedLegacy = @(& $nvccCmd.Source --list-gpu-code 2>$null) -join " "
+    if ($supportedLegacy -match "(^|\s)sm_61(\s|$)") {
+        Write-Host ""
+        Write-Host "[1a/5] Building optional legacy Maxwell/Pascal/Volta CUDA backend..."
+        powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "gpu\cuda\build-windows-legacy.ps1")
+        if ($LASTEXITCODE -ne 0) { throw "Legacy CUDA backend build failed with exit code $LASTEXITCODE" }
+        $legacyCudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-legacy.dll")
+    } else {
+        Write-Host "Current NVCC does not emit sm_61; legacy CUDA DLL will not be rebuilt locally."
+        $legacyCudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-legacy.dll")
+    }
+
+    if ($supportedLegacy -match "(^|\s)sm_35(\s|$)") {
+        Write-Host ""
+        Write-Host "[1aa/5] Building optional Kepler CUDA backend..."
+        powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "gpu\cuda\build-windows-kepler.ps1")
+        if ($LASTEXITCODE -ne 0) { throw "Kepler CUDA backend build failed with exit code $LASTEXITCODE" }
+        $keplerCudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-kepler.dll")
+    } else {
+        Write-Host "Current NVCC does not emit sm_35; Kepler CUDA DLL will not be rebuilt locally."
+        $keplerCudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-kepler.dll")
+    }
 } else {
     Write-Host "NVCC: not found - CUDA acceleration will be skipped."
+    $legacyCudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-legacy.dll")
+    $keplerCudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-kepler.dll")
 }
 
 Write-Host ""
@@ -77,6 +104,12 @@ if ($LASTEXITCODE -ne 0) {
 
 if ($cudaBuilt) {
     Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll") (Join-Path $dist "auronq-aqm64-cuda.dll") -Force
+}
+if ($legacyCudaBuilt) {
+    Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-legacy.dll") (Join-Path $dist "auronq-aqm64-cuda-legacy.dll") -Force
+}
+if ($keplerCudaBuilt) {
+    Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda-kepler.dll") (Join-Path $dist "auronq-aqm64-cuda-kepler.dll") -Force
 }
 if ($openclBuilt) {
     Copy-Item (Join-Path $root "gpu\opencl\auronq-aqm64-opencl.dll") (Join-Path $dist "auronq-aqm64-opencl.dll") -Force
@@ -125,7 +158,11 @@ Write-Host "SUCCESS"
 Write-Host "Package: $zipOut"
 Write-Host "GUI SHA256:    $guiHash"
 Write-Host "Worker SHA256: $workerHash"
-if ($cudaBuilt -and $openclBuilt) {
+if ($cudaBuilt -and $legacyCudaBuilt -and $keplerCudaBuilt -and $openclBuilt) {
+    Write-Host "Acceleration: current CUDA + legacy CUDA + Kepler CUDA + OpenCL GPU + CPU fallback"
+} elseif ($cudaBuilt -and $legacyCudaBuilt -and $openclBuilt) {
+    Write-Host "Acceleration: NVIDIA CUDA + legacy CUDA + vendor-neutral OpenCL GPU + native CPU fallback"
+} elseif ($cudaBuilt -and $openclBuilt) {
     Write-Host "Acceleration: NVIDIA CUDA + vendor-neutral OpenCL GPU + native CPU fallback"
 } elseif ($cudaBuilt) {
     Write-Host "Acceleration: NVIDIA CUDA + native CPU fallback"
@@ -136,4 +173,4 @@ if ($cudaBuilt -and $openclBuilt) {
 }
 Write-Host ""
 Write-Host "Double-click AuronQ-Miner.exe. Leave compute backend on AUTO."
-Write-Host "AUTO uses validated NVIDIA CUDA, then validated OpenCL GPU, then CPU."
+Write-Host "AUTO uses validated current CUDA, legacy CUDA, Kepler CUDA, OpenCL GPU, then CPU."
