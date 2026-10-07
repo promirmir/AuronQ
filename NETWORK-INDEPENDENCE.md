@@ -18,7 +18,7 @@ Therefore, once multiple full nodes know one another, the original bootstrap com
 
 ## Fresh-install discovery
 
-A computer with no peer history still needs at least one rendezvous path. AuronQ supports:
+A computer with no peer history still needs at least one rendezvous path. Current release metadata also ships a reviewed multi-peer seed snapshot, so the CLI is not dependent on a successful GitHub manifest fetch for first contact. AuronQ supports:
 
 1. local persisted peers;
 2. fixed seed peers;
@@ -35,7 +35,9 @@ Bootstrap metadata is discovery-only and excluded from the Network ID. AuronQ no
 - starts from the current manifest;
 - requests `/p2p/hello`;
 - requires protocol version 1 and the exact AuronQ Mainnet Network ID;
-- follows only publicly routable literal peers learned from gossip;
+- follows only publicly routable peers learned from gossip;
+- requires a newly learned live-registry peer to be advertised by at least two distinct peer netgroups before automatic promotion;
+- treats a node's own advertise field as a self-claim, not an independent endorsement;
 - rejects loopback, private, CGNAT, link-local and documentation ranges;
 - callback-verifies reachability;
 - limits peer count and basic network-group concentration;
