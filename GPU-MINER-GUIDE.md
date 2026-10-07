@@ -41,7 +41,7 @@ sha256sum -c SHA256SUMS-AURONQ-MINER.txt --ignore-missing
 Windows PowerShell:
 
 ~~~powershell
-Get-FileHash .\AuronQ-Miner-v0.4.5-alpha-Windows-x64-GUI-CUDA.zip -Algorithm SHA256
+Get-FileHash .\AuronQ-Miner-v0.4.5-alpha-Windows-x64-GUI-GPU.zip -Algorithm SHA256
 ~~~
 
 Compare the value with the release checksum.
@@ -62,8 +62,8 @@ In Solo mode the app uses an existing local AuronQ full node on `127.0.0.1:18444
 ## Linux quick start
 
 ~~~bash
-tar -xzf AuronQ-Miner-v0.4.5-alpha-Linux-x64-CUDA.tar.gz
-cd AuronQ-Miner-v0.4.5-alpha-Linux-x64-CUDA
+tar -xzf AuronQ-Miner-v0.4.5-alpha-Linux-x64-GPU.tar.gz
+cd AuronQ-Miner-v0.4.5-alpha-Linux-x64-GPU
 chmod +x auronq-miner
 ~~~
 
