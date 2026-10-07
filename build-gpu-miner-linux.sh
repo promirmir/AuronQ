@@ -20,8 +20,21 @@ if command -v nvcc >/dev/null 2>&1; then
   if [[ -f "$ROOT/gpu/cuda/libauronq-aqm64-cuda.so" ]]; then
     CUDA_BUILT=1
   fi
+
+  if nvcc --list-gpu-code 2>/dev/null | grep -Eq '(^|[[:space:]])sm_61([[:space:]]|$)'; then
+    echo "Building optional legacy Maxwell/Pascal/Volta CUDA backend..."
+    bash "$ROOT/gpu/cuda/build-linux-legacy.sh"
+    if [[ -f "$ROOT/gpu/cuda/libauronq-aqm64-cuda-legacy.so" ]]; then
+      LEGACY_CUDA_BUILT=1
+    fi
+  elif [[ -f "$ROOT/gpu/cuda/libauronq-aqm64-cuda-legacy.so" ]]; then
+    LEGACY_CUDA_BUILT=1
+  fi
 else
   echo "nvcc not found - CUDA acceleration will be skipped."
+  if [[ -f "$ROOT/gpu/cuda/libauronq-aqm64-cuda-legacy.so" ]]; then
+    LEGACY_CUDA_BUILT=1
+  fi
 fi
 
 if command -v g++ >/dev/null 2>&1; then
@@ -87,7 +100,9 @@ tar -C "$DIST" -czf "$ARCHIVE" "$(basename "$DIR")"
 sha256sum "$ARCHIVE" > "$DIST/SHA256SUMS-MINER-LINUX.txt"
 
 echo "Built: $ARCHIVE"
-if [[ "$CUDA_BUILT" == "1" && "$OPENCL_BUILT" == "1" ]]; then
+if [[ "$CUDA_BUILT" == "1" && "$LEGACY_CUDA_BUILT" == "1" && "$OPENCL_BUILT" == "1" ]]; then
+  echo "Acceleration: NVIDIA CUDA + legacy CUDA + OpenCL GPU + native CPU fallback"
+elif [[ "$CUDA_BUILT" == "1" && "$OPENCL_BUILT" == "1" ]]; then
   echo "Acceleration: NVIDIA CUDA + OpenCL GPU + native CPU fallback"
 elif [[ "$CUDA_BUILT" == "1" ]]; then
   echo "Acceleration: NVIDIA CUDA + native CPU fallback"
