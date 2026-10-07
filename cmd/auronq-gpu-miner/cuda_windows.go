@@ -20,9 +20,21 @@ type cudaDLLBackend struct {
 
 func openCUDABackend(path string, device int) (gpuBackend, error) {
 	dll := syscall.NewLazyDLL(path)
+	if err := dll.Load(); err != nil {
+		return nil, fmt.Errorf("load CUDA backend %s: %w", path, err)
+	}
 	initProc := dll.NewProc("aqm64_cuda_init")
 	runProc := dll.NewProc("aqm64_cuda_run")
 	closeProc := dll.NewProc("aqm64_cuda_shutdown")
+	for name, proc := range map[string]*syscall.LazyProc{
+		"aqm64_cuda_init": initProc,
+		"aqm64_cuda_run": runProc,
+		"aqm64_cuda_shutdown": closeProc,
+	} {
+		if err := proc.Find(); err != nil {
+			return nil, fmt.Errorf("CUDA backend missing %s: %w", name, err)
+		}
+	}
 
 	nameBuf := make([]byte, 256)
 	errBuf := make([]byte, 512)
