@@ -7,7 +7,7 @@ canonical result accepted by ordinary full-node validation. The official miner
 therefore treats hardware support as a **runtime correctness property**, not a
 marketing list of model names.
 
-## Official Universal Miner v0.4.5 Alpha
+## Official Universal Miner v0.4.6 Alpha
 
 AUTO order on accelerated Windows/Linux packages:
 
@@ -69,7 +69,7 @@ AuronQ does not invent hardware telemetry.
 
 ## Specialized mining hardware
 
-The official v0.4.5 miner is intentionally focused on general-purpose CPU/GPU
+The official v0.4.6 miner is intentionally focused on general-purpose CPU/GPU
 participation. It does not add a dedicated integration for specialized mining
 appliances.
 
