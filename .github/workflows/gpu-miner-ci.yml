@@ -50,6 +50,17 @@ jobs:
           test -f gpu/cuda/libauronq-aqm64-cuda-legacy.so
           file gpu/cuda/libauronq-aqm64-cuda-legacy.so
 
+      - name: Compile Kepler CUDA backend
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            nvidia/cuda:11.8.0-devel-ubuntu22.04 \
+            bash ./gpu/cuda/build-linux-kepler.sh
+          test -f gpu/cuda/libauronq-aqm64-cuda-kepler.so
+          file gpu/cuda/libauronq-aqm64-cuda-kepler.so
+
       - name: Compile vendor-neutral OpenCL backend without an OpenCL SDK
         shell: bash
         run: |
@@ -109,6 +120,23 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-legacy.ps1
           if (!(Test-Path .\gpu\cuda\auronq-aqm64-cuda-legacy.dll)) { throw "Legacy CUDA DLL missing" }
+
+  windows-kepler-cuda-compile:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install CUDA 11.8 for Kepler targets
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '11.8.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Compile Windows Kepler CUDA backend
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-kepler.ps1
+          if (!(Test-Path .\gpu\cuda\auronq-aqm64-cuda-kepler.dll)) { throw "Kepler CUDA DLL missing" }
 
   windows-app-compile:
     runs-on: windows-latest
