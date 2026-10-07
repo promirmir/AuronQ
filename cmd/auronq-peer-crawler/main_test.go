@@ -86,3 +86,42 @@ func TestPermanentLookupFailure(t *testing.T) {
 		t.Fatal("transient timeout must not be treated as permanent")
 	}
 }
+
+
+func TestCrawlerEndorsementsRequireDistinctNetgroups(t *testing.T) {
+	c := &crawler{endorsements: map[string]map[string]bool{}}
+	candidate := "http://9.9.9.9:18444"
+
+	c.endorse(candidate, "http://8.8.1.1:18444")
+	c.endorse(candidate, "http://8.8.2.2:18444") // same /16, not independent
+	if got := c.endorsementCount(candidate); got != 1 {
+		t.Fatalf("same-netgroup endorsements=%d want 1", got)
+	}
+	if c.eligibleLearnedPeer(candidate, false) {
+		t.Fatal("single-netgroup learned peer became eligible")
+	}
+
+	c.endorse(candidate, "http://1.1.1.1:18444")
+	if got := c.endorsementCount(candidate); got != 2 {
+		t.Fatalf("independent endorsements=%d want 2", got)
+	}
+	if !c.eligibleLearnedPeer(candidate, false) {
+		t.Fatal("two-netgroup learned peer did not become eligible")
+	}
+}
+
+func TestCrawlerSelfAdvertisementIsNotAnEndorsement(t *testing.T) {
+	c := &crawler{endorsements: map[string]map[string]bool{}}
+	peer := "http://8.8.8.8:18444"
+	c.endorse(peer, peer)
+	if got := c.endorsementCount(peer); got != 0 {
+		t.Fatalf("self endorsement count=%d want 0", got)
+	}
+}
+
+func TestExistingManifestPeerDoesNotNeedFreshEndorsements(t *testing.T) {
+	c := &crawler{endorsements: map[string]map[string]bool{}}
+	if !c.eligibleLearnedPeer("http://8.8.8.8:18444", true) {
+		t.Fatal("existing reviewed peer should remain eligible without fresh gossip quorum")
+	}
+}
