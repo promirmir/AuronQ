@@ -10,6 +10,7 @@ type multiGPUOptions struct {
 	Address          string
 	Batch            int
 	DLLPath          string
+	LegacyDLLPath    string
 	OpenCLPath       string
 	SelfTest         bool
 	Benchmark        bool
