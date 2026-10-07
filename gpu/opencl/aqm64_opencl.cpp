@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -38,6 +39,7 @@ using cl_event = struct _cl_event*;
 constexpr cl_int CL_SUCCESS = 0;
 constexpr cl_int CL_DEVICE_NOT_FOUND = -1;
 constexpr cl_device_type CL_DEVICE_TYPE_GPU = (1u << 2);
+constexpr cl_device_type CL_DEVICE_TYPE_ALL = static_cast<cl_device_type>(~static_cast<cl_device_type>(0));
 constexpr cl_mem_flags CL_MEM_READ_WRITE = (1u << 0);
 constexpr cl_mem_flags CL_MEM_WRITE_ONLY = (1u << 1);
 constexpr cl_mem_flags CL_MEM_READ_ONLY = (1u << 2);
@@ -221,13 +223,17 @@ static std::vector<cl_device_id> enumerate_gpus(std::string& why) {
         why = "clGetPlatformIDs failed";
         return out;
     }
+    const char* test_all = std::getenv("AURONQ_OPENCL_TEST_ALL");
+    const cl_device_type wanted_type =
+        (test_all && std::strcmp(test_all, "1") == 0) ? CL_DEVICE_TYPE_ALL : CL_DEVICE_TYPE_GPU;
+
     for (auto p : platforms) {
         cl_uint dc = 0;
-        rc = g_api.clGetDeviceIDs(p, CL_DEVICE_TYPE_GPU, 0, nullptr, &dc);
+        rc = g_api.clGetDeviceIDs(p, wanted_type, 0, nullptr, &dc);
         if (rc == CL_DEVICE_NOT_FOUND || dc == 0) continue;
         if (rc != CL_SUCCESS) continue;
         std::vector<cl_device_id> ds(dc);
-        if (g_api.clGetDeviceIDs(p, CL_DEVICE_TYPE_GPU, dc, ds.data(), nullptr) == CL_SUCCESS) {
+        if (g_api.clGetDeviceIDs(p, wanted_type, dc, ds.data(), nullptr) == CL_SUCCESS) {
             out.insert(out.end(), ds.begin(), ds.end());
         }
     }
