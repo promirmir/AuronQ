@@ -401,7 +401,8 @@ function gpuCardHTML(g,s){
 }
 function cpuCardHTML(s){
  const c=s.cpu||{};
- const usage=clamp(c.usage_percent);
+ const rawUsage=Number(c.usage_percent);
+ const usage=Number.isFinite(rawUsage)&&rawUsage>=0?clamp(rawUsage):NaN;
  const threads=Number(c.mining_threads||s.safe_cpu_threads||0);
  const logical=Number(c.logical_processors||s.cpu_count||0);
  const threadPct=logical>0?clamp(threads/logical*100):0;
