@@ -36,8 +36,28 @@ jobs:
           path: gpu/cuda/auronq-aqm64-cuda-legacy.dll
           if-no-files-found: error
 
+  windows-x64-kepler-cuda:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install CUDA 11.8 Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '11.8.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Build Kepler CUDA backend
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-kepler.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-windows-kepler-cuda
+          path: gpu/cuda/auronq-aqm64-cuda-kepler.dll
+          if-no-files-found: error
+
   windows-x64-full:
-    needs: windows-x64-legacy-cuda
+    needs: [windows-x64-legacy-cuda, windows-x64-kepler-cuda]
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
@@ -63,6 +83,11 @@ jobs:
         with:
           name: miner-windows-legacy-cuda
           path: legacy-cuda
+      - name: Download Kepler CUDA backend
+        uses: actions/download-artifact@v4
+        with:
+          name: miner-windows-kepler-cuda
+          path: kepler-cuda
       - name: Build full Windows package
         shell: pwsh
         run: |
@@ -77,6 +102,7 @@ jobs:
 
           Copy-Item .\gpu\cuda\auronq-aqm64-cuda.dll $dir -Force
           Copy-Item .\legacy-cuda\auronq-aqm64-cuda-legacy.dll $dir -Force
+          Copy-Item .\kepler-cuda\auronq-aqm64-cuda-kepler.dll $dir -Force
           Copy-Item .\gpu\opencl\auronq-aqm64-opencl.dll $dir -Force
           Copy-Item .\network.json $dir -Force
           Copy-Item .\bootstrap.json $dir -Force
@@ -114,6 +140,16 @@ jobs:
             nvidia/cuda:12.6.3-devel-ubuntu24.04 \
             bash ./gpu/cuda/build-linux-legacy.sh
           test -f gpu/cuda/libauronq-aqm64-cuda-legacy.so
+
+      - name: Build Kepler CUDA backend with CUDA 11.8 container
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            nvidia/cuda:11.8.0-devel-ubuntu22.04 \
+            bash ./gpu/cuda/build-linux-kepler.sh
+          test -f gpu/cuda/libauronq-aqm64-cuda-kepler.so
       - name: Install CUDA Toolkit
         uses: Jimver/cuda-toolkit@v0.2.35
         with:
@@ -135,6 +171,7 @@ jobs:
           CGO_ENABLED=1 go build -trimpath -o "$dir/auronq" ./cmd/auronq
           cp gpu/cuda/libauronq-aqm64-cuda.so "$dir/"
           cp gpu/cuda/libauronq-aqm64-cuda-legacy.so "$dir/"
+          cp gpu/cuda/libauronq-aqm64-cuda-kepler.so "$dir/"
           cp gpu/opencl/libauronq-aqm64-opencl.so "$dir/"
           cp network.json bootstrap.json UNIVERSAL-MINER-GUIDE.md GPU-MINER-GUIDE.md "$dir/"
           if [[ -f LICENSE ]]; then cp LICENSE "$dir/"; fi
