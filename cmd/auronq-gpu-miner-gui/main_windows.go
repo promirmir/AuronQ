@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.4.4-alpha"
+	guiVersion       = "0.4.5-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -337,7 +337,7 @@ func normalizeSettings(s *settings) {
 	if s.MiningMode != "pool" {
 		s.MiningMode = "solo"
 	}
-	if s.SoloBackend != "cpu" && s.SoloBackend != "cuda" {
+	if s.SoloBackend != "cpu" && s.SoloBackend != "cuda" && s.SoloBackend != "opencl" {
 		s.SoloBackend = "auto"
 	}
 	if s.CPUThreads < 0 || s.CPUThreads > 16 {
@@ -412,8 +412,8 @@ func (a *App) saveSettings(s settings) error {
 	if s.MiningMode != "solo" && s.MiningMode != "pool" {
 		return errors.New("mining mode must be solo or pool")
 	}
-	if s.SoloBackend != "auto" && s.SoloBackend != "cuda" && s.SoloBackend != "cpu" {
-		return errors.New("solo backend must be auto, cuda or cpu")
+	if s.SoloBackend != "auto" && s.SoloBackend != "cuda" && s.SoloBackend != "opencl" && s.SoloBackend != "cpu" {
+		return errors.New("solo backend must be auto, cuda, opencl or cpu")
 	}
 	if s.CPUThreads < 0 || s.CPUThreads > 16 {
 		return errors.New("CPU threads must be between 0 and 16")
@@ -1134,7 +1134,7 @@ func (a *App) usableCUDADevices(devices []int, explicit bool) ([]int, error) {
 		return nil, fmt.Errorf("requested CUDA device failed validation: %s", strings.Join(failed, "; "))
 	}
 	if len(usable) == 0 && len(failed) > 0 {
-		a.addLog("AUTO compute: CUDA validation failed; switching to CPU fallback")
+		a.addLog("AUTO compute: CUDA validation failed; worker will try OpenCL GPU before CPU fallback")
 	}
 	return usable, nil
 }
@@ -1167,6 +1167,8 @@ func (a *App) startWorker(mode string, s settings) error {
 		wantsGPU = s.PoolBackend == "auto" || s.PoolBackend == "cuda" || s.PoolBackend == "both"
 		explicitGPU = s.PoolBackend == "cuda" || s.PoolBackend == "both"
 	} else {
+		// OpenCL is enumerated by the worker itself because it is vendor-neutral.
+		// NVML discovery here is only for the preferred NVIDIA CUDA path.
 		wantsGPU = s.SoloBackend == "auto" || s.SoloBackend == "cuda"
 		explicitGPU = s.SoloBackend == "cuda"
 	}
@@ -1180,14 +1182,14 @@ func (a *App) startWorker(mode string, s settings) error {
 			if explicitGPU {
 				return fmt.Errorf("requested NVIDIA CUDA backend is unavailable: %w", err)
 			}
-			a.addLog("AUTO compute: no usable NVIDIA CUDA telemetry/device found; CPU fallback will be used")
+			a.addLog("AUTO compute: NVIDIA CUDA not available; worker will try OpenCL GPU and then CPU")
 		} else {
 			devices, err = selectedDeviceIndices(s, gpus)
 			if err != nil {
 				if explicitGPU {
 					return err
 				}
-				a.addLog("AUTO compute: selected NVIDIA GPU set unavailable; CPU fallback will be used")
+				a.addLog("AUTO compute: selected NVIDIA CUDA set unavailable; worker will try OpenCL GPU and then CPU")
 				devices = nil
 			}
 		}
@@ -1285,11 +1287,9 @@ func (a *App) startWorker(mode string, s settings) error {
 
 	resolved := s.SoloBackend
 	if resolved == "auto" {
-		if len(devices) > 0 {
-			resolved = "cuda"
-		} else {
-			resolved = "cpu"
-		}
+		// The worker is authoritative because AUTO may resolve to CUDA,
+		// vendor-neutral OpenCL, or CPU after canonical AQM64 validation.
+		resolved = "auto"
 	}
 	return a.launchWorkerCommand(cmd, mode, s.AutoPublic, resolved)
 }
