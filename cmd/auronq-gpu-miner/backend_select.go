@@ -29,7 +29,7 @@ func validateAcceleratorBackend(kind string, b gpuBackend) error {
 	return nil
 }
 
-func openSelectedBackend(mode, cudaPath, legacyCUDAPath, openclPath string, device, cpuThreads int) (gpuBackend, string, string, error) {
+func openSelectedBackend(mode, cudaPath, legacyCUDAPath, keplerCUDAPath, openclPath string, device, cpuThreads int) (gpuBackend, string, string, error) {
 	mode = normalizeComputeBackend(mode)
 
 	openValidatedCUDA := func(path, label string) (gpuBackend, error) {
@@ -56,10 +56,19 @@ func openSelectedBackend(mode, cudaPath, legacyCUDAPath, openclPath string, devi
 		}
 
 		if strings.TrimSpace(legacyCUDAPath) != "" && legacyCUDAPath != cudaPath {
-			if b, err := openValidatedCUDA(legacyCUDAPath, "Legacy CUDA"); err == nil {
-				return b, strings.Join(reasons, " | ") + " | selected Legacy CUDA", nil
+			if b, err := openValidatedCUDA(legacyCUDAPath, "Legacy CUDA 12.x"); err == nil {
+				return b, strings.Join(reasons, " | ") + " | selected Legacy CUDA 12.x", nil
 			} else {
-				reasons = append(reasons, "Legacy CUDA: "+err.Error())
+				reasons = append(reasons, "Legacy CUDA 12.x: "+err.Error())
+			}
+		}
+
+		if strings.TrimSpace(keplerCUDAPath) != "" &&
+			keplerCUDAPath != cudaPath && keplerCUDAPath != legacyCUDAPath {
+			if b, err := openValidatedCUDA(keplerCUDAPath, "Kepler CUDA 11.8"); err == nil {
+				return b, strings.Join(reasons, " | ") + " | selected Kepler CUDA 11.8", nil
+			} else {
+				reasons = append(reasons, "Kepler CUDA 11.8: "+err.Error())
 			}
 		}
 		return nil, strings.Join(reasons, " | "), fmt.Errorf("%s", strings.Join(reasons, " | "))
