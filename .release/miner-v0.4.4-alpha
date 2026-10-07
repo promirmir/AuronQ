@@ -1,0 +1,9 @@
+AuronQ Universal Miner v0.4.4-alpha release trigger
+
+Reliability update:
+- validate real CUDA backend before AUTO selects GPU
+- automatic CPU fallback for unsupported/older NVIDIA hardware
+- Windows CPU telemetry card
+- CPU temperature remains N/A without a trustworthy package sensor
+- corrected Pool thermal fail-safe wording
+- no Mainnet consensus changes
