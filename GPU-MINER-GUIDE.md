@@ -122,7 +122,7 @@ Recommended options:
 
 The configured limit is the emergency-cooldown threshold. Normal operation targets about 5 °C below it. On Windows, thermal decisions use direct local NVIDIA NVML hardware telemetry only. The Pool governor samples the shared NVML hardware state twice per second, applies short adaptive duty-cycle pulses and restores performance gradually with hysteresis instead of repeatedly jumping between full load and long pauses. MeshMiner/pool-reported temperatures are not used for safety control.
 
-At the configured limit (81 °C in the recommended profile), the external pool miner is suspended automatically until the GPU is stably cooled below the target, then the same process resumes with a conservative duty cycle. A separate catastrophic fail-safe stops the miner at approximately limit + 1 °C if temperature keeps rising despite suspension. Stale/missing direct NVML telemetry or a suspend/resume control failure also stops mining rather than allowing operation with guessed data.
+At the configured limit (81 °C in the recommended profile), the external pool miner is suspended automatically until the GPU is stably cooled below the target, then the same process resumes with a conservative duty cycle. A separate catastrophic envelope stops the miner if the suspended GPU exceeds the bounded thermal-inertia allowance (currently up to about limit + 4 °C), while sustained rising temperature during suspension can stop it earlier. Stale/missing direct NVML telemetry or a suspend/resume control failure also stops mining rather than allowing operation with guessed data.
 
 Recommended profile for laptop GPUs:
 
@@ -130,7 +130,7 @@ Recommended profile for laptop GPUs:
 thermal limit: 81 °C
 automatic target: ~76 °C
 emergency cooldown: 81 °C
-catastrophic fail-safe: 82 °C
+catastrophic envelope: 85 °C (continued rise can stop earlier)
 ~~~
 
 No manual restart is normally required after an ordinary thermal excursion.
