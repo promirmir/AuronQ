@@ -70,17 +70,19 @@ func main() {
 		devices, err := resolveCUDADevices(*devicesFlag)
 		if err != nil {
 			if backendMode == "cuda" {
-				fmt.Fprintln(os.Stderr, "CUDA devices:", err)
+				fmt.Fprintln(os.Stderr, "accelerator devices:", err)
 				os.Exit(2)
 			}
-			fmt.Printf("AUTO BACKEND: CUDA device detection unavailable (%v); using safe CPU fallback\n", err)
+			fmt.Printf("AUTO BACKEND: NVIDIA multi-device discovery unavailable (%v); continuing with single-device OpenCL/CPU fallback\n", err)
 		} else {
 			if len(devices) > 1 {
 				err := runMultiGPU(devices, multiGPUOptions{
+					Backend:          backendMode,
 					Node:             *nodeURL,
 					Address:          *address,
 					Batch:            *batchFlag,
 					DLLPath:          *dllPath,
+					OpenCLPath:       *openclPath,
 					SelfTest:         *selfTest,
 					Benchmark:        *benchmark,
 					BenchmarkSeconds: *benchmarkSeconds,
@@ -96,7 +98,7 @@ func main() {
 						fmt.Fprintln(os.Stderr, "MULTI-GPU FAILED:", err)
 						os.Exit(1)
 					}
-					fmt.Printf("AUTO BACKEND: multi-GPU CUDA unavailable (%v); using safe CPU fallback\n", err)
+					fmt.Printf("AUTO BACKEND: multi-GPU accelerator path unavailable (%v); continuing with single-device OpenCL/CPU fallback\n", err)
 				} else {
 					return
 				}
