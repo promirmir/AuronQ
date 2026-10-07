@@ -1,8 +1,8 @@
-# AuronQ Universal Miner v0.4.5 Alpha
+# AuronQ Universal Miner v0.4.6 Alpha
 
 ## Broad general-purpose GPU support
 
-v0.4.5 expands the official Solo miner from a CUDA-first implementation into a validated multi-backend miner while leaving AQM64 and Mainnet consensus unchanged.
+v0.4.6 expands the official Solo miner from a CUDA-first implementation into a validated multi-backend miner while leaving AQM64 and Mainnet consensus unchanged.
 
 ### AUTO backend order
 
