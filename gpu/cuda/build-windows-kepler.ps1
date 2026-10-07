@@ -87,6 +87,8 @@ $args = @(
     "-std=c++17",
     "-shared",
     "--cudart", "static",
+    "-allow-unsupported-compiler",
+    "-Wno-deprecated-gpu-targets",
     "-Xcompiler", "/O2 /MD"
 ) + $gencode + @(
     $src,
