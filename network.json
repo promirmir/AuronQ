@@ -35,7 +35,8 @@
   ],
   "coinbase_maturity": 100,
   "bootstrap_manifests": [
-    "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
+    "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json",
+    "https://raw.githubusercontent.com/promirmir/AuronQ/automation/peer-registry/bootstrap.json"
   ],
   "dns_seeds": []
 }
