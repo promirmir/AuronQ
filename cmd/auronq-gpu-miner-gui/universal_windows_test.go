@@ -16,6 +16,8 @@ func TestUniversalMinerWebControlsPresent(t *testing.T) {
 	for _, needle := range []string{
 		`id="soloBackend"`,
 		`value="auto"`,
+		`value="opencl"`,
+		`backend_opencl`,
 		`id="cpuThreads"`,
 		`id="poolBackend"`,
 		`AuronQ Universal Miner`,
@@ -76,5 +78,18 @@ func TestCompactWorkerErrorUsesLastDiagnosticLine(t *testing.T) {
 	got := compactWorkerError([]byte("line one\nCUDA batch failed: no kernel image is available\n"))
 	if got != "CUDA batch failed: no kernel image is available" {
 		t.Fatalf("compact error = %q", got)
+	}
+}
+
+
+func TestNormalizeOpenCLSoloBackend(t *testing.T) {
+	s := settings{
+		Device: 0, Batch: 60, AutoTuneSeconds: 1, ThermalStopC: 81,
+		MiningMode: "solo", SoloBackend: "opencl", CPUThreads: 0,
+		PoolBackend: "auto", Language: "en",
+	}
+	normalizeSettings(&s)
+	if s.SoloBackend != "opencl" {
+		t.Fatalf("SoloBackend = %q, want opencl", s.SoloBackend)
 	}
 }

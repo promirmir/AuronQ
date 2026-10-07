@@ -54,7 +54,7 @@
     <div class="eyebrow">AURQ Mainnet • Open Source • Proof-of-Work</div>
     <h1>AuronQ (AURQ) — open-source Proof-of-Work cryptocurrency</h1>
     <p class="lead">AuronQ is a public UTXO Proof-of-Work cryptocurrency written in Go, built around independent full-node validation, AQM64 mining and standardized ML-DSA-87 transaction signatures.</p>
-    <p class="sublead">You can run the full node yourself, mine with the official Universal Miner on CPU or supported NVIDIA CUDA hardware, inspect the chain through your own local Explorer and verify the software on GitHub.</p>
+    <p class="sublead">You can run the full node yourself, mine with the official Universal Miner on CPU or validated CUDA/OpenCL GPU hardware, inspect the chain through your own local Explorer and verify the software on GitHub.</p>
     <div class="buttons">
       <a class="btn primary" href="https://github.com/promirmir/AuronQ/releases/latest">Download AuronQ</a>
       <a class="btn secondary" href="#start">Run a node / start mining</a>
@@ -87,7 +87,7 @@
       <div class="card"><b>MeshPool</b><span class="muted">Independent AURQ mining pool.</span><br><a href="https://meshpool.net/pool/auronq-main">Open MeshPool →</a></div>
       <div class="card"><b>RPlant</b><span class="muted">Independent AURQ mining pool and connection page.</span><br><a href="https://pool.rplant.xyz/#auronq#connect">Open RPlant →</a></div>
       <div class="card"><b>MeshMiner 0.8.35</b><span class="muted">Third-party AURQ miner with published CPU and NVIDIA GPU support.</span><br><a href="https://github.com/totom9000/meshminer/releases/tag/v.0.8.35">View MeshMiner →</a></div>
-      <div class="card"><b>AuronQ Universal Miner v0.4.4 Alpha</b><span class="muted">Official AUTO miner with NVIDIA CUDA acceleration where supported and native CPU fallback, plus Windows GUI and portable Windows/Linux/macOS builds.</span><br><a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.4-alpha">Downloads →</a> · <a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Guide →</a></div>
+      <div class="card"><b>AuronQ Universal Miner v0.4.5 Alpha</b><span class="muted">Official AUTO miner with validated NVIDIA CUDA, vendor-neutral OpenCL GPU fallback for AMD/Intel/NVIDIA, and native CPU fallback.</span><br><a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.5-alpha">Downloads →</a> · <a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Guide →</a></div>
     </div>
     <p class="muted">Before using a third-party pool or miner, verify its current fees, payout policy, binaries and connection parameters with the operator.</p>
     <p class="muted">Third-party network/mining trackers: <a href="https://miningchamp.com/coin/auronq">MiningChamp AuronQ profile</a> · <a href="https://miningchamp.com/pools">MiningChamp pools</a> · <a href="https://miningchamp.com">MiningChamp coins</a> · <a href="https://cpu-mining.info/">CPU-Mining.info</a></p>
@@ -121,7 +121,7 @@
     <div class="steps">
       <div class="step"><h3>Download</h3><p class="muted">Get the current Windows or Linux full-node package from GitHub Releases and verify its SHA-256 checksum.</p><a href="https://github.com/promirmir/AuronQ/releases/latest">Latest release →</a></div>
       <div class="step"><h3>Run a full node</h3><p class="muted">On Windows, extract the whole archive and start <code>START-AURONQ.cmd</code>. The node discovers peers and synchronizes the chain.</p><a href="https://github.com/promirmir/AuronQ/blob/main/README-WINDOWS.md">Windows guide →</a></div>
-      <div class="step"><h3>Create a wallet / mine</h3><p class="muted">Create or import a wallet, back it up, then use the Universal Miner in AUTO mode for safe CUDA→CPU selection.</p><a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Mining guide →</a></div>
+      <div class="step"><h3>Create a wallet / mine</h3><p class="muted">Create or import a wallet, back it up, then use the Universal Miner in AUTO mode for validated CUDA→OpenCL→CPU selection.</p><a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Mining guide →</a></div>
     </div>
   </section>
 
@@ -129,10 +129,10 @@
     <h2>Current network software</h2>
     <p>
       <span class="status"><span class="dot"></span> Desktop / Full Node v1.7.13 Mainnet</span>
-      <span class="status"><span class="dot"></span> Universal Miner v0.4.4 Alpha</span>
+      <span class="status"><span class="dot"></span> Universal Miner v0.4.5 Alpha</span>
       <span class="status"><span class="dot"></span> AuronQ Mobile 0.5.3 Alpha</span>
     </p>
-    <p class="muted">Windows x64 and Linux amd64 full-node packages are available now. Universal Miner v0.4.4 Alpha adds AUTO CUDA→CPU mining across supported desktop platforms. Android is a light wallet that independently validates the header/AQM64 chain but does not reconstruct the complete UTXO state locally.</p>
+    <p class="muted">Windows x64 and Linux amd64 full-node packages are available now. Universal Miner v0.4.5 Alpha adds validated CUDA→OpenCL GPU→CPU fallback on accelerated Windows/Linux packages. Android is a light wallet that independently validates the header/AQM64 chain but does not reconstruct the complete UTXO state locally.</p>
   </section>
 
   <section class="section">

@@ -10,7 +10,7 @@ import (
 	"unsafe"
 )
 
-type cudaDLLBackend struct {
+type openclDLLBackend struct {
 	dll         *syscall.LazyDLL
 	runProc     *syscall.LazyProc
 	closeProc   *syscall.LazyProc
@@ -18,26 +18,26 @@ type cudaDLLBackend struct {
 	recommended int
 }
 
-func openCUDABackend(path string, device int) (gpuBackend, error) {
+func openOpenCLBackend(path string, device int) (gpuBackend, error) {
 	dll := syscall.NewLazyDLL(path)
 	if err := dll.Load(); err != nil {
-		return nil, fmt.Errorf("load CUDA backend %s: %w", path, err)
+		return nil, fmt.Errorf("load OpenCL backend %s: %w", path, err)
 	}
-	initProc := dll.NewProc("aqm64_cuda_init")
-	runProc := dll.NewProc("aqm64_cuda_run")
-	closeProc := dll.NewProc("aqm64_cuda_shutdown")
+	initProc := dll.NewProc("aqm64_opencl_init")
+	runProc := dll.NewProc("aqm64_opencl_run")
+	closeProc := dll.NewProc("aqm64_opencl_shutdown")
 	for name, proc := range map[string]*syscall.LazyProc{
-		"aqm64_cuda_init": initProc,
-		"aqm64_cuda_run": runProc,
-		"aqm64_cuda_shutdown": closeProc,
+		"aqm64_opencl_init": initProc,
+		"aqm64_opencl_run": runProc,
+		"aqm64_opencl_shutdown": closeProc,
 	} {
 		if err := proc.Find(); err != nil {
-			return nil, fmt.Errorf("CUDA backend missing %s: %w", name, err)
+			return nil, fmt.Errorf("OpenCL backend missing %s: %w", name, err)
 		}
 	}
 
 	nameBuf := make([]byte, 256)
-	errBuf := make([]byte, 512)
+	errBuf := make([]byte, 4096)
 	var recommended int32
 	r1, _, _ := initProc.Call(
 		uintptr(device),
@@ -50,26 +50,26 @@ func openCUDABackend(path string, device int) (gpuBackend, error) {
 	runtime.KeepAlive(nameBuf)
 	runtime.KeepAlive(errBuf)
 	if int32(r1) != 0 {
-		return nil, fmt.Errorf("CUDA init failed: %s", cString(errBuf))
+		return nil, fmt.Errorf("OpenCL init failed: %s", openCLCString(errBuf))
 	}
 	if recommended < 1 {
 		recommended = 1
 	}
-	return &cudaDLLBackend{
+	return &openclDLLBackend{
 		dll: dll, runProc: runProc, closeProc: closeProc,
-		name: cString(nameBuf), recommended: int(recommended),
+		name: openCLCString(nameBuf), recommended: int(recommended),
 	}, nil
 }
 
-func (b *cudaDLLBackend) Name() string { return b.name }
-func (b *cudaDLLBackend) RecommendedBatch() int { return b.recommended }
+func (b *openclDLLBackend) Name() string { return b.name }
+func (b *openclDLLBackend) RecommendedBatch() int { return b.recommended }
 
-func (b *cudaDLLBackend) Run(initial []uint64, count int) ([]uint64, error) {
+func (b *openclDLLBackend) Run(initial []uint64, count int) ([]uint64, error) {
 	if count < 1 || len(initial) != count*256 {
-		return nil, fmt.Errorf("invalid CUDA batch: count=%d initial_words=%d", count, len(initial))
+		return nil, fmt.Errorf("invalid OpenCL batch: count=%d initial_words=%d", count, len(initial))
 	}
 	out := make([]uint64, count*128)
-	errBuf := make([]byte, 512)
+	errBuf := make([]byte, 4096)
 	r1, _, _ := b.runProc.Call(
 		uintptr(unsafe.Pointer(&initial[0])),
 		uintptr(count),
@@ -81,12 +81,12 @@ func (b *cudaDLLBackend) Run(initial []uint64, count int) ([]uint64, error) {
 	runtime.KeepAlive(out)
 	runtime.KeepAlive(errBuf)
 	if int32(r1) != 0 {
-		return nil, fmt.Errorf("CUDA batch failed: %s", cString(errBuf))
+		return nil, fmt.Errorf("OpenCL batch failed: %s", openCLCString(errBuf))
 	}
 	return out, nil
 }
 
-func (b *cudaDLLBackend) Close() error {
+func (b *openclDLLBackend) Close() error {
 	if b == nil || b.closeProc == nil {
 		return nil
 	}
@@ -94,7 +94,7 @@ func (b *cudaDLLBackend) Close() error {
 	return nil
 }
 
-func cString(b []byte) string {
+func openCLCString(b []byte) string {
 	if i := strings.IndexByte(string(b), 0); i >= 0 {
 		return string(b[:i])
 	}

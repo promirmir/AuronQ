@@ -115,16 +115,35 @@ Write-Host "MSVC: $cl"
 Write-Host "NVCC: $nvcc"
 Write-Host "Building AuronQ AQM64 CUDA backend..."
 
+$supportedCode = @(& $nvcc --list-gpu-code 2>$null) -join " "
+$supportedArch = @(& $nvcc --list-gpu-arch 2>$null) -join " "
+$wanted = @("61","70","72","75","80","86","87","88","89","90","100","103","110","120","121")
+$gencode = @()
+foreach ($cc in $wanted) {
+    if ($supportedCode -match "(^|\s)sm_$cc(\s|$)") {
+        $gencode += @("-gencode", "arch=compute_$cc,code=sm_$cc")
+    }
+}
+$virtual = @()
+foreach ($cc in $wanted) {
+    if ($supportedArch -match "(^|\s)compute_$cc(\s|$)") { $virtual += [int]$cc }
+}
+if ($virtual.Count -gt 0) {
+    $latest = ($virtual | Measure-Object -Maximum).Maximum
+    $gencode += @("-gencode", "arch=compute_$latest,code=compute_$latest")
+}
+if ($gencode.Count -eq 0) {
+    throw "No supported CUDA GPU architecture targets were detected from nvcc."
+}
+Write-Host "CUDA targets: $($gencode -join ' ')"
+
 $args = @(
     "-O3",
     "-std=c++17",
     "-shared",
     "--cudart", "static",
-    "-Xcompiler", "/O2 /MD",
-    "-gencode", "arch=compute_75,code=sm_75",
-    "-gencode", "arch=compute_86,code=sm_86",
-    "-gencode", "arch=compute_89,code=sm_89",
-    "-gencode", "arch=compute_89,code=compute_89",
+    "-Xcompiler", "/O2 /MD"
+) + $gencode + @(
     $src,
     "-o", $out
 )

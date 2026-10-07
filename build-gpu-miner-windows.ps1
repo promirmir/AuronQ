@@ -11,7 +11,7 @@ function Need-Command([string]$name, [string]$hint) {
     return $cmd.Source
 }
 
-$version = "0.4.4-alpha"
+$version = "0.4.5-alpha"
 
 Write-Host ""
 Write-Host "AuronQ Universal Miner v$version - Windows build"
@@ -25,6 +25,7 @@ Write-Host "Go:   $go"
 & $go version
 
 $cudaBuilt = $false
+$openclBuilt = $false
 if ($nvccCmd) {
     Write-Host "NVCC: $($nvccCmd.Source)"
     & $nvccCmd.Source --version | Select-Object -Last 4
@@ -36,8 +37,18 @@ if ($nvccCmd) {
     }
     $cudaBuilt = Test-Path (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll")
 } else {
-    Write-Host "NVCC: not found - building CPU-safe Universal package without CUDA acceleration."
-    Write-Host "      The resulting miner remains fully usable through the native CPU fallback."
+    Write-Host "NVCC: not found - CUDA acceleration will be skipped."
+}
+
+Write-Host ""
+Write-Host "[1b/5] Building optional vendor-neutral OpenCL backend..."
+try {
+    powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "gpu\opencl\build-windows.ps1")
+    if ($LASTEXITCODE -eq 0) {
+        $openclBuilt = Test-Path (Join-Path $root "gpu\opencl\auronq-aqm64-opencl.dll")
+    }
+} catch {
+    Write-Warning ("OpenCL backend build skipped: " + $_.Exception.Message)
 }
 
 $dist = Join-Path $root "dist\AuronQ-Miner-v$version-Windows-x64"
@@ -66,6 +77,9 @@ if ($LASTEXITCODE -ne 0) {
 
 if ($cudaBuilt) {
     Copy-Item (Join-Path $root "gpu\cuda\auronq-aqm64-cuda.dll") (Join-Path $dist "auronq-aqm64-cuda.dll") -Force
+}
+if ($openclBuilt) {
+    Copy-Item (Join-Path $root "gpu\opencl\auronq-aqm64-opencl.dll") (Join-Path $dist "auronq-aqm64-opencl.dll") -Force
 }
 Copy-Item (Join-Path $root "network.json") (Join-Path $dist "network.json") -Force
 Copy-Item (Join-Path $root "bootstrap.json") (Join-Path $dist "bootstrap.json") -Force
@@ -111,11 +125,15 @@ Write-Host "SUCCESS"
 Write-Host "Package: $zipOut"
 Write-Host "GUI SHA256:    $guiHash"
 Write-Host "Worker SHA256: $workerHash"
-if ($cudaBuilt) {
+if ($cudaBuilt -and $openclBuilt) {
+    Write-Host "Acceleration: NVIDIA CUDA + vendor-neutral OpenCL GPU + native CPU fallback"
+} elseif ($cudaBuilt) {
     Write-Host "Acceleration: NVIDIA CUDA + native CPU fallback"
+} elseif ($openclBuilt) {
+    Write-Host "Acceleration: OpenCL GPU + native CPU fallback"
 } else {
-    Write-Host "Acceleration: native CPU fallback (CUDA Toolkit was not installed at build time)"
+    Write-Host "Acceleration: native CPU fallback"
 }
 Write-Host ""
 Write-Host "Double-click AuronQ-Miner.exe. Leave compute backend on AUTO."
-Write-Host "AUTO uses compatible NVIDIA CUDA when available and falls back to CPU otherwise."
+Write-Host "AUTO uses validated NVIDIA CUDA, then validated OpenCL GPU, then CPU."

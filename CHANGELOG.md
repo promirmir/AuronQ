@@ -24,6 +24,19 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ## Current releases
 
+### Universal Miner v0.4.5 Alpha
+
+- AUTO now validates and tries NVIDIA CUDA, then vendor-neutral OpenCL GPU, then native CPU AQM64.
+- Adds a runtime-loaded OpenCL backend for Windows/Linux ordinary GPUs from AMD, Intel and NVIDIA.
+- OpenCL devices are accepted only after local kernel compilation and byte-identical canonical AQM64 self-test.
+- CUDA build scripts generate all maintained baseline architecture targets supported by the installed CUDA Toolkit instead of hard-coding only three generations.
+- Generic OpenCL thermal-auto uses a conservative approximately 50% compute-duty profile when no trustworthy cross-vendor temperature source exists; no temperature is fabricated.
+- Windows Solo GUI adds explicit OpenCL GPU selection while AUTO remains recommended.
+- Multi-GPU child workers can carry AUTO/OpenCL fallback for selected device indices.
+- Native OpenCL remains a Solo backend; Pool mode continues to depend on the capabilities of the user-supplied external pool miner.
+- No dedicated specialized-miner integration is added.
+- No Mainnet consensus, genesis, Network ID, AQM64, difficulty, transaction validation or monetary-policy changes.
+
 ### Universal Miner v0.4.4 Alpha
 
 - AUTO now validates the real AuronQ CUDA backend with the canonical AQM64 self-test before selecting GPU mining.

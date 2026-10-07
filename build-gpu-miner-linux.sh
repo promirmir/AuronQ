@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-0.4.4-alpha}"
+VERSION="${1:-0.4.5-alpha}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DIST="$ROOT/dist"
 DIR="$DIST/AuronQ-Miner-v$VERSION-Linux-amd64"
@@ -12,6 +12,7 @@ rm -rf "$DIR" "$ARCHIVE"
 mkdir -p "$DIR"
 
 CUDA_BUILT=0
+OPENCL_BUILT=0
 if command -v nvcc >/dev/null 2>&1; then
   echo "Building optional NVIDIA CUDA backend..."
   bash "$ROOT/gpu/cuda/build-linux.sh"
@@ -19,8 +20,17 @@ if command -v nvcc >/dev/null 2>&1; then
     CUDA_BUILT=1
   fi
 else
-  echo "nvcc not found - building CPU-safe Universal package without CUDA acceleration."
-  echo "The resulting miner remains usable through the native CPU fallback."
+  echo "nvcc not found - CUDA acceleration will be skipped."
+fi
+
+if command -v g++ >/dev/null 2>&1; then
+  echo "Building vendor-neutral OpenCL backend..."
+  bash "$ROOT/gpu/opencl/build-linux.sh"
+  if [[ -f "$ROOT/gpu/opencl/libauronq-aqm64-opencl.so" ]]; then
+    OPENCL_BUILT=1
+  fi
+else
+  echo "g++ not found - OpenCL backend build skipped."
 fi
 
 echo "Building Linux Universal Miner..."
@@ -32,6 +42,9 @@ echo "Building Linux Universal Miner..."
 
 if [[ "$CUDA_BUILT" == "1" ]]; then
   cp "$ROOT/gpu/cuda/libauronq-aqm64-cuda.so" "$DIR/"
+fi
+if [[ "$OPENCL_BUILT" == "1" ]]; then
+  cp "$ROOT/gpu/opencl/libauronq-aqm64-opencl.so" "$DIR/"
 fi
 cp "$ROOT/network.json" "$DIR/"
 cp "$ROOT/bootstrap.json" "$DIR/"
@@ -53,8 +66,9 @@ AuronQ Universal Miner - Linux amd64
 3. Solo mining:
    ./auronq-miner --backend auto --node http://127.0.0.1:18444 --address aurq1... --self-test --thermal-auto --thermal-limit 81
 
-AUTO uses supported NVIDIA CUDA when available. If CUDA is unavailable, it uses
-the native CPU AQM64 fallback with a conservative thread profile.
+AUTO uses validated NVIDIA CUDA first, then validated vendor-neutral OpenCL GPU,
+then the native CPU AQM64 fallback. Generic OpenCL GPU mining uses a conservative
+no-temperature-sensor duty profile unless a vendor-specific safety path exists.
 
 For a completely portable CPU-only build, use build-universal-miner-packages.sh.
 See UNIVERSAL-MINER-GUIDE.md.
@@ -69,8 +83,12 @@ tar -C "$DIST" -czf "$ARCHIVE" "$(basename "$DIR")"
 sha256sum "$ARCHIVE" > "$DIST/SHA256SUMS-MINER-LINUX.txt"
 
 echo "Built: $ARCHIVE"
-if [[ "$CUDA_BUILT" == "1" ]]; then
+if [[ "$CUDA_BUILT" == "1" && "$OPENCL_BUILT" == "1" ]]; then
+  echo "Acceleration: NVIDIA CUDA + OpenCL GPU + native CPU fallback"
+elif [[ "$CUDA_BUILT" == "1" ]]; then
   echo "Acceleration: NVIDIA CUDA + native CPU fallback"
+elif [[ "$OPENCL_BUILT" == "1" ]]; then
+  echo "Acceleration: OpenCL GPU + native CPU fallback"
 else
   echo "Acceleration: native CPU fallback"
 fi

@@ -1,4 +1,4 @@
-# AuronQ Universal Miner v0.4.4 Alpha
+# AuronQ Universal Miner v0.4.5 Alpha
 
 AuronQ Universal Miner is designed to start safely on as many ordinary computers as possible without changing AuronQ Mainnet consensus.
 
@@ -9,26 +9,31 @@ Recommended compute backend: `--backend auto`.
 AUTO follows this order:
 
 1. On Windows/Linux, try the official AuronQ NVIDIA CUDA backend.
-2. Before AUTO commits to GPU mining, validate the selected CUDA device against the canonical AQM64 self-test.
-3. If the driver/DLL/device/kernel cannot produce the exact canonical AQM64 result, close the CUDA backend and fall back to the built-in CPU AQM64 backend automatically.
-4. Never substitute pool/web-reported temperatures for local hardware sensors.
-5. If GPU thermal safety was requested and trustworthy local GPU telemetry disappears, stop GPU mining rather than continue blind.
+2. Validate the selected CUDA device against the canonical AQM64 self-test before accepting it.
+3. If CUDA is unavailable, unsupported or fails the exact byte-for-byte AQM64 test, try the vendor-neutral OpenCL GPU backend.
+4. Validate OpenCL against the same canonical AQM64 CPU reference before accepting it.
+5. If no accelerator passes validation, fall back to the built-in CPU AQM64 backend.
 
-The Windows GUI applies the same validation before it resolves Pool AUTO to CUDA, so an NVIDIA card that is visible through NVML but unsupported by the current CUDA kernel no longer requires manual CPU selection.
+This means an NVIDIA GPU that is visible through NVML but incompatible with the packaged CUDA kernel can still be tried through OpenCL before CPU fallback. AMD Radeon and Intel Arc/iGPU hardware can also be attempted through OpenCL without changing AQM64 or Mainnet consensus.
 
-The CPU fallback uses the same AQM64 initialization/finalization logic and is checked against the canonical AuronQ CPU proof-of-work implementation.
+Every accelerated path is fail-closed for correctness: a GPU backend is used only after it produces the exact same AQM64 result as the canonical CPU implementation.
 
 ## Supported systems
 
 Portable CPU-safe CLI packages are CI-built for Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS Intel x64 and macOS Apple Silicon ARM64.
 
-The full Windows x64 graphical package additionally includes the official NVIDIA CUDA accelerator and direct NVML hardware telemetry. The Linux x64 CUDA package additionally includes the official CUDA shared library.
+The full Windows x64 graphical package includes both the official NVIDIA CUDA accelerator and the vendor-neutral OpenCL backend. The Linux x64 accelerated package includes both corresponding shared libraries. Portable Windows/Linux/macOS packages remain CPU-safe and do not assume a GPU runtime.
 
-## AMD / Intel graphics
+## GPU coverage
 
-v0.4.4 does not pretend that an unvalidated AMD/Intel GPU accelerator exists. On AMD Radeon, Intel Arc/iGPU, unsupported NVIDIA, missing CUDA, or no discrete GPU, AUTO uses the native CPU backend.
+The accelerated Windows/Linux packages are designed around two independent GPU paths:
 
-AMD/Intel GPU acceleration can be added later only after byte-for-byte AQM64 self-tests and hardware validation.
+- **CUDA** — preferred on NVIDIA when the packaged CUDA backend initializes and passes the canonical AQM64 self-test;
+- **OpenCL** — vendor-neutral fallback for AMD, Intel and NVIDIA GPUs with a working OpenCL runtime/driver.
+
+OpenCL support is deliberately runtime-validated instead of being claimed from a model name alone. A card/driver combination is considered usable only when the OpenCL kernel compiles locally and the full AQM64 self-test is byte-identical to the CPU reference.
+
+The current project does **not** add an ASIC-specific work protocol, ASIC device bridge or privileged hardware path. General-purpose CPU/GPU backends all compute the same public AQM64 proof-of-work.
 
 ## CPU safe profile and telemetry
 
@@ -79,11 +84,11 @@ Then mine:
 
     ./auronq-miner --backend auto --node http://127.0.0.1:18444 --address aurq1... --self-test --auto-tune --thermal-auto --thermal-limit 81
 
-On CPU fallback, CUDA autotune and GPU thermal control are skipped automatically and the conservative CPU profile is used.
+On CPU fallback, accelerator autotune and GPU thermal control are skipped automatically and the conservative CPU profile is used. On generic OpenCL hardware without a trustworthy vendor-specific local temperature source, `--thermal-auto` uses a conservative approximately 50% compute-duty profile and reports temperature as unavailable rather than fabricating a value.
 
 ## Windows GUI
 
-The Windows x64 graphical miner uses the same policy: AUTO (recommended), NVIDIA CUDA (explicit), or CPU (force universal fallback). Pool mode also supports AUTO.
+The Windows x64 graphical miner uses the same Solo policy: AUTO (recommended), NVIDIA CUDA (explicit), OpenCL GPU (explicit), or CPU. Pool mode still uses the external MeshMiner integration and therefore follows the backends supported by that third-party miner rather than the native Solo OpenCL backend.
 
 ## NVIDIA thermal safety
 
@@ -99,11 +104,13 @@ Each portable package contains the miner CLI, full-node CLI, network.json, boots
 
 ## Fail-safe rule
 
-- known + trustworthy local sensor -> use it;
-- no trustworthy sensor -> do not fabricate a value;
+- every GPU backend must pass canonical AQM64 equivalence before mining;
+- known + trustworthy local sensor -> use it for hardware-aware regulation;
+- no trustworthy cross-vendor temperature source -> do not fabricate a value;
+- generic OpenCL + thermal-auto -> conservative approximately 50% compute duty with temperature shown as unavailable;
 - CPU fallback -> conservative concurrency;
-- requested GPU thermal protection without trustworthy telemetry -> stop GPU mining.
+- NVIDIA CUDA with requested hardware thermal protection and lost trusted telemetry -> stop GPU mining.
 
 ## Consensus
 
-Universal Miner v0.4.4 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
+Universal Miner v0.4.5 does not change genesis, Network ID, AQM64 consensus parameters, difficulty rules, block/transaction validation or monetary policy.
