@@ -31,6 +31,10 @@ func defaultCUDAPath() string {
 	return backendLibraryPath("auronq-aqm64-cuda.dll", "libauronq-aqm64-cuda.so")
 }
 
+func defaultLegacyCUDAPath() string {
+	return backendLibraryPath("auronq-aqm64-cuda-legacy.dll", "libauronq-aqm64-cuda-legacy.so")
+}
+
 func defaultOpenCLPath() string {
 	return backendLibraryPath("auronq-aqm64-opencl.dll", "libauronq-aqm64-opencl.so")
 }
@@ -44,7 +48,8 @@ func main() {
 	devicesFlag := flag.String("devices", "", "comma-separated NVIDIA CUDA device indices or 'all'; overrides --device for CUDA multi-GPU")
 	multiChild := flag.Bool("multi-child", false, "internal multi-GPU child worker")
 	batchFlag := flag.Int("batch", 0, "nonces per compute batch (0 = automatic)")
-	dllPath := flag.String("cuda-dll", defaultCUDAPath(), "path to the AuronQ CUDA backend (.dll on Windows, .so on Linux)")
+	dllPath := flag.String("cuda-dll", defaultCUDAPath(), "path to the primary AuronQ CUDA backend (.dll on Windows, .so on Linux)")
+	legacyDLLPath := flag.String("cuda-legacy-dll", defaultLegacyCUDAPath(), "path to the legacy Maxwell/Pascal/Volta CUDA backend")
 	openclPath := flag.String("opencl-dll", defaultOpenCLPath(), "path to the AuronQ OpenCL backend (.dll on Windows, .so on Linux)")
 	selfTest := flag.Bool("self-test", false, "verify the selected backend against the canonical AQM64 CPU reference")
 	benchmark := flag.Bool("benchmark", false, "run an offline end-to-end AQM64 throughput benchmark")
@@ -82,6 +87,7 @@ func main() {
 					Address:          *address,
 					Batch:            *batchFlag,
 					DLLPath:          *dllPath,
+					LegacyDLLPath:    *legacyDLLPath,
 					OpenCLPath:       *openclPath,
 					SelfTest:         *selfTest,
 					Benchmark:        *benchmark,
@@ -108,7 +114,7 @@ func main() {
 		}
 	}
 
-	backend, backendKind, fallbackReason, err := openSelectedBackend(backendMode, *dllPath, *openclPath, *device, *cpuThreads)
+	backend, backendKind, fallbackReason, err := openSelectedBackend(backendMode, *dllPath, *legacyDLLPath, *openclPath, *device, *cpuThreads)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "backend:", err)
 		os.Exit(1)
@@ -137,7 +143,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("AuronQ Universal Miner v0.4.5-alpha\n")
+	fmt.Printf("AuronQ Universal Miner v0.4.6-alpha\n")
 	fmt.Printf("Backend: %s\n", backendKind)
 	fmt.Printf("Compute: %s\n", backend.Name())
 	if fallbackReason != "" {
