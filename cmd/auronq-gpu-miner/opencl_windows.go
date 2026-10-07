@@ -20,9 +20,21 @@ type openclDLLBackend struct {
 
 func openOpenCLBackend(path string, device int) (gpuBackend, error) {
 	dll := syscall.NewLazyDLL(path)
+	if err := dll.Load(); err != nil {
+		return nil, fmt.Errorf("load OpenCL backend %s: %w", path, err)
+	}
 	initProc := dll.NewProc("aqm64_opencl_init")
 	runProc := dll.NewProc("aqm64_opencl_run")
 	closeProc := dll.NewProc("aqm64_opencl_shutdown")
+	for name, proc := range map[string]*syscall.LazyProc{
+		"aqm64_opencl_init": initProc,
+		"aqm64_opencl_run": runProc,
+		"aqm64_opencl_shutdown": closeProc,
+	} {
+		if err := proc.Find(); err != nil {
+			return nil, fmt.Errorf("OpenCL backend missing %s: %w", name, err)
+		}
+	}
 
 	nameBuf := make([]byte, 256)
 	errBuf := make([]byte, 4096)
