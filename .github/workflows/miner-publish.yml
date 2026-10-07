@@ -1,22 +1,43 @@
-name: Publish AuronQ Universal Miner v0.4.5-alpha
+name: Publish AuronQ Universal Miner v0.4.6-alpha
 
 on:
   push:
     branches:
       - main
     paths:
-      - '.release/miner-v0.4.5-alpha'
+      - '.release/miner-v0.4.6-alpha'
 
 permissions:
   contents: write
 
 env:
-  MINER_VERSION: 0.4.5-alpha
-  MINER_TAG: miner-v0.4.5-alpha
+  MINER_VERSION: 0.4.6-alpha
+  MINER_TAG: miner-v0.4.6-alpha
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  windows-x64-legacy-cuda:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install CUDA 12.6 Toolkit
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '12.6.3'
+          method: network
+          use-github-cache: 'true'
+      - name: Build legacy CUDA backend
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-legacy.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-windows-legacy-cuda
+          path: gpu/cuda/auronq-aqm64-cuda-legacy.dll
+          if-no-files-found: error
+
   windows-x64-full:
+    needs: windows-x64-legacy-cuda
     runs-on: windows-2022
     timeout-minutes: 60
     steps:
@@ -25,6 +46,16 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
+      - name: Build legacy CUDA backend with CUDA 12.6 container
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            nvidia/cuda:12.6.3-devel-ubuntu24.04 \
+            bash ./gpu/cuda/build-linux-legacy.sh
+          test -f gpu/cuda/libauronq-aqm64-cuda-legacy.so
+
       - name: Install CUDA Toolkit
         uses: Jimver/cuda-toolkit@v0.2.35
         with:
@@ -37,6 +68,11 @@ jobs:
       - name: Build vendor-neutral OpenCL backend
         shell: pwsh
         run: powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\opencl\build-windows.ps1
+      - name: Download legacy CUDA backend
+        uses: actions/download-artifact@v4
+        with:
+          name: miner-windows-legacy-cuda
+          path: legacy-cuda
       - name: Build full Windows package
         shell: pwsh
         run: |
@@ -50,6 +86,7 @@ jobs:
           go build -trimpath -o (Join-Path $dir "auronq.exe") .\cmd\auronq
 
           Copy-Item .\gpu\cuda\auronq-aqm64-cuda.dll $dir -Force
+          Copy-Item .\legacy-cuda\auronq-aqm64-cuda-legacy.dll $dir -Force
           Copy-Item .\gpu\opencl\auronq-aqm64-opencl.dll $dir -Force
           Copy-Item .\network.json $dir -Force
           Copy-Item .\bootstrap.json $dir -Force
@@ -66,7 +103,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: miner-windows-full
-          path: dist/AuronQ-Miner-v0.4.5-alpha-Windows-x64-GUI-GPU.zip
+          path: dist/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip
           if-no-files-found: error
 
   linux-x64-full:
@@ -98,6 +135,7 @@ jobs:
           CGO_ENABLED=1 go build -trimpath -o "$dir/auronq-miner" ./cmd/auronq-gpu-miner
           CGO_ENABLED=1 go build -trimpath -o "$dir/auronq" ./cmd/auronq
           cp gpu/cuda/libauronq-aqm64-cuda.so "$dir/"
+          cp gpu/cuda/libauronq-aqm64-cuda-legacy.so "$dir/"
           cp gpu/opencl/libauronq-aqm64-opencl.so "$dir/"
           cp network.json bootstrap.json UNIVERSAL-MINER-GUIDE.md GPU-MINER-GUIDE.md "$dir/"
           if [[ -f LICENSE ]]; then cp LICENSE "$dir/"; fi
@@ -108,7 +146,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: miner-linux-full
-          path: dist/AuronQ-Miner-v0.4.5-alpha-Linux-x64-GPU.tar.gz
+          path: dist/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz
           if-no-files-found: error
 
   portable-cpu:
@@ -126,8 +164,8 @@ jobs:
         with:
           name: miner-portable
           path: |
-            dist/universal-v0.4.5-alpha/*.zip
-            dist/universal-v0.4.5-alpha/*.tar.gz
+            dist/universal-v0.4.6-alpha/*.zip
+            dist/universal-v0.4.6-alpha/*.tar.gz
           if-no-files-found: error
 
   publish:
@@ -166,7 +204,7 @@ jobs:
           else
             gh release create "$MINER_TAG" "${assets[@]}" \
               --target "$GITHUB_SHA" \
-              --title "AuronQ Universal Miner v0.4.5 Alpha" \
+              --title "AuronQ Universal Miner v0.4.6 Alpha" \
               --notes-file "./MINER-RELEASE-NOTES.md" \
               --prerelease
           fi
