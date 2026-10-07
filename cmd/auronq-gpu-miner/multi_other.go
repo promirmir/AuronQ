@@ -5,10 +5,12 @@ package main
 import "errors"
 
 type multiGPUOptions struct {
+	Backend          string
 	Node             string
 	Address          string
 	Batch            int
 	DLLPath          string
+	OpenCLPath       string
 	SelfTest         bool
 	Benchmark        bool
 	BenchmarkSeconds int
@@ -21,9 +23,9 @@ type multiGPUOptions struct {
 }
 
 func resolveCUDADevices(string) ([]int, error) {
-	return nil, errors.New("multi-GPU CUDA orchestration currently targets Windows x64")
+	return nil, errors.New("multi-GPU accelerator orchestration currently targets Windows/Linux")
 }
 
 func runMultiGPU([]int, multiGPUOptions) error {
-	return errors.New("multi-GPU CUDA orchestration currently targets Windows x64")
+	return errors.New("multi-GPU accelerator orchestration currently targets Windows/Linux")
 }
