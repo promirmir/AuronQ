@@ -93,3 +93,16 @@ func TestNormalizeOpenCLSoloBackend(t *testing.T) {
 		t.Fatalf("SoloBackend = %q, want opencl", s.SoloBackend)
 	}
 }
+
+
+func TestPoolDoesNotUseNativeCUDAEligibilityGate(t *testing.T) {
+	pool := settings{MiningMode: "pool", PoolBackend: "auto"}
+	if shouldValidateNativeCUDA("mining", pool) {
+		t.Fatal("Pool mode must not reject a GPU based on AuronQ native CUDA compatibility")
+	}
+
+	solo := settings{MiningMode: "solo", SoloBackend: "auto"}
+	if !shouldValidateNativeCUDA("mining", solo) {
+		t.Fatal("Solo mode must validate AuronQ native CUDA before using it")
+	}
+}
