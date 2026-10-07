@@ -1146,6 +1146,10 @@ func (a *App) isWorkerRunning() bool {
 	return a.miner.Running
 }
 
+func shouldValidateNativeCUDA(mode string, s settings) bool {
+	return !(mode == "mining" && s.MiningMode == "pool")
+}
+
 func (a *App) startWorker(mode string, s settings) error {
 	a.mu.Lock()
 	if a.miner.Running {
@@ -1223,7 +1227,7 @@ func (a *App) startWorker(mode string, s settings) error {
 	}
 
 	isPoolMining := mode == "mining" && s.MiningMode == "pool"
-	if len(devices) > 0 && wantsGPU && !isPoolMining {
+	if len(devices) > 0 && wantsGPU && shouldValidateNativeCUDA(mode, s) {
 		// Native Solo/self-test/benchmark must prove that AuronQ's own CUDA
 		// implementation works. Pool mode launches an independent external
 		// miner, so rejecting a GPU because AuronQ's native CUDA build does not
