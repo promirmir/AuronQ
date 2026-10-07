@@ -8,12 +8,13 @@ Recommended compute backend: `--backend auto`.
 
 AUTO follows this order:
 
-1. Try the primary NVIDIA CUDA backend built with CUDA 13.2 for newer NVIDIA generations.
-2. If that path is unavailable or fails validation, try the packaged legacy CUDA backend built with CUDA 12.6 for supported Maxwell / Pascal / Volta targets.
-3. Validate the selected CUDA implementation against the canonical AQM64 self-test before accepting it.
-4. If both CUDA paths are unavailable or fail the exact byte-for-byte AQM64 test, try the vendor-neutral OpenCL GPU backend.
-5. Validate OpenCL against the same canonical AQM64 CPU reference before accepting it.
-6. If no accelerator passes validation, fall back to the built-in CPU AQM64 backend.
+1. Try the primary NVIDIA CUDA backend built with the current CUDA 13.2 release toolkit for modern/new NVIDIA generations.
+2. If unavailable or invalid, try the packaged CUDA 12.6 legacy backend for supported Maxwell / Pascal / Volta targets.
+3. If unavailable or invalid, try the packaged CUDA 11.8 Kepler backend for supported sm_35 / sm_37 devices.
+4. Validate every CUDA implementation against the canonical AQM64 self-test before accepting it.
+5. If the NVIDIA CUDA paths are unavailable or fail exact byte-for-byte AQM64 validation, try the vendor-neutral OpenCL GPU backend.
+6. Validate OpenCL against the same canonical AQM64 CPU reference.
+7. If no accelerator passes validation, fall back to the built-in CPU AQM64 backend.
 
 This means an older NVIDIA GPU such as a GTX 10xx Pascal card can be tried through the packaged legacy CUDA backend before OpenCL or CPU fallback. AMD Radeon and Intel Arc/iGPU hardware can also be attempted through OpenCL without changing AQM64 or Mainnet consensus.
 
@@ -23,14 +24,15 @@ Every accelerated path is fail-closed for correctness: a GPU backend is used onl
 
 Portable CPU-safe CLI packages are CI-built for Windows x64, Windows ARM64, Linux x64, Linux ARM64, macOS Intel x64 and macOS Apple Silicon ARM64.
 
-The full Windows x64 graphical package includes the primary CUDA backend, the legacy CUDA backend, and the vendor-neutral OpenCL backend. The Linux x64 accelerated package includes the corresponding shared libraries. Portable Windows/Linux/macOS packages remain CPU-safe and do not assume a GPU runtime.
+The full Windows x64 graphical package includes primary CUDA, CUDA 12.6 legacy, CUDA 11.8 Kepler, and vendor-neutral OpenCL backends. The Linux x64 accelerated package includes the corresponding shared libraries. Portable Windows/Linux/macOS packages remain CPU-safe and do not assume a GPU runtime.
 
 ## GPU coverage
 
-The accelerated Windows/Linux packages are designed around three GPU paths:
+The accelerated Windows/Linux packages are designed around four GPU paths:
 
-- **Primary CUDA** — preferred on newer NVIDIA hardware;
-- **Legacy CUDA** — packaged CUDA 12.6 backend for older supported Maxwell/Pascal/Volta NVIDIA targets;
+- **Primary CUDA** — newest release backend, preferred on modern/new NVIDIA hardware;
+- **Legacy CUDA 12.6** — Maxwell/Pascal/Volta compatibility;
+- **Kepler CUDA 11.8** — sm_35/sm_37 compatibility;
 - **OpenCL** — vendor-neutral fallback for AMD, Intel and NVIDIA GPUs with a working OpenCL runtime/driver.
 
 OpenCL support is deliberately runtime-validated instead of being claimed from a model name alone. A card/driver combination is considered usable only when the OpenCL kernel compiles locally and the full AQM64 self-test is byte-identical to the CPU reference.
@@ -90,7 +92,7 @@ On CPU fallback, accelerator autotune and GPU thermal control are skipped automa
 
 ## Windows GUI
 
-The Windows x64 graphical miner uses the same Solo policy: AUTO (recommended), NVIDIA CUDA (explicit; primary then legacy), OpenCL GPU (explicit), or CPU. Pool mode still uses the external MeshMiner integration and therefore follows the backends supported by that third-party miner rather than the native Solo OpenCL backend.
+The Windows x64 graphical miner uses the same Solo policy: AUTO (recommended), NVIDIA CUDA (explicit; primary → CUDA 12.x legacy → CUDA 11.8 Kepler), OpenCL GPU, or CPU. Pool mode still uses the external MeshMiner integration and therefore follows the backends supported by that third-party miner rather than the native Solo OpenCL backend.
 
 ## NVIDIA thermal safety
 
