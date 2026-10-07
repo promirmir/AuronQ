@@ -1,0 +1,9 @@
+AuronQ Universal Miner v0.4.6-alpha release trigger
+
+Legacy NVIDIA compatibility update:
+- packaged CUDA 12.6 legacy backend for supported Maxwell/Pascal/Volta targets
+- GTX 10xx/Pascal can use native legacy CUDA when canonical AQM64 self-test passes
+- Solo AUTO: primary CUDA -> legacy CUDA -> OpenCL GPU -> CPU
+- Pool mode no longer rejects older NVIDIA GPUs using AuronQ native CUDA eligibility
+- GUI shows actual AUTO fallback reason
+- no Mainnet consensus changes
