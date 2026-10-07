@@ -41,6 +41,7 @@ type Node struct {
 	failures   map[string]int
 	quarantined map[string]time.Time
 	syncCursor int
+	gossipCursor int
 	blockSem   chan struct{}
 	rateMu     sync.Mutex
 	rate       map[string]requestRateWindow
@@ -547,18 +548,48 @@ func (n *Node) peerList() []string {
 	return p
 }
 
-func (n *Node) advertisedPeerList() []string {
+func (n *Node) publicPeerList() []string {
 	all := n.peerList()
 	out := make([]string, 0, len(all))
 	for _, p := range all {
 		if isPublicAdvertisedPeer(p) {
 			out = append(out, p)
 		}
-		if len(out) >= 32 {
-			break
-		}
+	}
+	return diversePeerOrder(out)
+}
+
+// advertisedPeerList returns a bounded, rotating window of public peers for
+// gossip. Rotation is important once the peer table grows beyond one hello
+// response: without it, lexicographically later peers would almost never be
+// propagated and the network could converge on the same small bootstrap set.
+func (n *Node) advertisedPeerList() []string {
+	all := n.publicPeerList()
+	if len(all) <= 32 {
+		return all
+	}
+	n.pmu.Lock()
+	start := n.gossipCursor % len(all)
+	n.gossipCursor = (start + 32) % len(all)
+	n.pmu.Unlock()
+
+	out := make([]string, 0, 32)
+	for i := 0; i < 32; i++ {
+		out = append(out, all[(start+i)%len(all)])
 	}
 	return out
+}
+
+// persistentPeerList is deliberately not bounded by the hello/gossip response
+// limit. A node should retain every useful public peer it has learned (up to
+// maxKnownPeers), so it can reconnect after bootstrap manifests, GitHub or
+// several previously known peers disappear.
+func (n *Node) persistentPeerList() []string {
+	all := n.publicPeerList()
+	if len(all) > maxKnownPeers {
+		all = all[:maxKnownPeers]
+	}
+	return all
 }
 
 func (n *Node) loadPeerStore() {
@@ -582,7 +613,7 @@ func (n *Node) savePeerStore() {
 	if n.cfg.PeerStorePath == "" {
 		return
 	}
-	peers := n.advertisedPeerList()
+	peers := n.persistentPeerList()
 	b, err := json.MarshalIndent(peers, "", "  ")
 	if err != nil {
 		return
