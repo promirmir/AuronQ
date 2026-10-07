@@ -26,7 +26,7 @@ A computer with no peer history still needs at least one rendezvous path. AuronQ
 4. HTTPS bootstrap manifests;
 5. peer gossip after first contact.
 
-The official `bootstrap.json` is discovery metadata only. It is excluded from the Network ID and can be updated without a fork.
+Bootstrap metadata is discovery-only and excluded from the Network ID. AuronQ now uses two HTTPS manifest layers: a reviewed static fallback from `main` and a supplemental live registry published by the crawler on `automation/peer-registry`. Either can fail without changing consensus.
 
 ## Autonomous registry
 
@@ -40,7 +40,9 @@ The official `bootstrap.json` is discovery metadata only. It is excluded from th
 - callback-verifies reachability;
 - limits peer count and basic network-group concentration;
 - preserves existing registry entries across transient outages;
-- updates `bootstrap.json` and `bootstrap.mainnet.json` only when there is a change.
+- runs the public network health checker against the generated registry before publishing it;
+- pushes the verified live registry to `automation/peer-registry` when there is a change;
+- may also prepare an optional reviewed snapshot for protected `main`, but fresh-node discovery no longer needs to wait for that manual review step.
 
 This process is not a consensus oracle. A malicious or broken peer cannot make an invalid chain valid; every full node validates candidate blocks itself.
 
@@ -57,4 +59,4 @@ The strongest practical test is:
 
 Only after this passes should the network be described as operationally independent of the original bootstrap machine.
 
-Today the code is prepared for that model, but the live network still has only one confirmed public bootstrap endpoint, so this final operational condition has not yet been met.
+The live network now has multiple reachable public full nodes and the crawler is discovering additional peers through ordinary gossip. The remaining independence test is operational rather than protocol-level: perform a clean-install join and block-relay drill while the original project-operated rendezvous machines are completely offline, and continue improving provider/operator diversity.
