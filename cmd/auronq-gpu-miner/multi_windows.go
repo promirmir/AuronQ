@@ -25,6 +25,7 @@ type multiGPUOptions struct {
 	Address          string
 	Batch            int
 	DLLPath          string
+	LegacyDLLPath    string
 	OpenCLPath       string
 	SelfTest         bool
 	Benchmark        bool
@@ -112,6 +113,7 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 			"--device", strconv.Itoa(device),
 			"--batch", strconv.Itoa(opt.Batch),
 			"--cuda-dll", opt.DLLPath,
+			"--cuda-legacy-dll", opt.LegacyDLLPath,
 			"--opencl-dll", opt.OpenCLPath,
 			"--nonce-prefix", strconv.FormatUint(prefix, 10),
 		}
