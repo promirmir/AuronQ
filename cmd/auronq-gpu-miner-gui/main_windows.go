@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	guiVersion       = "0.4.5-alpha"
+	guiVersion       = "0.4.6-alpha"
 	guiListen        = "127.0.0.1:18446"
 	localNodeURL     = "http://127.0.0.1:18444"
 	localNodeURLv6   = "http://[::1]:18444"
@@ -75,8 +75,9 @@ type minerState struct {
 	Height      uint64  `json:"height"`
 	BlocksFound uint64  `json:"blocks_found"`
 	LastBlock   string  `json:"last_block,omitempty"`
-	LastError   string  `json:"last_error,omitempty"`
-	StartedAt   int64   `json:"started_at,omitempty"`
+	LastError      string  `json:"last_error,omitempty"`
+	FallbackReason string  `json:"fallback_reason,omitempty"`
+	StartedAt      int64   `json:"started_at,omitempty"`
 }
 
 type appState struct {
@@ -1182,14 +1183,22 @@ func (a *App) startWorker(mode string, s settings) error {
 			if explicitGPU {
 				return fmt.Errorf("requested NVIDIA CUDA backend is unavailable: %w", err)
 			}
-			a.addLog("AUTO compute: NVIDIA CUDA not available; worker will try OpenCL GPU and then CPU")
+			if mode == "mining" && s.MiningMode == "pool" {
+				a.addLog("POOL AUTO: NVIDIA telemetry/device discovery unavailable; external miner may fall back to CPU")
+			} else {
+				a.addLog("AUTO compute: primary CUDA unavailable; worker will try Legacy CUDA, OpenCL GPU and then CPU")
+			}
 		} else {
 			devices, err = selectedDeviceIndices(s, gpus)
 			if err != nil {
 				if explicitGPU {
 					return err
 				}
-				a.addLog("AUTO compute: selected NVIDIA CUDA set unavailable; worker will try OpenCL GPU and then CPU")
+				if mode == "mining" && s.MiningMode == "pool" {
+					a.addLog("POOL AUTO: selected NVIDIA device set unavailable; external miner may fall back to CPU")
+				} else {
+					a.addLog("AUTO compute: selected NVIDIA device set unavailable; worker will try Legacy CUDA, OpenCL GPU and then CPU")
+				}
 				devices = nil
 			}
 		}
@@ -1213,7 +1222,12 @@ func (a *App) startWorker(mode string, s settings) error {
 		a.mu.Unlock()
 	}
 
-	if len(devices) > 0 && wantsGPU {
+	isPoolMining := mode == "mining" && s.MiningMode == "pool"
+	if len(devices) > 0 && wantsGPU && !isPoolMining {
+		// Native Solo/self-test/benchmark must prove that AuronQ's own CUDA
+		// implementation works. Pool mode launches an independent external
+		// miner, so rejecting a GPU because AuronQ's native CUDA build does not
+		// support that architecture would be incorrect.
 		validated, err := a.usableCUDADevices(devices, explicitGPU)
 		if err != nil {
 			return err
@@ -1223,7 +1237,15 @@ func (a *App) startWorker(mode string, s settings) error {
 
 	if len(devices) == 0 {
 		a.mu.Lock()
-		a.gpuName = fmt.Sprintf("CPU AQM64 safe mode (%d threads)", safeGUIThreads(s.CPUThreads))
+		if isPoolMining {
+			a.gpuName = fmt.Sprintf("CPU pool fallback (%d threads)", safeGUIThreads(s.CPUThreads))
+		} else if s.SoloBackend == "auto" {
+			a.gpuName = "AUTO: checking Legacy CUDA / OpenCL / CPU"
+		} else if s.SoloBackend == "opencl" {
+			a.gpuName = "OpenCL GPU: waiting for worker validation"
+		} else {
+			a.gpuName = fmt.Sprintf("CPU AQM64 safe mode (%d threads)", safeGUIThreads(s.CPUThreads))
+		}
 		a.mu.Unlock()
 	}
 
@@ -1507,6 +1529,9 @@ func (a *App) parseWorkerLine(line string) {
 	}
 	if strings.HasPrefix(line, "Backend: ") {
 		a.miner.Backend = strings.TrimSpace(strings.TrimPrefix(line, "Backend: "))
+	}
+	if strings.HasPrefix(line, "AUTO FALLBACK: ") {
+		a.miner.FallbackReason = strings.TrimSpace(strings.TrimPrefix(line, "AUTO FALLBACK: "))
 	}
 	if strings.HasPrefix(line, "Mining height ") {
 		fields := strings.Fields(line)
