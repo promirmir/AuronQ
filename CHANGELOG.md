@@ -26,8 +26,10 @@ This file is the concise public history of AuronQ. Detailed historical release n
 
 ### Universal Miner v0.4.6 Alpha
 
-- Adds a packaged CUDA 12.6 legacy backend for supported Maxwell/Pascal/Volta targets, including Pascal `sm_61` used by GTX 1050/1050 Ti/1060/1070/1080-class cards.
-- Solo AUTO order is now primary CUDA → legacy CUDA → OpenCL GPU → CPU, with canonical AQM64 self-test validation on every native accelerator.
+- Keeps the primary CUDA 13.2 backend for current/new NVIDIA targets.
+- Adds a packaged CUDA 12.6 compatibility backend for supported Maxwell/Pascal/Volta targets, including Pascal `sm_61`.
+- Adds a packaged CUDA 11.8 compatibility backend for supported Kepler `sm_35` / `sm_37` targets.
+- Solo AUTO order is now current CUDA → CUDA 12.x legacy → CUDA 11.8 Kepler → OpenCL GPU → CPU, with canonical AQM64 self-test validation on every native accelerator.
 - Fixes Windows Pool AUTO incorrectly rejecting older NVIDIA GPUs through AuronQ's native CUDA compatibility gate before launching an external pool miner.
 - Pool mode now passes locally detected NVIDIA devices to the user-supplied pool miner and lets that miner determine its own CUDA compatibility.
 - Fixes misleading GUI labeling that could show CPU before AUTO finished testing legacy CUDA/OpenCL.
