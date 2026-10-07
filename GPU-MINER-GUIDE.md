@@ -2,13 +2,13 @@
 
 Current release: **v0.4.6 Alpha**
 
-The v0.4.6 miner uses **AUTO** compute selection: primary NVIDIA CUDA → legacy NVIDIA CUDA → validated vendor-neutral OpenCL GPU → native CPU AQM64. See `UNIVERSAL-MINER-GUIDE.md` for the complete fallback and safety policy.
+The v0.4.6 miner uses **AUTO** compute selection: current NVIDIA CUDA → CUDA 12.x legacy → CUDA 11.8 Kepler → validated vendor-neutral OpenCL GPU → native CPU AQM64. See `UNIVERSAL-MINER-GUIDE.md` for the complete fallback and safety policy.
 
 ## Packages
 
-**Windows x64 full package** includes the PL/EN graphical dashboard, primary CUDA, legacy CUDA for supported older NVIDIA generations, the vendor-neutral OpenCL backend, CPU fallback, full-node CLI, Mainnet metadata and documentation.
+**Windows x64 full package** includes the PL/EN graphical dashboard, current CUDA, CUDA 12.x legacy, CUDA 11.8 Kepler, vendor-neutral OpenCL, CPU fallback, full-node CLI, Mainnet metadata and documentation.
 
-**Linux amd64 full package** includes the universal CLI miner, `libauronq-aqm64-cuda.so`, `libauronq-aqm64-cuda-legacy.so`, `libauronq-aqm64-opencl.so`, CPU fallback, full-node CLI, Mainnet metadata and documentation. Portable CPU-only packages are additionally built for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64.
+**Linux amd64 full package** includes the universal CLI miner, `libauronq-aqm64-cuda.so`, `libauronq-aqm64-cuda-legacy.so`, `libauronq-aqm64-cuda-kepler.so`, `libauronq-aqm64-opencl.so`, CPU fallback, full-node CLI, Mainnet metadata and documentation. Portable CPU-only packages are additionally built for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64.
 
 ## Requirements
 
@@ -18,7 +18,7 @@ For **NVIDIA CUDA acceleration**: NVIDIA GPU supported by one of the architectur
 
 For **OpenCL GPU acceleration**: Windows/Linux plus a working vendor OpenCL runtime from AMD, Intel or NVIDIA. A compatible model name alone is not enough — AuronQ compiles the OpenCL kernel on the local driver and accepts it only after the full canonical AQM64 equivalence self-test.
 
-Older NVIDIA cards such as GTX 1050/1050 Ti are now tried through the packaged **legacy CUDA 12.6 backend first**. If that backend cannot initialize or fails the canonical AQM64 self-test, AUTO continues to OpenCL and then CPU. CUDA/OpenCL Toolkits are build-time dependencies only; the packaged OpenCL backend dynamically loads the system OpenCL runtime supplied by the GPU driver.
+Older NVIDIA cards such as GTX 1050/1050 Ti are tried through the packaged **CUDA 12.6 legacy backend**. Supported Kepler sm_35/sm_37 cards have a separate **CUDA 11.8 backend**. Neither compatibility path replaces or downgrades the current CUDA 13.2 backend used by newer GPUs. CUDA/OpenCL Toolkits are build-time dependencies only; the packaged OpenCL backend dynamically loads the system OpenCL runtime supplied by the GPU driver.
 
 Solo mining also needs a synchronized AuronQ Mainnet full node; the v0.4.6 packages include the AuronQ node CLI.
 
@@ -51,7 +51,7 @@ Compare the value with the release checksum.
 1. Download and extract the entire Windows ZIP.
 2. Run `AuronQ-Miner.exe`.
 3. Enter a valid AURQ Mainnet reward address.
-4. Leave the compute backend on **AUTO**. It tries primary CUDA, legacy CUDA, OpenCL GPU, then CPU.
+4. Leave the compute backend on **AUTO**. It tries current CUDA, CUDA 12.x legacy, CUDA 11.8 Kepler, OpenCL GPU, then CPU.
 5. Leave Auto Tune enabled; CPU fallback automatically uses its conservative thread profile.
 6. Set the maximum GPU temperature.
 7. Choose Solo or Pool.
@@ -167,13 +167,13 @@ MeshMiner is independently developed and is not bundled or automatically downloa
 - MeshPool: https://meshpool.net/pool/auronq-main
 - RPlant: https://pool.rplant.xyz/#auronq#connect
 
-On Linux, compatible third-party pool miners can be run directly. The official v0.4.6 Linux miner provides **Solo AUTO** with primary CUDA → legacy CUDA → OpenCL GPU → CPU fallback.
+On Linux, compatible third-party pool miners can be run directly. The official v0.4.6 Linux miner provides **Solo AUTO** with current CUDA → CUDA 12.x legacy → CUDA 11.8 Kepler → OpenCL GPU → CPU fallback.
 
 ## Main CLI options
 
 | Option | Meaning |
 |---|---|
-| `--backend auto|cuda|opencl|cpu` | AUTO is recommended: primary CUDA → legacy CUDA → OpenCL GPU → CPU |
+| `--backend auto|cuda|opencl|cpu` | AUTO is recommended: current CUDA → CUDA 12.x legacy → CUDA 11.8 Kepler → OpenCL GPU → CPU |
 | `--cpu-threads N` | CPU lanes; 0 = conservative automatic profile, explicit max 16 |
 | `--node URL` | AuronQ full-node URL |
 | `--address aurq1...` | Mainnet reward address |
@@ -190,7 +190,8 @@ On Linux, compatible third-party pool miners can be run directly. The official v
 | `--thermal-limit N` | Hard temperature ceiling |
 | `--thermal-target N` | Optional explicit thermal target |
 | `--cuda-dll PATH` | Primary CUDA backend path (.dll or .so) |
-| `--cuda-legacy-dll PATH` | Legacy Maxwell/Pascal/Volta CUDA backend path |
+| `--cuda-legacy-dll PATH` | CUDA 12.x Maxwell/Pascal/Volta backend path |
+| `--cuda-kepler-dll PATH` | CUDA 11.8 Kepler sm_35/sm_37 backend path |
 | `--opencl-dll PATH` | OpenCL backend path (.dll or .so) |
 
 ## Linux troubleshooting
@@ -229,6 +230,18 @@ Linux legacy CUDA backend:
 
 ~~~bash
 bash ./gpu/cuda/build-linux-legacy.sh
+~~~
+
+Windows Kepler CUDA backend:
+
+~~~powershell
+powershell -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-kepler.ps1
+~~~
+
+Linux Kepler CUDA backend:
+
+~~~bash
+bash ./gpu/cuda/build-linux-kepler.sh
 ~~~
 
 Windows OpenCL backend:
