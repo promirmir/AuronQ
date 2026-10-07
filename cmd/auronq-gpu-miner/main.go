@@ -125,10 +125,14 @@ func main() {
 	if batch > 64 {
 		batch = 64
 	}
-	if backendKind == "cpu" {
-		// CPU work is 64 MiB per active lane. Keep one job per safe worker so
-		// template refreshes remain responsive and memory use is predictable.
-		if rec := backend.RecommendedBatch(); batch > rec {
+	if backendKind == "cpu" || backendKind == "opencl" {
+		// CPU work is 64 MiB per active lane. Generic OpenCL also starts from
+		// the backend's conservative memory recommendation because total/free
+		// VRAM reporting is not uniformly reliable across vendors.
+		if rec := backend.RecommendedBatch(); rec > 0 && batch > rec {
+			if backendKind == "opencl" {
+				fmt.Printf("OPENCL SAFE BATCH: requested=%d capped_to=%d before autotune\n", batch, rec)
+			}
 			batch = rec
 		}
 	}
