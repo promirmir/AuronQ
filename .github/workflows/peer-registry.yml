@@ -38,6 +38,9 @@ jobs:
       - name: Crawl verified public AuronQ peers
         run: go run ./cmd/auronq-peer-crawler -manifest bootstrap.json -mirror bootstrap.mainnet.json
 
+      - name: Verify generated registry coherence
+        run: go run ./cmd/auronq-healthcheck -manifest bootstrap.json
+
       - name: Prepare registry update branch
         id: registry
         shell: bash
@@ -84,12 +87,12 @@ jobs:
           fi
 
           if grep -q "GitHub Actions is not permitted to create or approve pull requests" <<<"$output"; then
-            echo "::warning::Peer registry branch updated, but repository settings currently block GitHub Actions from creating pull requests."
+            echo "::warning::Live peer registry published to automation/peer-registry; repository settings block only the optional reviewed-main PR."
             {
               echo "### Peer registry update ready for review"
               echo
-              echo "The crawler updated `automation/peer-registry` with verified Mainnet peers."
-              echo "Repository policy blocks GitHub Actions from opening the PR automatically."
+              echo "The crawler published the live supplemental registry on `automation/peer-registry` after network-health verification."
+              echo "Fresh nodes that include the live-registry manifest can use it immediately. Repository policy blocks only the optional static snapshot PR."
               echo "Create a protected-main PR from `automation/peer-registry` when convenient."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
