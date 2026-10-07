@@ -22,17 +22,19 @@ Official accelerated packages:
 
 Both accelerated packages contain:
 
-- the primary CUDA 13.2 backend for newer NVIDIA generations;
-- a separate CUDA 12.6 legacy backend for the supported subset of Maxwell/Pascal/Volta targets;
+- the primary CUDA 13.2 backend for current/new NVIDIA generations;
+- a CUDA 12.6 compatibility backend for supported Maxwell/Pascal/Volta targets;
+- a CUDA 11.8 compatibility backend for supported Kepler sm_35/sm_37 targets;
 - the vendor-neutral OpenCL backend;
 - native CPU AQM64 fallback.
 
 AUTO order is:
 
 1. validated primary NVIDIA CUDA;
-2. validated legacy NVIDIA CUDA;
-3. validated OpenCL GPU;
-4. native CPU AQM64.
+2. validated CUDA 12.x legacy NVIDIA;
+3. validated CUDA 11.8 Kepler NVIDIA;
+4. validated OpenCL GPU;
+5. native CPU AQM64.
 
 A CUDA device is accepted only after the mandatory full AQM64 self-test
 produces a byte-identical result to the canonical CPU implementation.
@@ -66,8 +68,9 @@ the supported subset.
 
 ### Older NVIDIA cards
 
-The v0.4.6 accelerated packages add a second CUDA library built with CUDA
-12.6. The legacy build script selects the supported subset of these maintained
+The v0.4.6 accelerated packages keep the newest CUDA path and add separate
+compatibility libraries for old generations. CUDA 12.6 covers the supported
+Maxwell/Pascal/Volta subset, while CUDA 11.8 covers supported Kepler sm_35/sm_37. The legacy build script selects the supported subset of these maintained
 architecture targets when the toolkit exposes them:
 
 - Maxwell: `sm_50`, `sm_52`, `sm_53`
@@ -80,10 +83,10 @@ CUDA backend used by newer GPUs.
 
 The packaged files are:
 
-- Windows: `auronq-aqm64-cuda.dll` and `auronq-aqm64-cuda-legacy.dll`
-- Linux: `libauronq-aqm64-cuda.so` and `libauronq-aqm64-cuda-legacy.so`
+- Windows: `auronq-aqm64-cuda.dll`, `auronq-aqm64-cuda-legacy.dll`, `auronq-aqm64-cuda-kepler.dll`
+- Linux: `libauronq-aqm64-cuda.so`, `libauronq-aqm64-cuda-legacy.so`, `libauronq-aqm64-cuda-kepler.so`
 
-AUTO tries the primary DLL first and the legacy DLL second. A legacy target is
+AUTO tries the primary DLL first, CUDA 12.x legacy second, and CUDA 11.8 Kepler third. A legacy target is
 still used only when the complete canonical AQM64 self-test passes on the real
 device. If both CUDA paths fail, AUTO continues to OpenCL and then CPU.
 
@@ -160,7 +163,17 @@ or:
 bash ./gpu/cuda/build-linux-legacy.sh
 ~~~
 
-The official release builds the legacy library with CUDA 12.6.
+Kepler compatibility:
+
+~~~powershell
+powershell -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-kepler.ps1
+~~~
+
+~~~bash
+bash ./gpu/cuda/build-linux-kepler.sh
+~~~
+
+The official release builds the Maxwell/Pascal/Volta compatibility library with CUDA 12.6 and the Kepler compatibility library with CUDA 11.8.
 
 ## Self-test
 
