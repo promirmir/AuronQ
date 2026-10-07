@@ -1,191 +1,203 @@
-# AuronQ GPU Miner — NVIDIA CUDA
+# AuronQ Universal Miner — NVIDIA CUDA backend
 
-This directory contains the first standalone NVIDIA/CUDA miner for AuronQ's
-AQM64 proof-of-work. It is intentionally separate from AuronQ Desktop and does
-not change Mainnet consensus.
+This directory contains the native NVIDIA CUDA accelerator used by **AuronQ
+Universal Miner v0.4.5 Alpha** for AQM64 Solo mining.
 
-## Status
+The CUDA backend is an implementation detail of the miner. It does **not**
+change AuronQ Mainnet consensus, AQM64 parameters, difficulty, genesis,
+Network ID, monetary policy, transaction validity or block validity.
 
-**v0.3.6-alpha release candidate.** The native AQM64 CUDA miner now supports both **Windows x64 and Linux amd64**. Windows retains the PL/EN graphical dashboard; Linux v0.3.6 is a CLI-first release with native Solo CUDA mining, multi-GPU orchestration, Auto Tune, rolling H/s and smart thermal control. It remains alpha software and the CUDA implementation has not received an independent professional audit.
+For the complete hardware matrix and AUTO fallback policy, see
+[../../HARDWARE-SUPPORT.md](../../HARDWARE-SUPPORT.md) and
+[../../UNIVERSAL-MINER-GUIDE.md](../../UNIVERSAL-MINER-GUIDE.md).
 
-Real-device validation has now passed on an NVIDIA GeForce RTX 4050 Laptop GPU
-with CUDA 13.4: the mandatory self-test produced a byte-identical full AQM64
-result between the CUDA backend and the canonical CPU PowHash implementation.
+## Current release status
 
-Measured end-to-end offline benchmark on that device:
+Official accelerated packages:
+
+- Windows x64 GUI/GPU:
+  `AuronQ-Miner-v0.4.5-alpha-Windows-x64-GUI-GPU.zip`
+- Linux x64 GPU:
+  `AuronQ-Miner-v0.4.5-alpha-Linux-x64-GPU.tar.gz`
+
+Both accelerated packages contain:
+
+- the native CUDA backend;
+- the vendor-neutral OpenCL backend;
+- native CPU AQM64 fallback.
+
+AUTO order is:
+
+1. validated NVIDIA CUDA;
+2. validated OpenCL GPU;
+3. native CPU AQM64.
+
+A CUDA device is accepted only after the mandatory full AQM64 self-test
+produces a byte-identical result to the canonical CPU implementation.
+
+## CUDA architecture coverage in v0.4.5
+
+The v0.4.5 release is built with CUDA Toolkit **13.2**.
+
+The release CI queried `nvcc --list-gpu-code` / `--list-gpu-arch` and emitted
+these real architecture targets:
+
+- `sm_75`
+- `sm_80`
+- `sm_86`
+- `sm_87`
+- `sm_88`
+- `sm_89`
+- `sm_90`
+- `sm_100`
+- `sm_103`
+- `sm_110`
+- `sm_120`
+- `sm_121`
+
+It also embeds forward-compatible PTX for the newest virtual architecture
+available from that toolkit (`compute_121` in the v0.4.5 release build).
+
+The build scripts do not hard-code only three generations. They ask the
+installed CUDA compiler which maintained targets it can actually build and emit
+the supported subset.
+
+### Older NVIDIA cards
+
+CUDA 13.2 does not emit Pascal `sm_61` code in this release. Therefore cards
+such as GTX 1050/1050 Ti/1060/1070/1080 are **not claimed as native CUDA targets
+of the v0.4.5 package**.
+
+AUTO can still try those cards through the packaged **OpenCL GPU backend** when
+the installed NVIDIA driver exposes a compatible OpenCL runtime. The OpenCL path
+must pass the same canonical AQM64 self-test before mining; otherwise AUTO falls
+back to CPU.
+
+Do not infer compatibility only from a GPU model name or from NVML detection.
+
+## Verified correctness
+
+The CUDA implementation is correctness-first.
+
+Before mining, the worker verifies:
+
+- the accelerated Argon2id boundary;
+- the complete AQM64 pipeline;
+- byte-for-byte equivalence with the canonical CPU `PowHash`.
+
+A backend that differs by even one bit is rejected.
+
+Real-device validation has passed on an **NVIDIA GeForce RTX 4050 Laptop GPU**.
+Historical offline benchmark data on that device:
 
 - batch 20: 118.733 H/s
-- batch 40: 226.263 H/s (30 s repeat: 226.447 H/s)
+- batch 40: 226.263 H/s
 - batch 60: 316.227 H/s
 - batch 64: 299.377 H/s
 
-Batch 60 was the best of the tested values on this RTX 4050 Laptop GPU. This is
-a single-device prototype measurement, not a guaranteed performance figure;
-laptop power limits, thermals, clocks and batch size can materially change
-throughput.
+These are single-device measurements, not guaranteed performance figures.
+Laptop power limits, cooling, clocks, drivers and batch size can materially
+change throughput.
 
-The heavy Argon2id memory graph runs on CUDA. SHAKE256 domain separation,
-Argon2 initialization/final extraction, target comparison, template handling
-and block submission stay in the Go miner so they reuse AuronQ's existing
-consensus implementation wherever practical.
+## Memory model
 
-AQM64 uses 64 MiB of memory per candidate. The CUDA backend therefore mines a
-batch of independent candidates concurrently and automatically recommends a
-conservative batch from free VRAM and the GPU SM count.
+AQM64 uses approximately **64 MiB per candidate lane**.
 
-## Requirements
+The CUDA backend runs independent candidates concurrently and chooses a
+conservative starting batch from available VRAM and GPU SM count. Auto Tune can
+then benchmark usable batch sizes on the actual device.
 
-- Windows x64 **or Linux amd64**
-- NVIDIA GPU with CUDA Compute Capability 7.5+
-- current proprietary NVIDIA driver with working `nvidia-smi`
-- CUDA Toolkit is **not required to run the packaged release**; the CUDA runtime is linked statically. A Toolkit 12.x/13.x installation is only required when building from source
-- a running AuronQ full node for Solo mining, normally http://127.0.0.1:18444
+## Runtime requirements
 
-RTX 20/30/40-class cards are the initial target. RTX 4050 Laptop GPU is supported by the current sm_89 build target. The first implementation is
-correctness-first; kernel tuning comes after device self-test and real hardware
-benchmarks.
+To run the packaged CUDA backend:
 
-## Build
+- Windows x64 or Linux x64 accelerated package;
+- compatible NVIDIA GPU;
+- current NVIDIA driver.
 
-### Windows
+The CUDA Toolkit is **not required on the mining computer** for the packaged
+release; the CUDA runtime is linked into the backend. A toolkit is required only
+when rebuilding the CUDA library from source.
+
+Solo mining also requires a synchronized AuronQ Mainnet full node.
+
+## Build from source
+
+Windows:
 
 ~~~powershell
-go build -o auronq-gpu-miner.exe ./cmd/auronq-gpu-miner
 powershell -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
-~~~
-
-### Linux
-
-The Linux Go binary uses CGO only to load the packaged CUDA shared library dynamically.
-
-~~~bash
-CGO_ENABLED=1 go build -o auronq-gpu-miner ./cmd/auronq-gpu-miner
-bash ./gpu/cuda/build-linux.sh
-~~~
-
-Build the complete Linux release-style package:
-
-~~~bash
-bash ./build-gpu-miner-linux.sh 0.3.6-alpha
-~~~
-
-## Windows application
-
-The Windows application is built as `AuronQ-GPU-Miner.exe` and intentionally
-uses the same visual language as AuronQ Desktop: dark sidebar, dashboard cards,
-network status and live logs. The UI is available in **Polish and English**.
-
-The application is designed to be standalone:
-
-- if an AuronQ Mainnet full node is already listening on `127.0.0.1:18444`,
-  the miner verifies its Network ID and uses it;
-- otherwise it starts its own full validating node on TCP/18444;
-- it loads the bundled Mainnet `network.json` and `bootstrap.json`, learns
-  more peers through normal P2P gossip and persists a public peer store;
-- before Mainnet mining it checks the local height against reachable bootstrap
-  peers and refuses to start on an obviously stale local tip;
-- when “support the network as a public node” is enabled, it attempts UPnP/IGD
-  mapping for TCP/18444, sets the embedded node's public advertise endpoint and
-  proactively announces that endpoint to bootstrap peers;
-- if the app is using an already-running local AuronQ Desktop node, the same
-  UPnP mapping is created and the endpoint is announced externally so remote
-  peers can callback-verify the local node;
-- CGNAT, disabled UPnP or router failure are non-fatal: the node remains
-  outbound-only and mining continues.
-
-The application provides reward-address, multi-GPU selection, automatic performance tuning, Start/Stop, GPU/CPU AQM64 self-test, a 15-second offline benchmark, live rolling H/s/block statistics, node height/peer/public-endpoint status and technical logs. NVIDIA telemetry is read through the installed driver tooling and includes temperature, fan speed when available, utilization, power and VRAM. The smart thermal governor targets about 5 °C below the configured hard limit by adjusting batch size and GPU duty cycle; the hard limit (85 °C by default) still stops the complete worker process tree if cooling cannot keep the card below it.
-
-Solo multi-GPU mining launches isolated CUDA child workers and assigns disjoint nonce ranges so cards do not repeat the same search space. Non-secret preferences are stored under the user's Windows AuronQ configuration directory.
-
-The GUI also offers a **Pool** mode. Pool mode intentionally does not embed or auto-download third-party software. In v0.3.4, AuronQ can also regulate an external GPU pool miner thermally by applying short Windows process duty-cycle pauses when the selected GPU approaches the configured temperature ceiling; the external miner is returned to full duty cycle after cooling. It launches a user-supplied AuronQ-compatible pool miner using the MeshMiner 0.8.35+ command-line layout. The default MeshPool endpoint is `pool.meshpool.net:3359`, but the endpoint field accepts any compatible `host:port` or `stratum+tcp://host:port` value, so other pools can be entered manually. Worker name, CUDA device list and CUDA/CPU backend can also be selected. Pool fees, share validation, payouts and availability remain third-party policy.
-
-The GUI launches the sibling `auronq-gpu-worker.exe` CUDA worker with its
-console hidden. The distinct filename is required on Windows because paths are
-case-insensitive by default; using only `AuronQ-GPU-Miner.exe` vs
-`auronq-gpu-miner.exe` would make the GUI launch itself instead of the worker. Every candidate block is still submitted to and fully validated
-by the ordinary AuronQ full node.
-
-For a complete Windows package, run from the repository root:
-
-~~~powershell
-powershell -ExecutionPolicy Bypass -File .\build-gpu-miner-windows.ps1
-~~~
-
-The script builds the CUDA DLL, CLI worker and Windows app, copies the immutable
-Mainnet configuration/bootstrap metadata, performs the mandatory GPU/CPU AQM64
-self-test, and creates `AuronQ-GPU-Miner-v0.3.6-alpha-Windows-x64.zip` under
-`dist`.
-
-The Linux package is `AuronQ-GPU-Miner-v0.3.6-alpha-Linux-amd64.tar.gz` and contains the native CLI miner plus `libauronq-aqm64-cuda.so`.
-
-## Mandatory device self-test before mining
-
-Windows worker:
-
-~~~powershell
-.\auronq-gpu-worker.exe --self-test
 ~~~
 
 Linux:
 
 ~~~bash
-./auronq-gpu-miner --self-test --device 0
+bash ./gpu/cuda/build-linux.sh
 ~~~
 
-The self-test performs one full 64 MiB / time-cost-2 Argon2id calculation on
-the GPU and independently computes the same result with AuronQ's CPU reference.
-The miner reports SELF-TEST OK only if the outputs are byte-identical.
+The scripts query the installed `nvcc` architecture list and compile the
+maintained targets supported by that toolkit.
 
-This is important because a CUDA kernel that is merely fast but differs by one
-bit from AQM64 can never produce a valid Mainnet block.
+## Self-test
 
-## Mine
-
-Single GPU:
+Windows worker:
 
 ~~~powershell
-.\auronq-gpu-worker.exe --node http://127.0.0.1:18444 --address aurq1... --device 0
+.\auronq-miner-worker.exe --backend cuda --self-test
 ~~~
 
-All selected GPUs can be driven by one parent worker process:
+Linux:
 
-~~~powershell
-.\auronq-gpu-worker.exe --node http://127.0.0.1:18444 --address aurq1... --devices all --auto-tune
+~~~bash
+./auronq-miner --backend cuda --self-test --device 0
 ~~~
 
-Or select explicit CUDA device IDs:
+Expected result:
 
-~~~powershell
-.\auronq-gpu-worker.exe --node http://127.0.0.1:18444 --address aurq1... --devices 0,1 --auto-tune
+~~~text
+SELF-TEST OK
 ~~~
 
-Optional flags:
+If explicit CUDA fails, do not force it on Mainnet. Use AUTO so the miner can
+try OpenCL and then CPU.
 
-- --device N: one CUDA device
-- --devices LIST: comma-separated CUDA device IDs or `all`; overrides --device
-- --batch N: candidates processed concurrently; 0 = backend recommendation
-- --auto-tune: benchmark several batch sizes before mining and select the fastest measured value per GPU
-- --auto-tune-seconds N: measurement time for each autotune candidate (default 1 second)
-- --cuda-dll PATH: explicit path to the CUDA backend (`auronq-aqm64-cuda.dll` on Windows or `libauronq-aqm64-cuda.so` on Linux)
-- --self-test: GPU/CPU equivalence test before mining
-- --benchmark: offline end-to-end AQM64 throughput benchmark; does not connect to a node or submit blocks
-- --benchmark-seconds N: approximate benchmark duration (default 20 seconds)
-- --nonce-prefix N: advanced work-partitioning base used internally by multi-GPU mode
+## Mining examples
 
-The miner obtains a block template from the local full node, searches nonces on
-the GPU, detects canonical-tip changes between batches, and submits a candidate
-block only after the final AQM64 digest satisfies the template target.
+Single NVIDIA device:
 
-## Security / correctness notes
+~~~bash
+./auronq-miner --backend auto --device 0 --node http://127.0.0.1:18444 --address aurq1... --self-test --auto-tune --thermal-auto --thermal-limit 81
+~~~
 
-- The full node remains the authority that validates submitted blocks.
-- No privileged mining endpoint or consensus shortcut is introduced.
-- The CUDA code is new and has not received an independent audit.
-- Real-device equivalence testing has passed on RTX 4050 Laptop GPU; more GPU models still need coverage.
-- The Windows app's embedded/public-node path uses the same AuronQ full-node and P2P implementation as the main project.
-- The Linux v0.3.6 release is CLI-first; it does not claim the Windows dashboard GUI.
-- Public-node enablement is best-effort and callback-verified; it never treats UPnP success alone as consensus or peer trust.
-- Performance numbers should not be advertised until measured with the offline benchmark on actual GPUs.
+All NVIDIA devices detected by the NVIDIA multi-GPU path:
 
+~~~bash
+./auronq-miner --backend auto --devices all --node http://127.0.0.1:18444 --address aurq1... --self-test --auto-tune --thermal-auto --thermal-limit 81
+~~~
 
-Complete user instructions: [../../GPU-MINER-GUIDE.md](../../GPU-MINER-GUIDE.md)
+Each multi-GPU child receives a disjoint nonce range.
+
+## Thermal safety
+
+On supported NVIDIA systems, AuronQ uses **direct local NVIDIA telemetry** for
+the CUDA thermal governor. Pool/web/miner-reported temperatures are not trusted
+for safety control.
+
+The configured hard limit is not the normal target. The controller aims several
+degrees below it, reduces work gradually as temperature rises, performs
+automatic cooldown/resume at the limit and fails closed when trusted telemetry
+is lost.
+
+Generic OpenCL hardware follows a separate conservative no-sensor policy
+documented in [../../HARDWARE-SUPPORT.md](../../HARDWARE-SUPPORT.md).
+
+## Security status
+
+The CUDA and OpenCL accelerator implementations remain **alpha software** and
+have not received an independent professional security/cryptographic audit.
+
+Every candidate block is still submitted to an ordinary AuronQ full node and
+must pass the same Mainnet validation rules as a block found by any other
+implementation.
+
+Complete user guide: [../../GPU-MINER-GUIDE.md](../../GPU-MINER-GUIDE.md)

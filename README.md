@@ -76,7 +76,7 @@ The official miner now uses **AUTO compute selection**: validated NVIDIA CUDA fi
 | Platforms / UI | ✅ Windows x64 GUI (PL/EN) · Linux amd64 CLI |
 | Correctness check | ✅ CUDA/OpenCL/CPU backend vs canonical AQM64 equivalence self-test |
 
-The miner remains **alpha software**. Multi-GPU behavior should be tested on more hardware combinations, and the CUDA implementation has not received an independent professional audit. A valid block found in Solo mode is still submitted to an ordinary AuronQ full node and must pass the same Mainnet validation rules as every other block.
+The miner remains **alpha software**. Multi-GPU and cross-vendor OpenCL behavior still need broader real-device coverage, and the CUDA/OpenCL accelerator implementations have not received an independent professional audit. A valid block found in Solo mode is still submitted to an ordinary AuronQ full node and must pass the same Mainnet validation rules as every other block.
 
 ## Long-term direction
 
@@ -153,8 +153,16 @@ The official AuronQ miner provides native Solo CUDA, vendor-neutral OpenCL GPU, 
 ```text
 7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
 2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6  AuronQ-1.7.13-Linux-amd64.tar.gz
-# Universal Miner v0.4.5 Alpha:
-# verify against SHA256SUMS-AURONQ-MINER.txt on the miner-v0.4.5-alpha release page
+# Universal Miner v0.4.5 Alpha — published release:
+28ec7de8dc283a2547143bfe1bce201c77d3c7996ff12f58572a5b3931ccc4a3  AuronQ-Miner-v0.4.5-alpha-Windows-x64-GUI-GPU.zip
+20310c1eda3018954ab243bdd8b0764e137b459b644406471f21d7334f678bd1  AuronQ-Miner-v0.4.5-alpha-Linux-x64-GPU.tar.gz
+da54626348e950a6bee9ac1566d3a605f88d7f92bd8ae175156e69c893236b68  AuronQ-Universal-Miner-v0.4.5-alpha-windows-amd64.zip
+401eac5e0ad7f84532e8481041714311f50643889002ad0ece394f9bba9d0de8  AuronQ-Universal-Miner-v0.4.5-alpha-windows-arm64.zip
+292dc28fc3e80c46be50aaf66f72cdf1d6844777a507e7f6ff41cf70da93d4e7  AuronQ-Universal-Miner-v0.4.5-alpha-linux-amd64.tar.gz
+e268449cb8b02b2dc48531c800cf5f03954196b97b1a6cd4fa32cb904cd328b1  AuronQ-Universal-Miner-v0.4.5-alpha-linux-arm64.tar.gz
+4cac33bfad1a9b6029b42a8628cecd5d802fb9d44a6979512530e1875f308de2  AuronQ-Universal-Miner-v0.4.5-alpha-darwin-amd64.tar.gz
+8052726d9e3cf7e606a79c7762dd58e928f02df1dd9ab5a8727eb2ca94feac2c  AuronQ-Universal-Miner-v0.4.5-alpha-darwin-arm64.tar.gz
+# Full signed-by-release-workflow list: SHA256SUMS-AURONQ-MINER.txt
 913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c  AuronQ-Mobile-0.5.3-alpha.apk
 ```
 
