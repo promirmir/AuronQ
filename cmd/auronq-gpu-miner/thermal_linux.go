@@ -54,6 +54,9 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 	if err != nil {
 		return batch, -1, 0, "stop", fmt.Errorf("THERMAL TELEMETRY FAILSAFE: local NVIDIA temperature unavailable for GPU %d: %w", t.device, err)
 	}
+	if temp < 0 || temp > 125 {
+		return batch, temp, 0, "stop", fmt.Errorf("THERMAL SENSOR INVALID: GPU %d returned %d C", t.device, temp)
+	}
 	t.lastTemp = temp
 	if temp >= t.limitC {
 		return batch, temp, 0, "stop", fmt.Errorf("THERMAL LIMIT: GPU %d reached %d C (limit %d C)", t.device, temp, t.limitC)
@@ -91,6 +94,15 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 		// could leave a throttled GPU stuck indefinitely at target-2C.
 		t.coolSamples++
 		if t.coolSamples >= 6 && batch < t.maxBatch {
+			newBatch = minInt(t.maxBatch, batch+1)
+			action = "increase"
+			t.coolSamples = 0
+		}
+	case temp == t.targetC-1:
+		// Very slow recovery one degree below target. The next hot sample
+		// still immediately trims batch and applies the existing duty pause.
+		t.coolSamples++
+		if t.coolSamples >= 10 && batch < t.maxBatch {
 			newBatch = minInt(t.maxBatch, batch+1)
 			action = "increase"
 			t.coolSamples = 0
