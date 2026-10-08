@@ -2,174 +2,298 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AuronQ (AURQ) — Open-Source Proof-of-Work Cryptocurrency in Go</title>
-  <meta name="description" content="AuronQ (AURQ) is an open-source UTXO Proof-of-Work cryptocurrency written in Go, with ML-DSA-87 transaction signatures, AQM64 mining, independent full nodes, wallets and public blockchain explorers.">
-  <meta name="keywords" content="AuronQ, AURQ, cryptocurrency, proof of work, UTXO, Go blockchain, ML-DSA-87, post-quantum cryptography, AQM64, crypto mining, full node">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="AuronQ (AURQ) is an open-source UTXO Proof-of-Work cryptocurrency. Run a full node, mine AURQ, explore the network and review the AQM64 and ML-DSA-87 protocol.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://promirmir.github.io/AuronQ/">
   <link rel="icon" type="image/svg+xml" href="assets/auronq-icon.svg">
-  <meta property="og:title" content="AuronQ (AURQ) — Open-Source Proof-of-Work Cryptocurrency">
-  <meta property="og:description" content="Explore the AuronQ source code, run an independent full node, mine AURQ, inspect the chain and review the ML-DSA-87 / AQM64 protocol design.">
+  <title>AuronQ (AURQ) | Open-source Proof-of-Work network</title>
+  <meta property="og:title" content="AuronQ (AURQ) | Open-source Proof-of-Work network">
+  <meta property="og:description" content="Run a full node, mine AURQ, inspect the blockchain and review the open-source protocol.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://promirmir.github.io/AuronQ/">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
   <script type="application/ld+json">
   {
-    "@context":"https://schema.org",
-    "@type":"SoftwareApplication",
-    "name":"AuronQ",
-    "alternateName":"AURQ",
-    "applicationCategory":"Blockchain software",
-    "operatingSystem":"Windows, Linux, Android",
-    "url":"https://promirmir.github.io/AuronQ/",
-    "downloadUrl":"https://github.com/promirmir/AuronQ/releases/latest",
-    "softwareVersion":"1.7.13",
-    "license":"https://opensource.org/license/mit",
-    "codeRepository":"https://github.com/promirmir/AuronQ",
-    "sameAs":["https://github.com/promirmir/AuronQ","https://bitcointalk.org/index.php?topic=5595868.0","https://miningchamp.com/coin/auronq"],
-    "keywords":"AuronQ, AURQ, Proof-of-Work, UTXO, Go, ML-DSA-87, post-quantum cryptography, AQM64, cryptocurrency mining, full node",
-    "description":"Open-source public Layer-1 UTXO Proof-of-Work cryptocurrency using ML-DSA-87 transaction signatures and AQM64 mining."
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "AuronQ",
+    "alternateName": "AURQ",
+    "applicationCategory": "Blockchain software",
+    "operatingSystem": "Windows, Linux, Android",
+    "url": "https://promirmir.github.io/AuronQ/",
+    "downloadUrl": "https://github.com/promirmir/AuronQ/releases",
+    "license": "https://opensource.org/license/mit",
+    "codeRepository": "https://github.com/promirmir/AuronQ",
+    "description": "Open-source UTXO Proof-of-Work cryptocurrency with AQM64 mining and ML-DSA-87 transaction signatures."
   }
   </script>
   <style>
-    :root{color-scheme:dark;--bg:#040817;--panel:#0b1427;--panel2:#101a33;--line:#25375f;--text:#f3f7ff;--muted:#9fb2d2;--accent:#55e7ff;--accent2:#8b76ff;--warn:#ffcf70}
-    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 50% -18%,#17265e 0,#080d25 36%,#040817 72%,#02040b 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.65}
-    main{max-width:1080px;margin:auto;padding:44px 22px 90px}a{color:var(--accent2);text-decoration:none}a:hover{text-decoration:underline}
-    .hero{padding:54px 0 34px;position:relative}.brand-logo{display:block;width:min(790px,100%);height:auto;margin:0 0 18px;filter:drop-shadow(0 0 30px rgba(72,130,255,.28))}.hero:before{content:"";position:absolute;inset:-30px -50px auto;height:420px;background:radial-gradient(circle at 42% 35%,rgba(63,126,255,.18),transparent 42%),radial-gradient(circle at 63% 30%,rgba(163,76,255,.14),transparent 38%);pointer-events:none;filter:blur(12px)}.hero>*{position:relative}.eyebrow{color:var(--accent);font-weight:800;letter-spacing:.1em;text-transform:uppercase;font-size:.82rem}
-    h1{font-size:clamp(2.8rem,7vw,5.5rem);line-height:1.02;margin:.16em 0 .2em;letter-spacing:-.045em;max-width:900px}h2{font-size:clamp(1.7rem,4vw,2.5rem);line-height:1.15;margin:0 0 12px}h3{margin:0 0 8px}
-    p.lead{max-width:850px;font-size:1.22rem;color:#c7d7e7}.sublead{max-width:820px;color:var(--muted)}
-    .buttons{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.btn{display:inline-block;padding:12px 17px;border:1px solid var(--line);border-radius:11px;background:var(--panel);font-weight:800}.btn.primary{background:linear-gradient(135deg,#5af1ff,#7d7cff);color:#061020;border-color:#73dfff;box-shadow:0 0 28px rgba(79,191,255,.18)}.btn.secondary{background:#112338}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:14px;margin:22px 0}.card{background:linear-gradient(180deg,rgba(15,27,54,.94),rgba(8,17,34,.94));border:1px solid var(--line);border-radius:15px;padding:20px;box-shadow:0 14px 34px rgba(0,0,0,.18)}.card b{display:block;margin-bottom:5px}
-    .section{margin-top:52px}.muted{color:var(--muted)}.status{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:#bdd0e3;background:#0b1724;margin:4px 8px 4px 0}
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}.warn{border-color:#5a4930}.warn b{color:var(--warn)}
-    .steps{counter-reset:step;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:20px}.step{position:relative;padding:22px;background:var(--panel);border:1px solid var(--line);border-radius:14px}.step:before{counter-increment:step;content:counter(step);position:absolute;top:16px;right:16px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#132a41;color:var(--accent);font-weight:900}
-    code{background:#122236;border-radius:6px;padding:.16em .42em}footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted)}
+    :root {
+      color-scheme: light;
+      --bg: #fbfcfe;
+      --surface: #fff;
+      --soft: #f3f6fb;
+      --ink: #14243a;
+      --muted: #50627a;
+      --line: #dce4ef;
+      --accent: #244fb3;
+      --accent-hover: #173a88;
+      --warn-bg: #fff9ec;
+      --warn-line: #e9d8ad;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    a:hover { color: var(--accent-hover); }
+    a:focus-visible, button:focus-visible { outline: 3px solid #7aa7fa; outline-offset: 3px; }
+    .skip { position: absolute; left: -999px; top: 8px; padding: 10px; background: var(--surface); }
+    .skip:focus { left: 10px; z-index: 10; }
+    .wrap { width: min(1100px, calc(100% - 40px)); margin: 0 auto; }
+    .header { background: var(--surface); border-bottom: 1px solid var(--line); }
+    .header-inner { display: flex; justify-content: space-between; align-items: center; gap: 26px; min-height: 76px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); font-size: 1.22rem; font-weight: 760; text-decoration: none; letter-spacing: -.025em; }
+    .brand-icon { width: 40px; height: 40px; border-radius: 10px; background: #121c39; padding: 3px; }
+    .nav { display: flex; flex-wrap: wrap; gap: 9px 23px; }
+    .nav a { font-size: .91rem; color: var(--muted); font-weight: 600; text-decoration: none; }
+    .nav a:hover { color: var(--accent); }
+    .hero { padding: 74px 0 56px; border-bottom: 1px solid var(--line); }
+    .hero-layout { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(260px,.7fr); gap: 56px; align-items: center; }
+    .eyebrow { display: inline-block; font-size: .78rem; text-transform: uppercase; font-weight: 800; letter-spacing: .13em; color: var(--accent); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: clamp(2.65rem, 6vw, 4.2rem); letter-spacing: -.055em; line-height: 1.12; margin: 16px 0 22px; }
+    h2 { font-size: clamp(1.65rem, 3vw, 2rem); letter-spacing: -.035em; line-height: 1.24; margin-bottom: 12px; }
+    h3 { font-size: 1.1rem; letter-spacing: -.015em; margin-bottom: 9px; }
+    .lead { color: var(--muted); font-size: 1.13rem; max-width: 690px; }
+    .btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    .btn { display: inline-flex; justify-content: center; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; min-height: 45px; text-decoration: none; font-weight: 700; font-size: .94rem; background: var(--surface); color: var(--ink); }
+    .btn:hover { border-color: var(--accent); text-decoration: none; }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { color: #fff; background: var(--accent-hover); }
+    .facts { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 26px; }
+    .facts h2 { font-size: 1rem; letter-spacing: 0; margin-bottom: 14px; }
+    .facts dl { margin: 0; }
+    .facts div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 10px 0; border-top: 1px solid var(--line); }
+    .facts dt { color: var(--muted); font-size: .87rem; }
+    .facts dd { margin: 0; text-align: right; font-size: .93rem; font-weight: 700; }
+    section.content { padding: 60px 0 0; }
+    .intro { color: var(--muted); max-width: 730px; margin-bottom: 25px; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; align-items: flex-start; }
+    .card p { color: var(--muted); font-size: .95rem; }
+    .card .links { margin-top: auto; padding-top: 10px; }
+    .card .links a { display: inline-block; margin: 5px 12px 5px 0; font-weight: 650; font-size: .93rem; }
+    .label { font-size: .75rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-bottom: 9px; }
+    .version { font-weight: 650; font-size: .86rem; margin-bottom: 10px; color: var(--muted); }
+    .note { margin: 18px 0 0; color: var(--muted); font-size: .88rem; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 24px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .step-num { display: block; color: var(--accent); font-weight: 800; margin-bottom: 8px; }
+    .steps p { font-size: .94rem; color: var(--muted); margin: 0; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 46px; }
+    .section-list { margin: 0; padding-left: 20px; }
+    .section-list li { margin: 0 0 12px; }
+    .section-list li::marker { color: var(--accent); }
+    .links-row { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 19px; }
+    .links-row a { font-weight: 600; }
+    .notice { padding: 23px 26px; background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 10px; }
+    .notice h3 { margin-bottom: 7px; }
+    .notice p { margin: 0; color: #5e513b; }
+    footer { margin-top: 72px; border-top: 1px solid var(--line); padding: 26px 0 44px; font-size: .9rem; color: var(--muted); }
+    .footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .footer-inner p { margin: 0; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+    @media (max-width: 800px) {
+      .hero-layout { grid-template-columns: 1fr; gap: 32px; }
+      .hero { padding: 52px 0 40px; }
+      .grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; gap: 24px; }
+      .split { grid-template-columns: 1fr; gap: 24px; }
+    }
+    @media (max-width: 570px) {
+      .wrap { width: min(100% - 30px, 1100px); }
+      .header-inner { align-items: flex-start; padding: 16px 0; flex-direction: column; gap: 12px; }
+      .nav { gap: 8px 17px; }
+      .hero { padding-top: 44px; }
+      section.content { padding-top: 46px; }
+      .btn { width: 100%; }
+      .facts { padding: 20px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
   </style>
 </head>
 <body>
-<main>
-  <section class="hero">
-    <img class="brand-logo" src="assets/auronq-logo-horizontal.svg" alt="AuronQ Blockchain">
-    <div class="eyebrow">AURQ Mainnet • Open Source • Proof-of-Work</div>
-    <h1>AuronQ (AURQ) — open-source Proof-of-Work cryptocurrency</h1>
-    <p class="lead">AuronQ is a public UTXO Proof-of-Work cryptocurrency written in Go, built around independent full-node validation, AQM64 mining and standardized ML-DSA-87 transaction signatures.</p>
-    <p class="sublead">You can run the full node yourself, mine with the official Universal Miner on CPU or validated CUDA/OpenCL GPU hardware, inspect the chain through your own local Explorer and verify the software on GitHub.</p>
-    <div class="buttons">
-      <a class="btn primary" href="https://github.com/promirmir/AuronQ/releases/latest">Download AuronQ</a>
-      <a class="btn secondary" href="#start">Run a node / start mining</a>
-      <a class="btn secondary" href="#mining">Mining pools &amp; miners</a>
-      <a class="btn" href="https://mir.taild63f46.ts.net/explorer">Open Explorer</a>
-      <a class="btn" href="https://github.com/promirmir/AuronQ">View source code</a>
-      <a class="btn" href="https://bitcointalk.org/index.php?topic=5595868.0">Bitcointalk ANN</a>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="header">
+    <div class="wrap header-inner">
+      <a class="brand" href="./" aria-label="AuronQ home"><img class="brand-icon" src="assets/auronq-icon.svg" alt="" width="40" height="40">AuronQ <span aria-hidden="true">/</span> AURQ</a>
+      <nav class="nav" aria-label="Main navigation">
+        <a href="#downloads">Downloads</a>
+        <a href="#start">Get started</a>
+        <a href="#network">Network</a>
+        <a href="#documentation">Documentation</a>
+        <a href="https://github.com/promirmir/AuronQ">GitHub ↗</a>
+      </nav>
     </div>
-  </section>
+  </header>
 
-  <section class="section" style="margin-top:18px">
-    <div class="card">
-      <b>Discovering new cryptocurrencies?</b>
-      <span class="muted">AuronQ has a factual overview for people searching for a new open-source, mineable Proof-of-Work cryptocurrency in 2026.</span><br>
-      <a href="new-cryptocurrency.html">New cryptocurrency / AURQ technical overview →</a>
-    </div>
-  </section>
+  <main id="main">
+    <section class="hero">
+      <div class="wrap hero-layout">
+        <div>
+          <span class="eyebrow">Open source · Public mainnet · Proof of Work</span>
+          <h1>AuronQ. A network you can verify.</h1>
+          <p class="lead">AuronQ (AURQ) is an open-source UTXO cryptocurrency built in Go. It combines independent full-node validation, AQM64 Proof-of-Work and ML-DSA-87 transaction signatures.</p>
+          <div class="btns">
+            <a class="btn btn-primary" href="#downloads">Download software</a>
+            <a class="btn" href="https://github.com/promirmir/AuronQ">View source code</a>
+            <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/WHITEPAPER.md">Read whitepaper</a>
+          </div>
+        </div>
+        <aside class="facts" aria-label="Protocol overview">
+          <h2>Protocol at a glance</h2>
+          <dl>
+            <div><dt>Network</dt><dd>Public mainnet</dd></div>
+            <div><dt>Ledger</dt><dd>UTXO</dd></div>
+            <div><dt>Consensus</dt><dd>Proof of Work</dd></div>
+            <div><dt>Mining</dt><dd>AQM64</dd></div>
+            <div><dt>Signatures</dt><dd>ML-DSA-87</dd></div>
+            <div><dt>License</dt><dd>MIT</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </section>
 
-  <section class="grid">
-    <div class="card"><b>ML-DSA-87 transaction signatures</b><span class="muted">AuronQ transactions use the standardized post-quantum ML-DSA-87 signature scheme.</span></div>
-    <div class="card"><b>AQM64 Proof-of-Work</b><span class="muted">AuronQ-specific compute-and-memory Proof-of-Work with cumulative-work chain selection.</span></div>
-    <div class="card"><b>Independent full nodes</b><span class="muted">Every full node validates blocks, transactions, signatures, timestamps, difficulty and chain work locally.</span></div>
-    <div class="card"><b>No canonical Explorer</b><span class="muted">Each full node can serve its own Explorer directly from its independently validated chain.</span></div>
-  </section>
+    <section class="content wrap" id="downloads" aria-labelledby="downloads-title">
+      <h2 id="downloads-title">Download AuronQ</h2>
+      <p class="intro">Choose the software that fits your role. Downloads are hosted on the project's GitHub Releases pages.</p>
+      <div class="grid">
+        <article class="card">
+          <span class="label">Run a full node</span>
+          <h3>AuronQ Desktop</h3>
+          <div class="version">v1.7.13 · Mainnet</div>
+          <p>Validate the blockchain independently, manage a local wallet and inspect your node's Explorer.</p>
+          <div class="links">
+            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip">Windows x64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz">Linux amd64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/v1.7.13">Release details →</a>
+          </div>
+        </article>
+        <article class="card">
+          <span class="label">Mine AURQ</span>
+          <h3>Universal Miner</h3>
+          <div class="version">v0.4.8 Alpha · Windows x64</div>
+          <p>Windows GUI with CPU and supported CUDA/OpenCL GPU backends, automatic selection and local safety controls. Early-stage software.</p>
+          <div class="links">
+            <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip">Windows x64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha">Release details →</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha">Other platforms (v0.4.6) →</a>
+          </div>
+        </article>
+        <article class="card">
+          <span class="label">Mobile wallet</span>
+          <h3>AuronQ Mobile</h3>
+          <div class="version">v0.5.3 Alpha · Android</div>
+          <p>Local signing and light-client verification. A mobile wallet is not a replacement for a validating full node.</p>
+          <div class="links">
+            <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk">Android APK ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha">Release details →</a>
+          </div>
+        </article>
+      </div>
+      <p class="note">Verify file checksums on the corresponding release page. Windows builds may trigger SmartScreen because they are not currently Authenticode-signed. Versions shown are published packages, not a live network-health indicator.</p>
+    </section>
 
-  <section class="section" id="mining">
-    <h2>Mine AURQ</h2>
-    <p class="sublead">AURQ can be mined solo or through independently operated third-party pools. External pools and miners are not part of AuronQ consensus.</p>
-    <div class="grid">
-      <div class="card"><b>MeshPool</b><span class="muted">Independent AURQ mining pool.</span><br><a href="https://meshpool.net/pool/auronq-main">Open MeshPool →</a></div>
-      <div class="card"><b>RPlant</b><span class="muted">Independent AURQ mining pool and connection page.</span><br><a href="https://pool.rplant.xyz/#auronq#connect">Open RPlant →</a></div>
-      <div class="card"><b>MeshMiner 0.8.35</b><span class="muted">Third-party AURQ miner with published CPU and NVIDIA GPU support.</span><br><a href="https://github.com/totom9000/meshminer/releases/tag/v.0.8.35">View MeshMiner →</a></div>
-      <div class="card"><b>AuronQ Universal Miner v0.4.6 Alpha</b><span class="muted">Official AUTO miner with current CUDA for new NVIDIA GPUs, CUDA 12.x legacy support, CUDA 11.8 Kepler support, OpenCL GPU fallback for AMD/Intel/NVIDIA, and native CPU fallback.</span><br><a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha">Downloads →</a> · <a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Guide →</a></div>
-    </div>
-    <p class="muted">Before using a third-party pool or miner, verify its current fees, payout policy, binaries and connection parameters with the operator.</p>
-    <p class="muted">Third-party network/mining trackers: <a href="https://miningchamp.com/coin/auronq">MiningChamp AuronQ profile</a> · <a href="https://miningchamp.com/pools">MiningChamp pools</a> · <a href="https://miningchamp.com">MiningChamp coins</a> · <a href="https://cpu-mining.info/">CPU-Mining.info</a></p>
-  </section>
+    <section class="content wrap" id="start" aria-labelledby="start-title">
+      <h2 id="start-title">Get started</h2>
+      <p class="intro">No account is needed to operate a full node.</p>
+      <div class="steps">
+        <div><span class="step-num">01 / Download</span><h3>Get the full node</h3><p>Download your platform's release and extract the entire archive to a folder.</p></div>
+        <div><span class="step-num">02 / Synchronize</span><h3>Connect to the network</h3><p>Start the node and let it discover peers and validate the chain.</p></div>
+        <div><span class="step-num">03 / Participate</span><h3>Use a wallet or miner</h3><p>Back up your wallet securely before transactions. Mining is optional.</p></div>
+      </div>
+      <div class="links-row">
+        <a href="https://github.com/promirmir/AuronQ/blob/main/README-WINDOWS.md">Windows setup guide →</a>
+        <a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Mining guide →</a>
+        <a href="https://github.com/promirmir/AuronQ/blob/main/HARDWARE-SUPPORT.md">Hardware support →</a>
+      </div>
+    </section>
 
-  <section class="section">
-    <h2>Verify the network yourself</h2>
-    <p class="sublead">AuronQ is easier to evaluate through public code and observable network data than through marketing claims.</p>
-    <div class="grid">
-      <div class="card"><b>Source &amp; releases</b><span class="muted">Read the implementation, release history and checksums directly on GitHub.</span><br><a href="https://github.com/promirmir/AuronQ">Open GitHub →</a></div>
-      <div class="card"><b>Public Explorer</b><span class="muted">Inspect blocks, transactions, supply and chain state from a public full-node Explorer.</span><br><a href="https://mir.taild63f46.ts.net/explorer">Open Explorer →</a></div>
-      <div class="card"><b>Independent tracking</b><span class="muted">Compare third-party mining and network observations.</span><br><a href="https://miningchamp.com/coin/auronq">MiningChamp →</a> · <a href="https://cpu-mining.info/">CPU-Mining.info →</a></div>
-      <div class="card"><b>Protocol documentation</b><span class="muted">Review the consensus rules and AQM64 construction instead of relying on summaries.</span><br><a href="https://github.com/promirmir/AuronQ/blob/main/PROTOCOL.md">Protocol →</a> · <a href="https://github.com/promirmir/AuronQ/blob/main/AQM64.md">AQM64 →</a></div>
-    </div>
-  </section>
+    <section class="content wrap" id="network" aria-labelledby="network-title">
+      <h2 id="network-title">Independent network operation</h2>
+      <p class="intro">AuronQ is designed around nodes that validate rules locally. Bootstrap peers help nodes find each other; they do not control consensus.</p>
+      <div class="split">
+        <div>
+          <h3>Verify for yourself</h3>
+          <ul class="section-list">
+            <li>Full nodes validate blocks, transactions, signatures and cumulative work independently.</li>
+            <li>Each full node can serve a read-only Explorer from its own chain.</li>
+            <li>Network identity and consensus details are documented publicly.</li>
+          </ul>
+          <div class="links-row">
+            <a href="https://mir.taild63f46.ts.net/explorer">Community Explorer ↗</a>
+            <a href="https://github.com/promirmir/AuronQ/blob/main/MAINNET.md">Mainnet details →</a>
+            <a href="https://github.com/promirmir/AuronQ/blob/main/NETWORK-INDEPENDENCE.md">Network independence →</a>
+          </div>
+          <p class="note">The linked Explorer is one independently reachable endpoint; availability varies and it is not a consensus authority.</p>
+        </div>
+        <div>
+          <h3>Mining pools &amp; integration</h3>
+          <p class="intro">Solo mining is supported. Independent pools and third-party miners are separate services; check their fees, safety and availability with each operator.</p>
+          <div class="links-row">
+            <a href="https://meshpool.net/pool/auronq-main">MeshPool ↗</a>
+            <a href="https://pool.rplant.xyz/#auronq#connect">RPlant ↗</a>
+            <a href="https://github.com/promirmir/AuronQ/blob/main/POOL-INTEGRATION.md">Pool integration →</a>
+            <a href="https://github.com/promirmir/AuronQ/blob/main/EXCHANGE-INTEGRATION.md">Exchange integration →</a>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <section class="section">
-    <h2>Why AuronQ?</h2>
-    <p class="sublead">AuronQ is not presented as a finished replacement for established cryptocurrencies. It is an open engineering project exploring a different combination of Proof-of-Work, post-quantum transaction signatures and full-node-first validation.</p>
-    <div class="grid">
-      <div class="card"><b>Verify instead of trust</b><span class="muted">Full nodes decide validity from protocol rules, not from a website, founder server or public Explorer.</span></div>
-      <div class="card"><b>Replaceable discovery</b><span class="muted">Bootstrap endpoints are startup hints, not consensus authorities. Learned peers are persisted and gossiped through the P2P network.</span></div>
-      <div class="card"><b>Public engineering</b><span class="muted">Source code, protocol documentation, releases, tests, bug reports and fixes are developed in the open.</span></div>
-      <div class="card"><b>Built to be tested</b><span class="muted">The project includes partition/reorg tests, fuzzing, race-detector CI, reproducible-build checks and network health monitoring.</span></div>
-    </div>
-  </section>
+    <section class="content wrap" id="documentation" aria-labelledby="docs-title">
+      <h2 id="docs-title">Documentation &amp; development</h2>
+      <p class="intro">Design choices, specifications, tests and release history are public and available for independent review.</p>
+      <div class="split">
+        <div>
+          <h3>Technical references</h3>
+          <ul class="section-list">
+            <li><a href="https://github.com/promirmir/AuronQ/blob/main/WHITEPAPER.md">Technical whitepaper</a></li>
+            <li><a href="https://github.com/promirmir/AuronQ/blob/main/PROTOCOL.md">Protocol specification</a></li>
+            <li><a href="https://github.com/promirmir/AuronQ/blob/main/AQM64.md">AQM64 Proof-of-Work</a></li>
+            <li><a href="https://github.com/promirmir/AuronQ/blob/main/DECENTRALIZATION.md">Decentralization model</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Participate &amp; review</h3>
+          <ul class="section-list">
+            <li><a href="https://github.com/promirmir/AuronQ/blob/main/CHANGELOG.md">Release history</a> and <a href="https://github.com/promirmir/AuronQ/blob/main/ROADMAP.md">roadmap</a></li>
+            <li><a href="https://github.com/promirmir/AuronQ/blob/main/TEST-MATRIX.md">Tests</a> and <a href="https://github.com/promirmir/AuronQ/blob/main/SECURITY.md">security policy</a></li>
+            <li><a href="https://github.com/promirmir/AuronQ/issues">Report an issue</a> or <a href="https://github.com/promirmir/AuronQ/blob/main/CONTRIBUTING.md">contribute</a></li>
+            <li><a href="https://bitcointalk.org/index.php?topic=5595868.0">Bitcointalk discussion</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
-  <section class="section" id="start">
-    <h2>Try the network</h2>
-    <p class="sublead">The fastest way to understand AuronQ is to run it. No account registration is required to operate a full node.</p>
-    <div class="steps">
-      <div class="step"><h3>Download</h3><p class="muted">Get the current Windows or Linux full-node package from GitHub Releases and verify its SHA-256 checksum.</p><a href="https://github.com/promirmir/AuronQ/releases/latest">Latest release →</a></div>
-      <div class="step"><h3>Run a full node</h3><p class="muted">On Windows, extract the whole archive and start <code>START-AURONQ.cmd</code>. The node discovers peers and synchronizes the chain.</p><a href="https://github.com/promirmir/AuronQ/blob/main/README-WINDOWS.md">Windows guide →</a></div>
-      <div class="step"><h3>Create a wallet / mine</h3><p class="muted">Create or import a wallet, back it up, then use the Universal Miner in AUTO mode for validated current CUDA→CUDA 12.x legacy→CUDA 11.8 Kepler→OpenCL→CPU selection.</p><a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Mining guide →</a></div>
-    </div>
-  </section>
-
-  <section class="section">
-    <h2>Current network software</h2>
-    <p>
-      <span class="status"><span class="dot"></span> Desktop / Full Node v1.7.13 Mainnet</span>
-      <span class="status"><span class="dot"></span> Universal Miner v0.4.6 Alpha</span>
-      <span class="status"><span class="dot"></span> AuronQ Mobile 0.5.3 Alpha</span>
-    </p>
-    <p class="muted">Windows x64 and Linux amd64 full-node packages are available now. Universal Miner v0.4.6 Alpha keeps the current CUDA 13.2 path for modern/new NVIDIA targets, adds CUDA 12.6 compatibility for Maxwell/Pascal/Volta, CUDA 11.8 compatibility for supported Kepler, then OpenCL GPU and CPU fallback. Android is a light wallet that independently validates the header/AQM64 chain but does not reconstruct the complete UTXO state locally.</p>
-  </section>
-
-  <section class="section">
-    <h2>What has already been tested?</h2>
-    <div class="grid">
-      <div class="card"><b>20-node convergence</b><span class="muted">Partition, fork, reconnect and restart scenarios are exercised in automated network tests.</span></div>
-      <div class="card"><b>Founder-node removal</b><span class="muted">A regression test removes the original bootstrap node permanently and verifies that a fresh node can join through surviving peers.</span></div>
-      <div class="card"><b>Mining correctness</b><span class="muted">Miners cancel stale templates when the canonical tip advances or changes through a reorganization.</span></div>
-      <div class="card"><b>Reproducible builds</b><span class="muted">Release-style deterministic build checks run for supported desktop targets.</span></div>
-    </div>
-    <p><a href="https://github.com/promirmir/AuronQ/blob/main/CHANGELOG.md">Read the changelog →</a> &nbsp; <a href="https://github.com/promirmir/AuronQ/blob/main/ROADMAP.md">View the roadmap →</a></p>
-  </section>
-
-  <section class="section">
-    <h2>Security status</h2>
-    <div class="card warn">
-      <b>Young network — independent audit still pending</b>
-      <span class="muted">AuronQ is a young public cryptocurrency network in an early stage of operational maturity. ML-DSA-87 is a standardized post-quantum signature scheme, but that does not make the complete system automatically post-quantum secure or mature financial infrastructure. AQM64 and the full consensus/network implementation have not yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not use AuronQ to store or transfer substantial value.</span>
-    </div>
-  </section>
-
-  <section class="section">
-    <h2>For developers and reviewers</h2>
-    <p class="sublead">AuronQ is designed to be inspected. The protocol, PoW design, decentralization model, threat model, test matrix and release history are public.</p>
-    <div class="buttons">
-      <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/PROTOCOL.md">Protocol</a>
-      <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/AQM64.md">AQM64</a>
-      <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/DECENTRALIZATION.md">Decentralization</a>
-      <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/THREAT-MODEL.md">Threat model</a>
-      <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/TEST-MATRIX.md">Test matrix</a>
-    </div>
-  </section>
+    <section class="content wrap" aria-labelledby="security-title">
+      <div class="notice">
+        <h3 id="security-title">Security and maturity</h3>
+        <p>AuronQ is a young public network. AQM64 and the complete consensus, wallet and networking implementations have not received an independent professional security or cryptographic audit. ML-DSA-87 is a standardized signature algorithm; using it does not prove the complete system is post-quantum secure. Avoid storing or transferring substantial value until independent review and longer operational testing are complete.</p>
+      </div>
+    </section>
+  </main>
 
   <footer>
-    <p>AuronQ is open-source software released under the MIT License.</p>
-    <p><a href="https://github.com/promirmir/AuronQ">GitHub</a> · <a href="https://github.com/promirmir/AuronQ/releases">Releases</a> · <a href="https://bitcointalk.org/index.php?topic=5595868.0">Bitcointalk ANN</a> · <a href="https://github.com/promirmir/AuronQ/issues">Issues</a> · <a href="https://github.com/promirmir/AuronQ/blob/main/SECURITY.md">Security</a></p>
+    <div class="wrap footer-inner">
+      <p>© AuronQ contributors · Open-source software under the <a href="https://github.com/promirmir/AuronQ/blob/main/LICENSE">MIT License</a></p>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="https://github.com/promirmir/AuronQ">GitHub</a>
+        <a href="https://github.com/promirmir/AuronQ/releases">All releases</a>
+        <a href="new-cryptocurrency.html">Technical overview</a>
+        <a href="https://github.com/promirmir/AuronQ/blob/main/SECURITY.md">Security</a>
+      </nav>
+    </div>
   </footer>
-</main>
 </body>
 </html>
