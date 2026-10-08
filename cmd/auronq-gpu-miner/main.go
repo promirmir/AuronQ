@@ -472,21 +472,28 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 	deadline := start.Add(duration)
 	var total uint64
 	var nonce uint64
+	var prepareTime, backendTime, finalizeTime time.Duration
 
 	for {
+		prepareStart := time.Now()
 		prepared, initial, err := buildBatch(template, nonce, batch)
 		if err != nil {
 			return err
 		}
+		prepareTime += time.Since(prepareStart)
+		backendStart := time.Now()
 		finals, err := backend.Run(initial, batch)
 		if err != nil {
 			return err
 		}
+		backendTime += time.Since(backendStart)
+		finalizeStart := time.Now()
 		for i := 0; i < batch; i++ {
 			if _, err := finishCandidate(prepared[i].pre, finals[i*128:(i+1)*128]); err != nil {
 				return err
 			}
 		}
+		finalizeTime += time.Since(finalizeStart)
 		total += uint64(batch)
 		nonce += uint64(batch)
 		if time.Now().After(deadline) && total > 0 {
@@ -496,6 +503,7 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 
 	elapsed := time.Since(start)
 	rate := float64(total) / elapsed.Seconds()
+	fmt.Printf("BENCHMARK BREAKDOWN prepare=%s backend=%s finalize=%s (wall-clock, inclusive of host/device transfers)\n", prepareTime.Round(time.Millisecond), backendTime.Round(time.Millisecond), finalizeTime.Round(time.Millisecond))
 	fmt.Printf("BENCHMARK OK hashes=%d elapsed=%s avg=%.3f H/s batch=%d\n",
 		total, elapsed.Round(time.Millisecond), rate, batch)
 	return nil
