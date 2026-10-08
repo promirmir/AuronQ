@@ -189,10 +189,7 @@ func main() {
 						return fmt.Errorf("autotune thermal telemetry unavailable: %w", err)
 					}
 					// Leave a margin because the sensor is sampled between complete batches.
-					if temp >= *thermalLimit-3 {
-						return fmt.Errorf("autotune paused for safety: GPU at %d C, limit %d C", temp, *thermalLimit)
-					}
-					return nil
+					return validateAutotuneTemperature(temp, *thermalLimit)
 				}
 			}
 			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second, tuneGuard)
@@ -341,6 +338,21 @@ func runSelfTest(backend gpuBackend) error {
 	}
 	if gpuHash != cpuHash {
 		return fmt.Errorf("full AQM64 backend result does not match canonical CPU PowHash")
+	}
+	return nil
+}
+
+// validateAutotuneTemperature rejects unsafe or invalid thermal samples.
+// The margin leaves headroom for the next CUDA batch before the mining governor starts.
+func validateAutotuneTemperature(temp, limit int) error {
+	if limit < 60 || limit > 95 {
+		return fmt.Errorf("invalid GPU thermal limit %d C", limit)
+	}
+	if temp < -10 || temp > 125 {
+		return fmt.Errorf("invalid GPU temperature sample %d C", temp)
+	}
+	if temp >= limit-3 {
+		return fmt.Errorf("autotune paused for safety: GPU at %d C, limit %d C", temp, limit)
 	}
 	return nil
 }
