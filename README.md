@@ -64,6 +64,15 @@ Review fees, payout policies, hardware compatibility, downloads and connection p
 
 Independent pools, wallets, exchanges and explorers may integrate the public network without prior project approval. See [pool integration](POOL-INTEGRATION.md), [exchange integration](EXCHANGE-INTEGRATION.md) and [machine-readable project metadata](auronq-project.json). An integration does not imply endorsement by AuronQ.
 
+## Independent network tracking
+
+External services have started collecting AuronQ mining and network statistics. These independently operated data sources are useful for comparing observations outside the project's own Explorer:
+
+- **[CPU-Mining.info — AURQ network statistics](https://cpu-mining.info/):** lists AuronQ (AURQ), the AQM64 algorithm, estimated network hashrate and reported block height.
+- **[MiningChamp — RPlant pool statistics](https://miningchamp.com/pool/rplant):** its third-party pool aggregator includes AURQ/AQM64 mining activity, pool hashrate and worker counts.
+
+These are **independent observations, not official consensus data, an independent security audit or an endorsement**. Reported figures may be delayed, incomplete or calculated differently. Compare them with data from a locally validating full node. Thank you to the people and services monitoring the network independently.
+
 ## Documentation
 
 | Topic | Reference |
