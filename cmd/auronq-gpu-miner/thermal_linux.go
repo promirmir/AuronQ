@@ -21,6 +21,7 @@ type thermalController struct {
 	lastCheck   time.Time
 	lastTemp    int
 	coolSamples int
+	readTemperature func(int) (int, error)
 }
 
 func newThermalController(device, targetC, limitC, maxBatch int) *thermalController {
@@ -34,6 +35,7 @@ func newThermalController(device, targetC, limitC, maxBatch int) *thermalControl
 		minBatch: 1,
 		maxBatch: maxBatch,
 		lastTemp: -1,
+		readTemperature: queryNVIDIATemperature,
 	}
 }
 
@@ -50,9 +52,14 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 	}
 	t.lastCheck = now
 
-	temp, err := queryNVIDIATemperature(t.device)
+	readTemperature := t.readTemperature
+	if readTemperature == nil { readTemperature = queryNVIDIATemperature }
+	temp, err := readTemperature(t.device)
 	if err != nil {
 		return batch, -1, 0, "stop", fmt.Errorf("THERMAL TELEMETRY FAILSAFE: local NVIDIA temperature unavailable for GPU %d: %w", t.device, err)
+	}
+	if temp < 0 || temp > 125 {
+		return batch, temp, 0, "stop", fmt.Errorf("THERMAL SENSOR INVALID: GPU %d returned %d C", t.device, temp)
 	}
 	t.lastTemp = temp
 	if temp >= t.limitC {
@@ -77,10 +84,30 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 		action = "trim"
 		t.coolSamples = 0
 	case temp <= t.targetC-4:
+		// Braiins-style staged recovery: regain throughput cautiously after
+		// consecutive cool samples; retain our original hard thermal stop.
 		t.coolSamples++
 		if t.coolSamples >= 3 && batch < t.maxBatch {
 			step := maxInt(1, t.maxBatch/12)
 			newBatch = minInt(t.maxBatch, batch+step)
+			action = "increase"
+			t.coolSamples = 0
+		}
+	case temp <= t.targetC-2:
+		// Recover more slowly in the near-target band; previous logic
+		// could leave a throttled GPU stuck indefinitely at target-2C.
+		t.coolSamples++
+		if t.coolSamples >= 6 && batch < t.maxBatch {
+			newBatch = minInt(t.maxBatch, batch+1)
+			action = "increase"
+			t.coolSamples = 0
+		}
+	case temp == t.targetC-1:
+		// Very slow recovery one degree below target. The next hot sample
+		// still immediately trims batch and applies the existing duty pause.
+		t.coolSamples++
+		if t.coolSamples >= 10 && batch < t.maxBatch {
+			newBatch = minInt(t.maxBatch, batch+1)
 			action = "increase"
 			t.coolSamples = 0
 		}

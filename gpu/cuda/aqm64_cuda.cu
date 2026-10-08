@@ -318,10 +318,15 @@ AQ_EXPORT int aqm64_cuda_init(
     }
 
     // Keep substantial VRAM headroom for the desktop/display driver and CUDA.
-    const size_t usable = free_bytes * 60 / 100;
+    // Reserve at least 35% of currently free VRAM for the display, OS and
+    // other applications. This is a recommendation, not an allocation: the
+    // subsequent end-to-end autotuner validates batches against actual memory.
+    const size_t usable = free_bytes * 65 / 100;
     int memory_lanes = static_cast<int>(usable / kBytesPerCandidate);
     memory_lanes = std::max(1, memory_lanes);
-    int occupancy_lanes = std::max(1, prop.multiProcessorCount * 2);
+    // Argon2 is latency/memory bound: two concurrent candidates per SM can
+    // underfill modern GPUs. Permit up to three, bounded by memory headroom.
+    int occupancy_lanes = std::max(1, prop.multiProcessorCount * 3);
     int rec = std::min({64, memory_lanes, occupancy_lanes});
 
     if (recommended_batch) *recommended_batch = rec;
@@ -374,12 +379,9 @@ AQ_EXPORT int aqm64_cuda_run(
         set_cuda_error(err, err_cap, "AQM64 kernel launch", rc);
         return 1;
     }
-    rc = cudaDeviceSynchronize();
-    if (rc != cudaSuccess) {
-        set_cuda_error(err, err_cap, "AQM64 kernel execution", rc);
-        return 1;
-    }
-
+    // The blocking D2H copy below uses the same default CUDA stream. It
+    // waits for the kernel and propagates execution failures; an additional
+    // device-wide synchronization would unnecessarily serialize all streams.
     rc = cudaMemcpy(
         final_blocks, g_final, final_bytes, cudaMemcpyDeviceToHost);
     if (rc != cudaSuccess) {

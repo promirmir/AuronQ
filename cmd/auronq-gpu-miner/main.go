@@ -169,13 +169,28 @@ func main() {
 		}
 	}
 
+	// Apply the same fail-closed temperature checks to autotune and offline benchmarks.
+	var computeGuard func() error
+	if backendKind == "cuda" && *thermalAuto && (*autoTune || *benchmark) {
+		if *thermalLimit < 60 || *thermalLimit > 95 {
+			fmt.Fprintln(os.Stderr, "--thermal-limit must be between 60 and 95 C")
+			os.Exit(2)
+		}
+		computeGuard = func() error {
+			temp, err := queryNVIDIATemperature(*device)
+			if err != nil {
+				return fmt.Errorf("GPU thermal telemetry unavailable: %w", err)
+			}
+			return validateAutotuneTemperature(temp, *thermalLimit)
+		}
+	}
 	if *autoTune {
 		if *autoTuneSeconds < 1 {
 			fmt.Fprintln(os.Stderr, "--auto-tune-seconds must be at least 1")
 			os.Exit(2)
 		}
 		if backendKind == "cuda" || backendKind == "opencl" {
-			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second)
+			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second, computeGuard)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "AUTOTUNE FAILED:", err)
 				os.Exit(1)
@@ -192,7 +207,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "--benchmark-seconds must be at least 1")
 			os.Exit(2)
 		}
-		if err := runBenchmark(backend, batch, time.Duration(*benchmarkSeconds)*time.Second); err != nil {
+		if err := runBenchmark(backend, batch, time.Duration(*benchmarkSeconds)*time.Second, computeGuard); err != nil {
 			fmt.Fprintln(os.Stderr, "BENCHMARK FAILED:", err)
 			os.Exit(1)
 		}
@@ -325,7 +340,22 @@ func runSelfTest(backend gpuBackend) error {
 	return nil
 }
 
-func runAutoTune(backend gpuBackend, perBatch time.Duration) (int, float64, error) {
+// validateAutotuneTemperature rejects unsafe or invalid thermal samples.
+// The margin leaves headroom for the next CUDA batch before the mining governor starts.
+func validateAutotuneTemperature(temp, limit int) error {
+	if limit < 60 || limit > 95 {
+		return fmt.Errorf("invalid GPU thermal limit %d C", limit)
+	}
+	if temp < 0 || temp > 125 {
+		return fmt.Errorf("invalid GPU temperature sample %d C", temp)
+	}
+	if temp >= limit-3 {
+		return fmt.Errorf("autotune paused for safety: GPU at %d C, limit %d C", temp, limit)
+	}
+	return nil
+}
+
+func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func() error) (int, float64, error) {
 	if perBatch <= 0 {
 		perBatch = time.Second
 	}
@@ -362,57 +392,83 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration) (int, float64, erro
 		template.Header.MerkleRoot[i] = byte(i*17 + 11)
 	}
 
-	bestBatch := 0
-	bestRate := 0.0
-	fmt.Printf("AUTOTUNE start candidates=%v per_batch=%s\n", candidates, perBatch.Round(time.Second))
-	for _, batch := range candidates {
+	// Recheck the two leading candidates. GPU power/clock ramp and operating
+	// system scheduling can distort one short sample; the second pass reduces
+	// the likelihood of locking in a transiently fast batch.
+	measure := func(batch int) (float64, error) {
 		start := time.Now()
 		deadline := start.Add(perBatch)
-		var total uint64
-		var nonce uint64
-		valid := true
-
+		var total, nonce uint64
+		warmed := false
 		for {
+			if thermalGuard != nil {
+				if err := thermalGuard(); err != nil { return 0, err }
+			}
 			prepared, initial, err := buildBatch(template, nonce, batch)
-			if err != nil {
-				return 0, 0, err
-			}
+			if err != nil { return 0, err }
 			finals, err := backend.Run(initial, batch)
-			if err != nil {
-				fmt.Printf("AUTOTUNE batch=%d skipped: %v\n", batch, err)
-				valid = false
-				break
+			if thermalGuard != nil {
+				if guardErr := thermalGuard(); guardErr != nil { return 0, guardErr }
 			}
+			if err != nil { return 0, err }
 			for i := 0; i < batch; i++ {
 				if _, err := finishCandidate(prepared[i].pre, finals[i*128:(i+1)*128]); err != nil {
-					return 0, 0, err
+					return 0, err
 				}
 			}
 			total += uint64(batch)
 			nonce += uint64(batch)
-			if time.Now().After(deadline) && total > 0 {
-				break
+			if !warmed {
+				warmed = true
+				start = time.Now()
+				deadline = start.Add(perBatch)
+				total = 0
+				continue
 			}
+			if time.Now().After(deadline) && total > 0 { break }
 		}
-
-		if !valid || total == 0 {
+		return float64(total) / time.Since(start).Seconds(), nil
+	}
+	bestBatch, secondBatch := 0, 0
+	bestRate, secondRate := 0.0, 0.0
+	fmt.Printf("AUTOTUNE start candidates=%v per_batch=%s\n", candidates, perBatch.Round(time.Second))
+	for _, batch := range candidates {
+		rate, err := measure(batch)
+		if err != nil {
+			// A sensor or thermal guard failure is fatal. Backend capacity failures
+			// are handled only when no thermal guard is active.
+			if thermalGuard != nil { return 0, 0, err }
+			fmt.Printf("AUTOTUNE batch=%d skipped: %v\n", batch, err)
 			continue
 		}
-		elapsed := time.Since(start)
-		rate := float64(total) / elapsed.Seconds()
 		fmt.Printf("AUTOTUNE batch=%d rate=%.3f H/s\n", batch, rate)
 		if bestBatch == 0 || rate > bestRate {
-			bestBatch = batch
-			bestRate = rate
+			secondBatch, secondRate = bestBatch, bestRate
+			bestBatch, bestRate = batch, rate
+		} else if secondBatch == 0 || rate > secondRate {
+			secondBatch, secondRate = batch, rate
 		}
 	}
-	if bestBatch == 0 {
-		return 0, 0, fmt.Errorf("no usable accelerator batch size found")
+	if bestBatch == 0 { return 0, 0, fmt.Errorf("no usable accelerator batch size found") }
+	if secondBatch != 0 {
+		// Conservative min-of-two score: avoid choosing a batch from one
+		// short-lived performance spike. Do not raise thermal limits.
+		for _, batch := range []int{bestBatch, secondBatch} {
+			rate, err := measure(batch)
+			if err != nil { return 0, 0, fmt.Errorf("autotune confirmation batch %d: %w", batch, err) }
+			fmt.Printf("AUTOTUNE confirm batch=%d rate=%.3f H/s\n", batch, rate)
+			if batch == bestBatch {
+				if rate < bestRate { bestRate = rate }
+			} else {
+				if rate < secondRate { secondRate = rate }
+			}
+		}
+		if secondRate > bestRate { bestBatch, bestRate = secondBatch, secondRate }
 	}
 	return bestBatch, bestRate, nil
 }
 
-func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
+func runBenchmark(backend gpuBackend, batch int, duration time.Duration, thermalGuard func() error) error {
 	var template aq.Block
 	template.Header = aq.BlockHeader{
 		Version:   aq.BlockVersion,
@@ -433,21 +489,34 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 	deadline := start.Add(duration)
 	var total uint64
 	var nonce uint64
+	var prepareTime, backendTime, finalizeTime time.Duration
 
 	for {
+		if thermalGuard != nil {
+			if err := thermalGuard(); err != nil { return err }
+		}
+		prepareStart := time.Now()
 		prepared, initial, err := buildBatch(template, nonce, batch)
 		if err != nil {
 			return err
 		}
+		prepareTime += time.Since(prepareStart)
+		backendStart := time.Now()
 		finals, err := backend.Run(initial, batch)
+		if thermalGuard != nil {
+			if guardErr := thermalGuard(); guardErr != nil { return guardErr }
+		}
 		if err != nil {
 			return err
 		}
+		backendTime += time.Since(backendStart)
+		finalizeStart := time.Now()
 		for i := 0; i < batch; i++ {
 			if _, err := finishCandidate(prepared[i].pre, finals[i*128:(i+1)*128]); err != nil {
 				return err
 			}
 		}
+		finalizeTime += time.Since(finalizeStart)
 		total += uint64(batch)
 		nonce += uint64(batch)
 		if time.Now().After(deadline) && total > 0 {
@@ -457,6 +526,7 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 
 	elapsed := time.Since(start)
 	rate := float64(total) / elapsed.Seconds()
+	fmt.Printf("BENCHMARK BREAKDOWN prepare=%s backend=%s finalize=%s (wall-clock, inclusive of host/device transfers)\n", prepareTime.Round(time.Millisecond), backendTime.Round(time.Millisecond), finalizeTime.Round(time.Millisecond))
 	fmt.Printf("BENCHMARK OK hashes=%d elapsed=%s avg=%.3f H/s batch=%d\n",
 		total, elapsed.Round(time.Millisecond), rate, batch)
 	return nil
@@ -468,6 +538,9 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 	lastReport := start
 	var lastReportTotal uint64
 	var nextNonce uint64
+	var consecutiveStatusErrors int
+	var agent *adaptiveMiningAgent
+	if thermal != nil { agent = newAdaptiveMiningAgent() }
 
 	for {
 		template, err := client.Template(address)
@@ -495,12 +568,7 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				thermalPause = pause
 			}
 
-			st, err := client.Status()
-			if err == nil && !aq.MiningTemplateCurrent(template, st) {
-				fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
-				break
-			}
-
+			batchStarted := time.Now()
 			prepared, initial, err := buildBatch(template, nextNonce, batch)
 			if err != nil {
 				return err
@@ -542,9 +610,22 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				break
 			}
 
-			st, err = client.Status()
-			if err == nil && !aq.MiningTemplateCurrent(template, st) {
-				break
+			// One status poll after each compute batch is sufficient: the initial
+			// template is fresh, and a tip change is detected before the next batch.
+			// Avoid a redundant blocking RPC on the critical GPU hot path.
+			st, statusErr := client.Status()
+			if statusErr != nil {
+				consecutiveStatusErrors++
+				fmt.Printf("NODE_STATUS_WARNING consecutive=%d error=%v\n", consecutiveStatusErrors, statusErr)
+				if consecutiveStatusErrors >= 3 {
+					return fmt.Errorf("node status unavailable for %d consecutive GPU batches: %w", consecutiveStatusErrors, statusErr)
+				}
+			} else {
+				consecutiveStatusErrors = 0
+				if !aq.MiningTemplateCurrent(template, st) {
+					fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
+					break
+				}
 			}
 			prevNonce := nextNonce
 			nextNonce += uint64(batch)
@@ -552,6 +633,14 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				break
 			}
 
+			// Local adaptive adviser observes measured end-to-end batch throughput.
+			// It operates only well below the thermal target and may never override
+			// the separate, fail-closed hardware-temperature governor.
+			if agent != nil {
+				nextBatch, reason := agent.Observe(time.Now(), batch, batch, time.Since(batchStarted), thermal.lastTemp, thermal.Target(), thermal.maxBatch, thermalPause)
+				if reason != "" { fmt.Println(reason) }
+				batch = nextBatch
+			}
 			if thermalPause > 0 {
 				time.Sleep(thermalPause)
 			}

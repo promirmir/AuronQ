@@ -1,0 +1,134 @@
+name: Universal Miner Windows GPU test bundle
+
+on:
+  pull_request:
+    paths:
+      - 'cmd/auronq-gpu-miner/**'
+      - 'cmd/auronq-gpu-miner-gui/**'
+      - 'gpu/**'
+      - 'internal/**'
+      - '.github/workflows/universal-miner-test-bundle.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cuda-modern:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '13.2.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Build CUDA 13.2 DLL
+        shell: pwsh
+        run: |
+          & .\gpu\cuda\build-windows.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'CUDA 13.2 build failed' }
+          if (!(Test-Path gpu/cuda/auronq-aqm64-cuda.dll)) { throw 'Modern CUDA DLL missing' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auronq-cuda-modern
+          path: gpu/cuda/auronq-aqm64-cuda.dll
+          if-no-files-found: error
+
+  cuda-legacy:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '12.6.3'
+          method: network
+          use-github-cache: 'true'
+      - name: Build CUDA 12.6 DLL
+        shell: pwsh
+        run: |
+          & .\gpu\cuda\build-windows-legacy.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Legacy CUDA build failed' }
+          if (!(Test-Path gpu/cuda/auronq-aqm64-cuda-legacy.dll)) { throw 'Legacy CUDA DLL missing' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auronq-cuda-legacy
+          path: gpu/cuda/auronq-aqm64-cuda-legacy.dll
+          if-no-files-found: error
+
+  cuda-kepler:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '11.8.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Build CUDA 11.8 DLL
+        shell: pwsh
+        run: |
+          & .\gpu\cuda\build-windows-kepler.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Kepler CUDA build failed' }
+          if (!(Test-Path gpu/cuda/auronq-aqm64-cuda-kepler.dll)) { throw 'Kepler CUDA DLL missing' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auronq-cuda-kepler
+          path: gpu/cuda/auronq-aqm64-cuda-kepler.dll
+          if-no-files-found: error
+
+  windows-test-bundle:
+    needs: [cuda-modern, cuda-legacy, cuda-kepler]
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: auronq-cuda-*
+          path: gpu-libs
+          merge-multiple: true
+      - name: Test worker and create Windows package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          go test ./cmd/auronq-gpu-miner ./cmd/auronq-gpu-miner-gui ./internal/argon2pure ./internal/gputelemetry
+          if ($LASTEXITCODE -ne 0) { throw 'Unit tests failed' }
+          & .\gpu\opencl\build-windows.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'OpenCL DLL build failed' }
+          $out='dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          go build -trimpath -o "$out/auronq-miner-worker.exe" ./cmd/auronq-gpu-miner
+          if ($LASTEXITCODE -ne 0) { throw 'Worker build failed' }
+          go build -trimpath -ldflags '-H=windowsgui' -o "$out/AuronQ-Miner.exe" ./cmd/auronq-gpu-miner-gui
+          if ($LASTEXITCODE -ne 0) { throw 'GUI build failed' }
+          go build -trimpath -o "$out/auronq.exe" ./cmd/auronq
+          if ($LASTEXITCODE -ne 0) { throw 'Node build failed' }
+          foreach ($dll in @('auronq-aqm64-cuda.dll','auronq-aqm64-cuda-legacy.dll','auronq-aqm64-cuda-kepler.dll')) {
+            if (!(Test-Path "gpu-libs/$dll")) { throw "Required GPU DLL missing: $dll" }
+            Copy-Item "gpu-libs/$dll" $out
+          }
+          Copy-Item gpu/opencl/auronq-aqm64-opencl.dll $out
+          Copy-Item network.json, bootstrap.json, UNIVERSAL-MINER-GUIDE.md, GPU-MINER-GUIDE.md $out
+          if (Test-Path LICENSE) { Copy-Item LICENSE $out }
+          & "$out/auronq-miner-worker.exe" --backend cpu --cpu-threads 1 --self-test
+          if ($LASTEXITCODE -ne 0) { throw 'CPU AQM64 self-test failed' }
+          'TEST BUILD - NOT A PRODUCTION RELEASE. Verify GPU self-test and temperature before mining.' | Set-Content -Encoding UTF8 "$out/TEST-BUILD.txt"
+          Get-ChildItem $out -File | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash)  $(Split-Path $_.Path -Leaf)" } |
+            Set-Content -Encoding ascii "$out/SHA256SUMS.txt"
+          Compress-Archive -Path "$out/*" -DestinationPath "dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST.zip" -CompressionLevel Optimal
+          if (!(Test-Path 'dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST.zip')) { throw 'ZIP missing' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AuronQ-Universal-Miner-Windows-x64-GPU-TEST
+          path: dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST.zip
+          if-no-files-found: error
+          retention-days: 14
