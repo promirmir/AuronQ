@@ -1,0 +1,66 @@
+name: Publish Intelligent Miner v0.4.8 Alpha
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-miner-v0.4.8-alpha.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify release does not already exist
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view miner-v0.4.8-alpha >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite.' >&2
+            exit 1
+          fi
+      - name: Download verified Windows GPU bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release/windows
+          gh run download 37851578001 --name AuronQ-Universal-Miner-Windows-x64-GPU-TEST --dir release/windows
+          test -s release/windows/AuronQ-Miner.exe
+          test -s release/windows/auronq-miner-worker.exe
+          test -s release/windows/auronq.exe
+          test -s release/windows/SHA256SUMS.txt
+          test -s release/windows/auronq-aqm64-cuda.dll
+          test -s release/windows/auronq-aqm64-cuda-legacy.dll
+          test -s release/windows/auronq-aqm64-cuda-kepler.dll
+          test -s release/windows/auronq-aqm64-opencl.dll
+          if find release/windows -maxdepth 1 -iname '*.zip' | grep -q .; then
+            echo 'Unexpected nested ZIP in artifact' >&2
+            exit 1
+          fi
+      - name: Verify packaged file SHA256
+        run: |
+          cd release/windows
+          sha256sum --check SHA256SUMS.txt
+      - name: Assemble single-extract downloadable ZIP
+        run: |
+          cd release/windows
+          zip -q -9 -r ../AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip .
+          cd ..
+          sha256sum AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip > SHA256SUMS-AURONQ-MINER-v0.4.8.txt
+          unzip -l AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip | grep AuronQ-Miner.exe
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create miner-v0.4.8-alpha \
+            release/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip \
+            release/SHA256SUMS-AURONQ-MINER-v0.4.8.txt \
+            --target "$GITHUB_SHA" \
+            --title 'AuronQ Intelligent Universal Miner v0.4.8 Alpha' \
+            --prerelease \
+            --notes 'Windows x64 GUI/GPU alpha. Local adaptive batch agent, improved autotune and CUDA GPU performance, thermally protected mining, Solo node RPC rate-limit backoff (#121), single-extract download (#122), safe unattended node startup/template/status recovery and bounded GUI restart for node-only failures (#124). Built from verified GitHub Actions run 37851578001. Included NVIDIA CUDA modern/legacy/Kepler, OpenCL and CPU fallback, local full node, worker and GUI. No AQM64 Mainnet consensus changes. Real-device 24/7 stability has not yet been independently proven. Test temperature and GPU compatibility before unattended use. Other platform release assets are not included in this Windows-only package.'
