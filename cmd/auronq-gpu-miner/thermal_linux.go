@@ -21,6 +21,7 @@ type thermalController struct {
 	lastCheck   time.Time
 	lastTemp    int
 	coolSamples int
+	readTemperature func(int) (int, error)
 }
 
 func newThermalController(device, targetC, limitC, maxBatch int) *thermalController {
@@ -34,6 +35,7 @@ func newThermalController(device, targetC, limitC, maxBatch int) *thermalControl
 		minBatch: 1,
 		maxBatch: maxBatch,
 		lastTemp: -1,
+		readTemperature: queryNVIDIATemperature,
 	}
 }
 
@@ -50,7 +52,9 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 	}
 	t.lastCheck = now
 
-	temp, err := queryNVIDIATemperature(t.device)
+	readTemperature := t.readTemperature
+	if readTemperature == nil { readTemperature = queryNVIDIATemperature }
+	temp, err := readTemperature(t.device)
 	if err != nil {
 		return batch, -1, 0, "stop", fmt.Errorf("THERMAL TELEMETRY FAILSAFE: local NVIDIA temperature unavailable for GPU %d: %w", t.device, err)
 	}
