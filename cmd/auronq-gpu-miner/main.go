@@ -391,6 +391,7 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func()
 		var total uint64
 		var nonce uint64
 		valid := true
+		warmed := false
 
 		for {
 			if thermalGuard != nil {
@@ -420,6 +421,14 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func()
 			}
 			total += uint64(batch)
 			nonce += uint64(batch)
+			if !warmed {
+				// Exclude first run: it may allocate the GPU workspace and warm GPU clocks.
+				warmed = true
+				start = time.Now()
+				deadline = start.Add(perBatch)
+				total = 0
+				continue
+			}
 			if time.Now().After(deadline) && total > 0 {
 				break
 			}
