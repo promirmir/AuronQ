@@ -13,7 +13,7 @@
   <a href="https://github.com/promirmir/AuronQ/releases/latest"><img src="https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
   <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ" alt="Go version"></a>
-  <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha"><img src="https://img.shields.io/badge/Universal%20Miner-v0.4.6%20Alpha-7c5cff" alt="Universal Miner v0.4.6 Alpha"></a>
+  <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha"><img src="https://img.shields.io/badge/Universal%20Miner-v0.4.8%20Alpha-7c5cff" alt="Universal Miner v0.4.6 Alpha"></a>
   <img src="https://img.shields.io/badge/Mainnet-Live-19a974" alt="Mainnet Live">
 </p>
 
@@ -24,15 +24,18 @@ The AuronQ Mainnet is live. The project is designed around **independent full-no
 > [!IMPORTANT]
 > **Intelligent Miner update (8 October 2026):** PR [#118](https://github.com/promirmir/AuronQ/pull/118) is merged into `main` ([commit eb24ea8](https://github.com/promirmir/AuronQ/commit/eb24ea82230d06480a9c0439d5cbfc4c47436777)). Changes include a local deterministic adaptive batch agent (not a cloud AI model), two-pass accelerator autotuning, CUDA throughput refinements, NVIDIA fail-closed thermal protection, node-status watchdog and improved diagnostics; a follow-up fix [#121](https://github.com/promirmir/AuronQ/pull/121) throttles Solo status RPC calls and backs off when rate-limited. All five PR CI workflows passed, and the Windows CUDA test package was built successfully.
 >
-> **Latest updated Windows GPU test build:** [GitHub Actions run 37832849518](https://github.com/promirmir/AuronQ/actions/runs/37837949129) → artifact `AuronQ-Universal-Miner-Windows-x64-GPU-TEST` (login may be required; artifacts expire). **This is not the v0.4.6-alpha GitHub Release asset.** Existing release download links below continue to point to the older tagged version. Independent long-duration and multi-device verification and a permanent Release asset remain outstanding. No AQM64 consensus, Network ID, genesis or monetary rule changed.
+> **Previous Windows GPU test build:** [GitHub Actions run 37832849518](https://github.com/promirmir/AuronQ/actions/runs/37837949129) → artifact `AuronQ-Universal-Miner-Windows-x64-GPU-TEST` (login may be required; artifacts expire). **This is not the v0.4.6-alpha GitHub Release asset.** Existing release download links below continue to point to the older tagged version. Independent long-duration and multi-device verification while a permanent Windows v0.4.8 Release asset is now available. No AQM64 consensus, Network ID, genesis or monetary rule changed.
+
+> [!IMPORTANT]
+> **Latest Windows miner: [AuronQ Intelligent Universal Miner v0.4.8 Alpha](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip)** · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) · [SHA-256](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/SHA256SUMS-AURONQ-MINER-v0.4.8.txt). Includes local adaptive batch tuning, CUDA/OpenCL/CPU selection, thermal safety and guarded recovery from full-node downtime ([#124](https://github.com/promirmir/AuronQ/pull/124)). The ZIP extracts once. Windows x64 only for this version; other-platform downloads below are older v0.4.6-alpha builds. Real-world 24/7 reliability is not yet independently proven. No mainnet consensus changes.
 
 ## 🚀 Start here
 
 | Run the network | Mine AURQ | Inspect the chain |
 |---|---|---|
-| **AuronQ Desktop / Full Node v1.7.13** | **AuronQ Universal Miner v0.4.6 Alpha** | **Public Explorer** |
+| **AuronQ Desktop / Full Node v1.7.13** | **AuronQ Universal Miner v0.4.8 Alpha (Windows)** | **Public Explorer** |
 | Windows + Linux full validating node, wallet and local Explorer | AUTO CUDA→12.x Legacy→11.8 Kepler→OpenCL→CPU fallback, Windows GUI, portable Windows/Linux/macOS CPU builds, Solo/Pool | Blocks, transactions, peers and network state |
-| [⬇️ Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) | [⬇️ Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [All portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) | [🌐 Open Explorer](https://mir.taild63f46.ts.net/explorer) |
+| [⬇️ Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) | [⬇️ Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [All portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) | [🌐 Open Explorer](https://mir.taild63f46.ts.net/explorer) |
 
 > **Universal miner:** AUTO keeps the newest NVIDIA CUDA backend for current/new GPUs, then tries separate compatibility backends for Maxwell/Pascal/Volta (CUDA 12.x) and Kepler sm_35/sm_37 (CUDA 11.8), then vendor-neutral OpenCL for AMD/Intel/NVIDIA, and finally CPU AQM64. The CPU fallback uses a conservative memory/thread profile and is self-tested against canonical AQM64. Windows NVIDIA thermals use direct local NVML data. Portable CPU-safe CLI packages are CI-built for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64. Pool mode can use a user-supplied compatible external miner; AuronQ does not silently download third-party binaries.
 
@@ -66,12 +69,12 @@ A third-party listing or integration remains independently operated and does not
 > [!WARNING]
 > AuronQ is a young public cryptocurrency network in an early stage of operational maturity. AQM64 and the complete consensus/network implementation have **not** yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not use AuronQ to store or transfer substantial value.
 
-## ⛏️ Official AuronQ Universal Miner v0.4.6 Alpha
+## ⛏️ Official AuronQ Universal Miner v0.4.8 Alpha (Windows)
 
 The official miner now uses **AUTO compute selection**: current NVIDIA CUDA → CUDA 12.x legacy → CUDA 11.8 Kepler → vendor-neutral OpenCL GPU → native CPU AQM64. The portable release matrix covers Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64; Windows x64 also has the PL/EN GUI.
 
 <p align="center">
-  <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip"><strong>⬇️ Windows x64</strong></a>
+  <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip"><strong>⬇️ Windows x64</strong></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz"><strong>⬇️ Linux amd64</strong></a>
   &nbsp;·&nbsp;
@@ -80,7 +83,7 @@ The official miner now uses **AUTO compute selection**: current NVIDIA CUDA → 
   <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha">Release page</a>
 </p>
 
-| Capability | v0.4.6 Alpha |
+| Capability | Windows v0.4.8 Alpha |
 |---|---|
 | AUTO backend | ✅ Current CUDA → CUDA 12.x Maxwell/Pascal/Volta → CUDA 11.8 Kepler → OpenCL GPU (AMD/Intel/NVIDIA) → CPU |
 | Portable CPU platforms | ✅ Windows x64/ARM64 · Linux x64/ARM64 · macOS x64/ARM64 |
@@ -121,7 +124,7 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 | Component | Current release | Status | Download |
 |---|---:|---|---|
 | Desktop / Full Node | **v1.7.13** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) |
-| Universal Miner | **v0.4.6 Alpha** | AUTO CUDA→12.x Legacy→11.8 Kepler→OpenCL→CPU · Windows GUI · portable Windows/Linux/macOS · safe fallback | [Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
+| Universal Miner | **v0.4.8 Alpha (Windows)** | AUTO CUDA→12.x Legacy→11.8 Kepler→OpenCL→CPU · Windows GUI · portable Windows/Linux/macOS · safe fallback | [Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
 | AuronQ Mobile | **0.5.3 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) |
 
 **Project site:** https://promirmir.github.io/AuronQ/
@@ -141,8 +144,8 @@ This direction is intentionally conservative: the aim is for AuronQ to survive t
 ## ⛏️ Mine AURQ
 
 **Official miner:**
-- **AuronQ Universal Miner v0.4.6 Alpha:** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha
-- **Windows x64 GUI/GPU:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Windows-x64-GUI-GPU.zip
+- **AuronQ Universal Miner v0.4.8 Alpha (Windows):** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha
+- **Windows x64 GUI/GPU:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip
 - **Linux x64 GPU:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz
 - **Portable Windows/Linux/macOS CPU-safe builds:** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha
 - **Universal user guide:** [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md)
