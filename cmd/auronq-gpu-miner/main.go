@@ -169,30 +169,28 @@ func main() {
 		}
 	}
 
+	// Apply the same fail-closed temperature checks to autotune and offline benchmarks.
+	var computeGuard func() error
+	if backendKind == "cuda" && *thermalAuto && (*autoTune || *benchmark) {
+		if *thermalLimit < 60 || *thermalLimit > 95 {
+			fmt.Fprintln(os.Stderr, "--thermal-limit must be between 60 and 95 C")
+			os.Exit(2)
+		}
+		computeGuard = func() error {
+			temp, err := queryNVIDIATemperature(*device)
+			if err != nil {
+				return fmt.Errorf("GPU thermal telemetry unavailable: %w", err)
+			}
+			return validateAutotuneTemperature(temp, *thermalLimit)
+		}
+	}
 	if *autoTune {
 		if *autoTuneSeconds < 1 {
 			fmt.Fprintln(os.Stderr, "--auto-tune-seconds must be at least 1")
 			os.Exit(2)
 		}
 		if backendKind == "cuda" || backendKind == "opencl" {
-			// A thermal safety check is required for CUDA when thermal protection is requested.
-			// Autotune runs before the mining governor, so every compute batch must be guarded.
-			var tuneGuard func() error
-			if backendKind == "cuda" && *thermalAuto {
-				if *thermalLimit < 60 || *thermalLimit > 95 {
-					fmt.Fprintln(os.Stderr, "--thermal-limit must be between 60 and 95 C")
-					os.Exit(2)
-				}
-				tuneGuard = func() error {
-					temp, err := queryNVIDIATemperature(*device)
-					if err != nil {
-						return fmt.Errorf("autotune thermal telemetry unavailable: %w", err)
-					}
-					// Leave a margin because the sensor is sampled between complete batches.
-					return validateAutotuneTemperature(temp, *thermalLimit)
-				}
-			}
-			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second, tuneGuard)
+			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second, computeGuard)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "AUTOTUNE FAILED:", err)
 				os.Exit(1)
@@ -209,7 +207,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "--benchmark-seconds must be at least 1")
 			os.Exit(2)
 		}
-		if err := runBenchmark(backend, batch, time.Duration(*benchmarkSeconds)*time.Second); err != nil {
+		if err := runBenchmark(backend, batch, time.Duration(*benchmarkSeconds)*time.Second, computeGuard); err != nil {
 			fmt.Fprintln(os.Stderr, "BENCHMARK FAILED:", err)
 			os.Exit(1)
 		}
@@ -463,7 +461,7 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func()
 	return bestBatch, bestRate, nil
 }
 
-func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
+func runBenchmark(backend gpuBackend, batch int, duration time.Duration, thermalGuard func() error) error {
 	var template aq.Block
 	template.Header = aq.BlockHeader{
 		Version:   aq.BlockVersion,
@@ -487,6 +485,9 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 	var prepareTime, backendTime, finalizeTime time.Duration
 
 	for {
+		if thermalGuard != nil {
+			if err := thermalGuard(); err != nil { return err }
+		}
 		prepareStart := time.Now()
 		prepared, initial, err := buildBatch(template, nonce, batch)
 		if err != nil {
@@ -495,6 +496,9 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration) error {
 		prepareTime += time.Since(prepareStart)
 		backendStart := time.Now()
 		finals, err := backend.Run(initial, batch)
+		if thermalGuard != nil {
+			if guardErr := thermalGuard(); guardErr != nil { return guardErr }
+		}
 		if err != nil {
 			return err
 		}
