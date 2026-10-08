@@ -140,6 +140,10 @@ type App struct {
 	minerCmd           *exec.Cmd
 	miner              minerState
 	minerStopRequested bool
+	workerLastFatal string
+	workerSession uint64
+	workerRestartCount int
+	workerRestartWindow time.Time
 	gpuName            string
 	gpus               []gpuInfo
 	gpuTelemetryErr    string
@@ -1461,6 +1465,8 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, _ bool, backend st
 	a.mu.Lock()
 	a.minerCmd = cmd
 	a.minerStopRequested = false
+	a.workerSession++
+	a.workerLastFatal = ""
 	a.miner = minerState{
 		Running:     true,
 		Mode:        mode,
@@ -1476,16 +1482,37 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, _ bool, backend st
 		go a.monitorPoolThermals(cmd)
 	}
 
-	go a.scanWorker(stdout, "")
-	go a.scanWorker(stderr, "ERROR: ")
+	stdoutDone := make(chan struct{})
+	stderrDone := make(chan struct{})
+	go func() { defer close(stdoutDone); a.scanWorker(stdout, "") }()
+	go func() { defer close(stderrDone); a.scanWorker(stderr, "ERROR: ") }()
 	go func() {
 		err := cmd.Wait()
+		// Drain the worker's final diagnostic line before classifying the exit.
+		<-stdoutDone
+		<-stderrDone
 		a.mu.Lock()
 		stopped := a.minerStopRequested
 		if a.minerCmd == cmd {
 			a.minerCmd = nil
 		}
 		finishedMode := a.miner.Mode
+		session := a.workerSession
+		fatalLine := a.workerLastFatal
+		shouldRecover := err != nil && !stopped && finishedMode == "mining" && a.cfg.MiningMode == "solo" && recoverableSoloExit(fatalLine)
+		attempt := 0
+		if shouldRecover {
+			if time.Since(a.workerRestartWindow) > 30*time.Minute {
+				a.workerRestartWindow = time.Now()
+				a.workerRestartCount = 0
+			}
+			if a.workerRestartCount >= 3 {
+				shouldRecover = false
+			} else {
+				a.workerRestartCount++
+				attempt = a.workerRestartCount
+			}
+		}
 		a.miner.Running = false
 		a.miner.Mode = ""
 		a.miner.Backend = ""
@@ -1501,11 +1528,38 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, _ bool, backend st
 		} else {
 			a.addLog("Worker stopped")
 		}
+		if shouldRecover {
+			delay := time.Duration(5*attempt) * time.Second
+			a.addLog(fmt.Sprintf("WORKER_RECOVERY wait=%s attempt=%d/3 cause=%s", delay, attempt, fatalLine))
+			go func() {
+				time.Sleep(delay)
+				a.mu.RLock()
+				allowed := a.workerSession == session && !a.minerStopRequested && !a.miner.Running
+				cfg := a.cfg
+				a.mu.RUnlock()
+				if !allowed { return }
+				if e := a.startWorker("mining", cfg); e != nil {
+					a.addLog("WORKER_RECOVERY failed: " + e.Error())
+				}
+			}()
+		} else if attempt == 0 && err != nil && !stopped && finishedMode == "mining" && recoverableSoloExit(fatalLine) {
+			a.addLog("WORKER_RECOVERY disabled: three restarts in thirty minutes; intervention required")
+		}
 	}()
 	return nil
 }
 
 var syscallSysProcAttr = syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+
+// Only connection failures are eligible for bounded solo-worker restart.
+// Never retry GPU failures, thermal limit violations, bad signatures,
+// invalid network identity or AQM64 self-test failures automatically.
+func recoverableSoloExit(line string) bool {
+	msg := strings.ToLower(strings.TrimSpace(line))
+	return strings.HasPrefix(msg, "node status:") ||
+		strings.HasPrefix(msg, "miner stopped: node status unavailable") ||
+		strings.HasPrefix(msg, "miner stopped: template: ")
+}
 
 func (a *App) scanWorker(r io.Reader, prefix string) {
 	sc := bufio.NewScanner(r)
@@ -1516,6 +1570,11 @@ func (a *App) scanWorker(r io.Reader, prefix string) {
 			continue
 		}
 		a.addLog(prefix + line)
+		if recoverableSoloExit(line) {
+			a.mu.Lock()
+			a.workerLastFatal = line
+			a.mu.Unlock()
+		}
 		a.parseWorkerLine(line)
 	}
 }
@@ -1692,6 +1751,7 @@ func (a *App) stopWorker() {
 	a.mu.Lock()
 	cmd := a.minerCmd
 	a.minerStopRequested = true
+	a.workerSession++ // Invalidate any delayed automatic restart.
 	a.mu.Unlock()
 	if cmd != nil && cmd.Process != nil {
 		pid := strconv.Itoa(cmd.Process.Pid)
