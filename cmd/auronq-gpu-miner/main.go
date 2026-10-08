@@ -348,7 +348,7 @@ func validateAutotuneTemperature(temp, limit int) error {
 	if limit < 60 || limit > 95 {
 		return fmt.Errorf("invalid GPU thermal limit %d C", limit)
 	}
-	if temp < -10 || temp > 125 {
+	if temp < 0 || temp > 125 {
 		return fmt.Errorf("invalid GPU temperature sample %d C", temp)
 	}
 	if temp >= limit-3 {
