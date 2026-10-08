@@ -392,71 +392,78 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func()
 		template.Header.MerkleRoot[i] = byte(i*17 + 11)
 	}
 
-	bestBatch := 0
-	bestRate := 0.0
-	fmt.Printf("AUTOTUNE start candidates=%v per_batch=%s\n", candidates, perBatch.Round(time.Second))
-	for _, batch := range candidates {
+	// Recheck the two leading candidates. GPU power/clock ramp and operating
+	// system scheduling can distort one short sample; the second pass reduces
+	// the likelihood of locking in a transiently fast batch.
+	measure := func(batch int) (float64, error) {
 		start := time.Now()
 		deadline := start.Add(perBatch)
-		var total uint64
-		var nonce uint64
-		valid := true
+		var total, nonce uint64
 		warmed := false
-
 		for {
 			if thermalGuard != nil {
-				if err := thermalGuard(); err != nil {
-					return 0, 0, err
-				}
+				if err := thermalGuard(); err != nil { return 0, err }
 			}
 			prepared, initial, err := buildBatch(template, nonce, batch)
-			if err != nil {
-				return 0, 0, err
-			}
+			if err != nil { return 0, err }
 			finals, err := backend.Run(initial, batch)
 			if thermalGuard != nil {
-				if guardErr := thermalGuard(); guardErr != nil {
-					return 0, 0, guardErr
-				}
+				if guardErr := thermalGuard(); guardErr != nil { return 0, guardErr }
 			}
-			if err != nil {
-				fmt.Printf("AUTOTUNE batch=%d skipped: %v\n", batch, err)
-				valid = false
-				break
-			}
+			if err != nil { return 0, err }
 			for i := 0; i < batch; i++ {
 				if _, err := finishCandidate(prepared[i].pre, finals[i*128:(i+1)*128]); err != nil {
-					return 0, 0, err
+					return 0, err
 				}
 			}
 			total += uint64(batch)
 			nonce += uint64(batch)
 			if !warmed {
-				// Exclude first run: it may allocate the GPU workspace and warm GPU clocks.
 				warmed = true
 				start = time.Now()
 				deadline = start.Add(perBatch)
 				total = 0
 				continue
 			}
-			if time.Now().After(deadline) && total > 0 {
-				break
-			}
+			if time.Now().After(deadline) && total > 0 { break }
 		}
-
-		if !valid || total == 0 {
+		return float64(total) / time.Since(start).Seconds(), nil
+	}
+	bestBatch, secondBatch := 0, 0
+	bestRate, secondRate := 0.0, 0.0
+	fmt.Printf("AUTOTUNE start candidates=%v per_batch=%s\\n", candidates, perBatch.Round(time.Second))
+	for _, batch := range candidates {
+		rate, err := measure(batch)
+		if err != nil {
+			// A sensor or thermal guard failure is fatal. Backend capacity failures
+			// are handled only when no thermal guard is active.
+			if thermalGuard != nil { return 0, 0, err }
+			fmt.Printf("AUTOTUNE batch=%d skipped: %v\\n", batch, err)
 			continue
 		}
-		elapsed := time.Since(start)
-		rate := float64(total) / elapsed.Seconds()
-		fmt.Printf("AUTOTUNE batch=%d rate=%.3f H/s\n", batch, rate)
+		fmt.Printf("AUTOTUNE batch=%d rate=%.3f H/s\\n", batch, rate)
 		if bestBatch == 0 || rate > bestRate {
-			bestBatch = batch
-			bestRate = rate
+			secondBatch, secondRate = bestBatch, bestRate
+			bestBatch, bestRate = batch, rate
+		} else if secondBatch == 0 || rate > secondRate {
+			secondBatch, secondRate = batch, rate
 		}
 	}
-	if bestBatch == 0 {
-		return 0, 0, fmt.Errorf("no usable accelerator batch size found")
+	if bestBatch == 0 { return 0, 0, fmt.Errorf("no usable accelerator batch size found") }
+	if secondBatch != 0 {
+		// Conservative min-of-two score: avoid choosing a batch from one
+		// short-lived performance spike. Do not raise thermal limits.
+		for _, batch := range []int{bestBatch, secondBatch} {
+			rate, err := measure(batch)
+			if err != nil { return 0, 0, fmt.Errorf("autotune confirmation batch %d: %w", batch, err) }
+			fmt.Printf("AUTOTUNE confirm batch=%d rate=%.3f H/s\\n", batch, rate)
+			if batch == bestBatch {
+				if rate < bestRate { bestRate = rate }
+			} else {
+				if rate < secondRate { secondRate = rate }
+			}
+		}
+		if secondRate > bestRate { bestBatch, bestRate = secondBatch, secondRate }
 	}
 	return bestBatch, bestRate, nil
 }
