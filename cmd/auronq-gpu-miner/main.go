@@ -544,9 +544,13 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 	if thermal != nil { agent = newAdaptiveMiningAgent() }
 
 	for {
+		// Wait for the full node to recover; never hash without a fresh template.
 		template, err := client.Template(address)
-		if err != nil {
-			return fmt.Errorf("template: %w", err)
+		for attempt := 0; err != nil; attempt++ {
+			delay := nodeRecoveryDelay(attempt)
+			fmt.Printf("NODE_TEMPLATE_RETRY wait=%s error=%v\\n", delay, err)
+			time.Sleep(delay)
+			template, err = client.Template(address)
 		}
 		if template.Header.PowAlgo != aq.PowAlgorithmAQM64 {
 			return fmt.Errorf("unsupported PoW algorithm %d", template.Header.PowAlgo)
@@ -616,18 +620,15 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 			// five seconds, not one RPC per nonce batch.
 			if time.Since(lastStatusCheck) >= 5*time.Second {
 				st, statusErr := client.Status()
-				for attempt := 0; statusErr != nil && attempt < 6; attempt++ {
+				for attempt := 0; statusErr != nil; attempt++ {
 					consecutiveStatusErrors++
 					fmt.Printf("NODE_STATUS_WARNING consecutive=%d error=%v\n", consecutiveStatusErrors, statusErr)
 					// Pause GPU work during node errors. Backoff avoids rapidly
 					// exhausting the same shared rate limiter again.
-					delay := time.Duration(3*(attempt+1)) * time.Second
-					fmt.Printf("NODE_STATUS_BACKOFF wait=%s attempt=%d/6\n", delay, attempt+1)
+					delay := nodeRecoveryDelay(attempt)
+					fmt.Printf("NODE_STATUS_BACKOFF wait=%s attempt=%d\n", delay, attempt+1)
 					time.Sleep(delay)
 					st, statusErr = client.Status()
-				}
-				if statusErr != nil {
-					return fmt.Errorf("node status unavailable after throttled retries: %w", statusErr)
 				}
 				consecutiveStatusErrors = 0
 				lastStatusCheck = time.Now()
