@@ -86,14 +86,19 @@ jobs:
             exit 0
           fi
 
-          if grep -q "GitHub Actions is not permitted to create or approve pull requests" <<<"$output"; then
-            echo "::warning::Live peer registry published to automation/peer-registry; repository settings block only the optional reviewed-main PR."
+          if grep -Fq "GitHub Actions is not permitted to create or approve pull requests" <<<"$output"; then
+            echo "::notice::Verified peer registry published; the GitHub Actions token cannot create PRs under the current repository policy. Manual review PR required."
             {
-              echo "### Peer registry update ready for review"
-              echo
-              echo "The crawler published the live supplemental registry on `automation/peer-registry` after network-health verification."
-              echo "Fresh nodes that include the live-registry manifest can use it immediately. Repository policy blocks only the optional static snapshot PR."
-              echo "Create a protected-main PR from `automation/peer-registry` when convenient."
+              cat <<'SUMMARY'
+          ### Verified peer registry update ready for review
+
+          The crawler published a verified supplemental registry on `automation/peer-registry`.
+          Nodes configured to use that branch's live registry can consume it without changing main.
+          Repository settings intentionally block PR creation by GitHub Actions. This is not a crawler or network-health failure.
+
+          Review the changes and open a PR against the protected main branch:
+          https://github.com/promirmir/AuronQ/compare/main...automation/peer-registry?expand=1
+          SUMMARY
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
