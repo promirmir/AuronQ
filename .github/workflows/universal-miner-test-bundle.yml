@@ -124,11 +124,13 @@ jobs:
           Get-ChildItem $out -File | Get-FileHash -Algorithm SHA256 |
             ForEach-Object { "$($_.Hash)  $(Split-Path $_.Path -Leaf)" } |
             Set-Content -Encoding ascii "$out/SHA256SUMS.txt"
-          Compress-Archive -Path "$out/*" -DestinationPath "dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST.zip" -CompressionLevel Optimal
-          if (!(Test-Path 'dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST.zip')) { throw 'ZIP missing' }
+          # upload-artifact already generates a downloadable ZIP archive.
+          # Upload the ready-to-run directory to avoid ZIP-inside-ZIP.
+          if (!(Test-Path "$out/AuronQ-Miner.exe")) { throw 'Miner executable missing' }
+          if (!(Test-Path "$out/SHA256SUMS.txt")) { throw 'Checksums missing' }
       - uses: actions/upload-artifact@v4
         with:
           name: AuronQ-Universal-Miner-Windows-x64-GPU-TEST
-          path: dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST.zip
+          path: dist/AuronQ-Universal-Miner-Windows-x64-GPU-TEST/*
           if-no-files-found: error
           retention-days: 14
