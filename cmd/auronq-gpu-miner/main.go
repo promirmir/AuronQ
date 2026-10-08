@@ -636,6 +636,9 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				}
 				consecutiveStatusErrors = 0
 				lastStatusCheck = time.Now()
+				if st.NetworkID.String() != mainnetNetworkID {
+					return fmt.Errorf("refusing to mine: node Network ID changed during reconnect")
+				}
 				if !aq.MiningTemplateCurrent(template, st) {
 					fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
 					break
