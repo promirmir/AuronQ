@@ -2,6 +2,19 @@
 
 This file is the concise public history of AuronQ. Detailed historical release notes and old checksum files are preserved under [docs/archive/](docs/archive/).
 
+## Intelligent Universal Miner — 8 October 2026 (merged into main; Windows GPU TEST artifact)
+
+- Merged [PR #118](https://github.com/promirmir/AuronQ/pull/118), commit [eb24ea8](https://github.com/promirmir/AuronQ/commit/eb24ea82230d06480a9c0439d5cbfc4c47436777).
+- Added a lightweight, fully local deterministic adaptive batch controller with bounded probes and rollback on measured performance regression. It is not a neural-network model and requires no cloud account.
+- Improved accelerator autotune through separate warmup, candidate ranking and second confirmation of leading batch configurations.
+- Updated native NVIDIA CUDA occupancy recommendation and eliminated redundant synchronization in the default-stream execution path.
+- Preserved independently enforced thermal targets, fail-closed sensor checks and emergency stop; expanded cautious thermal recovery on supported NVIDIA drivers.
+- Reduced Solo node RPC overhead while adding protection against repeatedly unavailable node status; expanded live GUI diagnostics and estimated network hashrate.
+- All five PR workflow suites passed, including accelerated CUDA and Windows full GPU bundle.
+- Windows test artifact: [workflow 37832849518](https://github.com/promirmir/AuronQ/actions/runs/37837949129) → `AuronQ-Universal-Miner-Windows-x64-GPU-TEST`. This temporary Actions artifact is **not** a permanent GitHub Release asset or the old tagged v0.4.6-alpha download.
+- A user confirmed successful RTX 4050 Laptop mining near 200 H/s in one test session; this does not establish universal performance or long-term independent audit coverage.
+- Mainnet genesis, Network ID, AQM64 consensus, monetary supply, difficulty and validation rules were not modified.
+
 ## Recent Android updates
 
 ### Android 0.5.3 Alpha

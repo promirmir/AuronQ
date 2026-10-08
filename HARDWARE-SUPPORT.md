@@ -1,4 +1,10 @@
 # AuronQ Mining Hardware Support
+> [!IMPORTANT]
+> **Intelligent Miner update (8 October 2026):** PR [#118](https://github.com/promirmir/AuronQ/pull/118) is merged into `main` ([commit eb24ea8](https://github.com/promirmir/AuronQ/commit/eb24ea82230d06480a9c0439d5cbfc4c47436777)). Changes include a local deterministic adaptive batch agent (not a cloud AI model), two-pass accelerator autotuning, CUDA throughput refinements, NVIDIA fail-closed thermal protection, node-status watchdog and improved diagnostics; a follow-up fix [#121](https://github.com/promirmir/AuronQ/pull/121) throttles Solo status RPC calls and backs off when rate-limited. All five PR CI workflows passed, and the Windows CUDA test package was built successfully.
+>
+> **Latest updated Windows GPU test build:** [GitHub Actions run 37832849518](https://github.com/promirmir/AuronQ/actions/runs/37837949129) → artifact `AuronQ-Universal-Miner-Windows-x64-GPU-TEST` (login may be required; artifacts expire). **This is not the v0.4.6-alpha GitHub Release asset.** Existing release download links below continue to point to the older tagged version. Independent long-duration and multi-device verification and a permanent Release asset remain outstanding. No AQM64 consensus, Network ID, genesis or monetary rule changed.
+
+
 
 AuronQ Mainnet consensus defines **AQM64**, not a specific hardware vendor.
 
