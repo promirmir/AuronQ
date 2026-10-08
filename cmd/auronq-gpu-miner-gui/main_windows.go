@@ -1564,7 +1564,16 @@ func (a *App) parseWorkerLine(line string) {
 			}
 		}
 	}
+	// A paused worker is NOT producing hashes. Clear stale GUI telemetry while
+	// waiting for a disconnected/rate-limited full node to recover.
+	if strings.HasPrefix(line, "NODE_STARTUP_RETRY ") ||
+		strings.HasPrefix(line, "NODE_TEMPLATE_RETRY ") ||
+		strings.HasPrefix(line, "NODE_STATUS_BACKOFF ") {
+		a.miner.Hashrate = 0
+		a.miner.LastError = "Node temporarily unavailable; mining paused until recovery"
+	}
 	if strings.HasPrefix(line, "Mining height ") {
+		a.miner.LastError = ""
 		fields := strings.Fields(line)
 		if len(fields) >= 3 {
 			if h, err := strconv.ParseUint(fields[2], 10, 64); err == nil {
@@ -1573,6 +1582,7 @@ func (a *App) parseWorkerLine(line string) {
 		}
 	}
 	if strings.HasPrefix(line, "hashes=") {
+		if a.miner.LastError == "Node temporarily unavailable; mining paused until recovery" { a.miner.LastError = "" }
 		if v, ok := numberAfter(line, "rate="); ok {
 			a.miner.Hashrate = v
 		} else if v, ok := numberAfter(line, "avg="); ok {
