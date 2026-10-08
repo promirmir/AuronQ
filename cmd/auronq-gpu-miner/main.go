@@ -431,17 +431,17 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func()
 	}
 	bestBatch, secondBatch := 0, 0
 	bestRate, secondRate := 0.0, 0.0
-	fmt.Printf("AUTOTUNE start candidates=%v per_batch=%s\\n", candidates, perBatch.Round(time.Second))
+	fmt.Printf("AUTOTUNE start candidates=%v per_batch=%s\n", candidates, perBatch.Round(time.Second))
 	for _, batch := range candidates {
 		rate, err := measure(batch)
 		if err != nil {
 			// A sensor or thermal guard failure is fatal. Backend capacity failures
 			// are handled only when no thermal guard is active.
 			if thermalGuard != nil { return 0, 0, err }
-			fmt.Printf("AUTOTUNE batch=%d skipped: %v\\n", batch, err)
+			fmt.Printf("AUTOTUNE batch=%d skipped: %v\n", batch, err)
 			continue
 		}
-		fmt.Printf("AUTOTUNE batch=%d rate=%.3f H/s\\n", batch, rate)
+		fmt.Printf("AUTOTUNE batch=%d rate=%.3f H/s\n", batch, rate)
 		if bestBatch == 0 || rate > bestRate {
 			secondBatch, secondRate = bestBatch, bestRate
 			bestBatch, bestRate = batch, rate
@@ -456,7 +456,7 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func()
 		for _, batch := range []int{bestBatch, secondBatch} {
 			rate, err := measure(batch)
 			if err != nil { return 0, 0, fmt.Errorf("autotune confirmation batch %d: %w", batch, err) }
-			fmt.Printf("AUTOTUNE confirm batch=%d rate=%.3f H/s\\n", batch, rate)
+			fmt.Printf("AUTOTUNE confirm batch=%d rate=%.3f H/s\n", batch, rate)
 			if batch == bestBatch {
 				if rate < bestRate { bestRate = rate }
 			} else {
