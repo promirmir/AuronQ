@@ -112,7 +112,7 @@
       .split { grid-template-columns: 1fr; gap: 24px; }
     }
     @media (max-width: 570px) {
-      .wrap { width: min(100% - 30px, 1100px); }
+      .wrap { width: min(1100px, calc(100% - 30px)); }
       .header-inner { align-items: flex-start; padding: 16px 0; flex-direction: column; gap: 12px; }
       .nav { gap: 8px 17px; }
       .hero { padding-top: 44px; }
@@ -236,7 +236,7 @@
             <a href="https://github.com/promirmir/AuronQ/blob/main/MAINNET.md">Mainnet details →</a>
             <a href="https://github.com/promirmir/AuronQ/blob/main/NETWORK-INDEPENDENCE.md">Network independence →</a>
           </div>
-          <p class="note">The linked Explorer is one independently reachable endpoint; availability varies and it is not a consensus authority.</p>
+          <p class="note">The linked Explorer is an independently hosted endpoint; availability varies and it is not a consensus authority.</p>
         </div>
         <div>
           <h3>Mining pools &amp; integration</h3>
