@@ -68,10 +68,10 @@ Independent pools, wallets, exchanges and explorers may integrate the public net
 
 External services have started collecting AuronQ mining and network statistics. These independently operated data sources are useful for comparing observations outside the project's own Explorer:
 
-- **[CPU-Mining.info — AURQ network statistics](https://cpu-mining.info/):** lists AuronQ (AURQ), the AQM64 algorithm, estimated network hashrate and reported block height.
-- **[MiningChamp — RPlant pool statistics](https://miningchamp.com/pool/rplant):** its third-party pool aggregator includes AURQ/AQM64 mining activity, pool hashrate and worker counts.
+- **[MiningChamp — AuronQ (AURQ)](https://miningchamp.com/coin/auronq):** dedicated AuronQ coin page, rather than the multi-coin RPlant overview.
+- **[CPU-Mining.info — AuronQ (AURQ)](https://cpu-mining.info/coins/AURQ):** dedicated AURQ page with AQM64 identification and externally reported mining/network estimates.
 
-These are **independent observations, not official consensus data, an independent security audit or an endorsement**. Reported figures may be delayed, incomplete or calculated differently. Compare them with data from a locally validating full node. Thank you to the people and services monitoring the network independently.
+These are **third-party, unverified estimates, not official consensus data, an independent security audit or an endorsement**. Some displayed fields (for example, block reward, worker count or network hashrate) may be missing, stale or incorrect. Compare reported figures with your own validating full node rather than treating aggregator pages as authoritative. Thanks to independent services for including AURQ.
 
 ## Documentation
 
