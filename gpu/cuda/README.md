@@ -1,4 +1,10 @@
 # AuronQ Universal Miner — NVIDIA CUDA backend
+> [!IMPORTANT]
+> **Intelligent Miner update (8 October 2026):** PR [#118](https://github.com/promirmir/AuronQ/pull/118) is merged into `main` ([commit eb24ea8](https://github.com/promirmir/AuronQ/commit/eb24ea82230d06480a9c0439d5cbfc4c47436777)). Changes include a local deterministic adaptive batch agent (not a cloud AI model), two-pass accelerator autotuning, CUDA throughput refinements, NVIDIA fail-closed thermal protection, node-status watchdog and improved diagnostics. All five PR CI workflows passed, and the Windows CUDA test package was built successfully.
+>
+> **Latest updated Windows GPU test build:** [GitHub Actions run 37832849518](https://github.com/promirmir/AuronQ/actions/runs/37832849518) → artifact `AuronQ-Universal-Miner-Windows-x64-GPU-TEST` (login may be required; artifacts expire). **This is not the v0.4.6-alpha GitHub Release asset.** Existing release download links below continue to point to the older tagged version. Independent long-duration and multi-device verification and a permanent Release asset remain outstanding. No AQM64 consensus, Network ID, genesis or monetary rule changed.
+
+
 
 This directory contains the native NVIDIA CUDA accelerator used by **AuronQ
 Universal Miner v0.4.6 Alpha** for AQM64 Solo mining.
