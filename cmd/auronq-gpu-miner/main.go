@@ -253,10 +253,14 @@ func main() {
 	}
 
 	client := aq.NewClient(*nodeURL)
+	// The GUI may launch the worker while its local node is still booting.
+	// Wait without hashing; never skip the independent Network ID check.
 	st, err := client.Status()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "node status:", err)
-		os.Exit(1)
+	for attempt := 0; err != nil; attempt++ {
+		delay := nodeRecoveryDelay(attempt)
+		fmt.Printf("NODE_STARTUP_RETRY wait=%s error=%v\n", delay, err)
+		time.Sleep(delay)
+		st, err = client.Status()
 	}
 	if st.NetworkID.String() != mainnetNetworkID {
 		fmt.Fprintln(os.Stderr, "refusing to mine: node Network ID mismatch")
