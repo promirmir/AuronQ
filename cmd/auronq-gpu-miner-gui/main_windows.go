@@ -1487,10 +1487,11 @@ func (a *App) launchWorkerCommand(cmd *exec.Cmd, mode string, _ bool, backend st
 	go func() { defer close(stdoutDone); a.scanWorker(stdout, "") }()
 	go func() { defer close(stderrDone); a.scanWorker(stderr, "ERROR: ") }()
 	go func() {
-		err := cmd.Wait()
-		// Drain the worker's final diagnostic line before classifying the exit.
+		// StdoutPipe/StderrPipe must finish reading before Cmd.Wait closes
+		// the pipe descriptors; retain the worker's terminal diagnosis.
 		<-stdoutDone
 		<-stderrDone
+		err := cmd.Wait()
 		a.mu.Lock()
 		stopped := a.minerStopRequested
 		if a.minerCmd == cmd {
