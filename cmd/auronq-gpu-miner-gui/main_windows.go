@@ -1551,6 +1551,9 @@ func (a *App) parseWorkerLine(line string) {
 			a.miner.ActiveBatch = int(batch)
 		}
 	}
+	if strings.HasPrefix(line, "AUTOTUNE start ") {
+		a.miner.ActiveBatch = 0 // The actual choice is not known until tuning completes.
+	}
 	if strings.HasPrefix(line, "THERMAL ") {
 		if batchSpec, ok := wordAfter(line, "batch="); ok {
 			parts := strings.Split(batchSpec, "->")
