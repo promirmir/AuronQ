@@ -1538,6 +1538,14 @@ func (a *App) parseWorkerLine(line string) {
 	if strings.HasPrefix(line, "AUTO FALLBACK: ") {
 		a.miner.FallbackReason = strings.TrimSpace(strings.TrimPrefix(line, "AUTO FALLBACK: "))
 	}
+	if strings.HasPrefix(line, "Batch: ") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 {
+			if n, err := strconv.Atoi(fields[1]); err == nil && n >= 1 && n <= 64 {
+				a.miner.ActiveBatch = n
+			}
+		}
+	}
 	if strings.HasPrefix(line, "AUTOTUNE OK ") {
 		if batch, ok := uintAfter(line, "best_batch="); ok && batch >= 1 && batch <= 64 {
 			a.miner.ActiveBatch = int(batch)
