@@ -538,6 +538,8 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 	lastReport := start
 	var lastReportTotal uint64
 	var nextNonce uint64
+	var agent *adaptiveMiningAgent
+	if thermal != nil { agent = newAdaptiveMiningAgent() }
 
 	for {
 		template, err := client.Template(address)
@@ -565,6 +567,7 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				thermalPause = pause
 			}
 
+			batchStarted := time.Now()
 			prepared, initial, err := buildBatch(template, nextNonce, batch)
 			if err != nil {
 				return err
@@ -620,6 +623,14 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				break
 			}
 
+			// Local adaptive adviser observes measured end-to-end batch throughput.
+			// It operates only well below the thermal target and may never override
+			// the separate, fail-closed hardware-temperature governor.
+			if agent != nil {
+				nextBatch, reason := agent.Observe(time.Now(), batch, batch, time.Since(batchStarted), thermal.lastTemp, thermal.Target(), thermal.maxBatch, thermalPause)
+				if reason != "" { fmt.Println(reason) }
+				batch = nextBatch
+			}
 			if thermalPause > 0 {
 				time.Sleep(thermalPause)
 			}
