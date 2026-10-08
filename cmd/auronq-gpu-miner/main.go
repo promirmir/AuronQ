@@ -175,7 +175,27 @@ func main() {
 			os.Exit(2)
 		}
 		if backendKind == "cuda" || backendKind == "opencl" {
-			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second)
+			// A thermal safety check is required for CUDA when thermal protection is requested.
+			// Autotune runs before the mining governor, so every compute batch must be guarded.
+			var tuneGuard func() error
+			if backendKind == "cuda" && *thermalAuto {
+				if *thermalLimit < 60 || *thermalLimit > 95 {
+					fmt.Fprintln(os.Stderr, "--thermal-limit must be between 60 and 95 C")
+					os.Exit(2)
+				}
+				tuneGuard = func() error {
+					temp, err := queryNVIDIATemperature(*device)
+					if err != nil {
+						return fmt.Errorf("autotune thermal telemetry unavailable: %w", err)
+					}
+					// Leave a margin because the sensor is sampled between complete batches.
+					if temp >= *thermalLimit-3 {
+						return fmt.Errorf("autotune paused for safety: GPU at %d C, limit %d C", temp, *thermalLimit)
+					}
+					return nil
+				}
+			}
+			bestBatch, bestRate, err := runAutoTune(backend, time.Duration(*autoTuneSeconds)*time.Second, tuneGuard)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "AUTOTUNE FAILED:", err)
 				os.Exit(1)
@@ -325,7 +345,7 @@ func runSelfTest(backend gpuBackend) error {
 	return nil
 }
 
-func runAutoTune(backend gpuBackend, perBatch time.Duration) (int, float64, error) {
+func runAutoTune(backend gpuBackend, perBatch time.Duration, thermalGuard func() error) (int, float64, error) {
 	if perBatch <= 0 {
 		perBatch = time.Second
 	}
@@ -373,11 +393,21 @@ func runAutoTune(backend gpuBackend, perBatch time.Duration) (int, float64, erro
 		valid := true
 
 		for {
+			if thermalGuard != nil {
+				if err := thermalGuard(); err != nil {
+					return 0, 0, err
+				}
+			}
 			prepared, initial, err := buildBatch(template, nonce, batch)
 			if err != nil {
 				return 0, 0, err
 			}
 			finals, err := backend.Run(initial, batch)
+			if thermalGuard != nil {
+				if guardErr := thermalGuard(); guardErr != nil {
+					return 0, 0, guardErr
+				}
+			}
 			if err != nil {
 				fmt.Printf("AUTOTUNE batch=%d skipped: %v\n", batch, err)
 				valid = false
