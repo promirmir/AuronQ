@@ -77,10 +77,21 @@ func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, 
 		action = "trim"
 		t.coolSamples = 0
 	case temp <= t.targetC-4:
+		// Braiins-style staged recovery: regain throughput cautiously after
+		// consecutive cool samples; retain our original hard thermal stop.
 		t.coolSamples++
 		if t.coolSamples >= 3 && batch < t.maxBatch {
 			step := maxInt(1, t.maxBatch/12)
 			newBatch = minInt(t.maxBatch, batch+step)
+			action = "increase"
+			t.coolSamples = 0
+		}
+	case temp <= t.targetC-2:
+		// Recover more slowly in the near-target band; previous logic
+		// could leave a throttled GPU stuck indefinitely at target-2C.
+		t.coolSamples++
+		if t.coolSamples >= 6 && batch < t.maxBatch {
+			newBatch = minInt(t.maxBatch, batch+1)
 			action = "increase"
 			t.coolSamples = 0
 		}
