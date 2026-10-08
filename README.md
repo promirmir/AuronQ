@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/brand/auronq-banner.svg" alt="AuronQ — Blockchain" width="100%">
+</p>
+
 # AuronQ (AURQ)
 
 **Open-source Proof-of-Work cryptocurrency · Public mainnet · MIT License**
