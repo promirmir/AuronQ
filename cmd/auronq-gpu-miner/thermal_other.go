@@ -2,7 +2,10 @@
 
 package main
 
-import "time"
+import (
+ "fmt"
+ "time"
+)
 
 type thermalController struct{}
 
@@ -11,4 +14,9 @@ func (t *thermalController) Target() int { return 0 }
 func (t *thermalController) Limit() int { return 0 }
 func (t *thermalController) Adjust(batch int) (int, int, time.Duration, string, error) {
 	return batch, -1, 0, "", nil
+}
+
+// Platforms without a trusted local NVIDIA sensor must fail closed for CUDA thermal autotune.
+func queryNVIDIATemperature(device int) (int, error) {
+ return -1, fmt.Errorf("NVIDIA temperature telemetry unsupported on this platform (device %d)", device)
 }
