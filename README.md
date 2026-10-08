@@ -1,427 +1,81 @@
-<p align="center">
-  <img src="assets/brand/auronq-banner.svg" alt="AuronQ — Blockchain" width="100%">
-</p>
+# AuronQ (AURQ)
 
-<h1 align="center">AuronQ (AURQ)</h1>
+**Open-source Proof-of-Work cryptocurrency · Public mainnet · MIT License**
 
-<p align="center"><strong>Open-source public Proof-of-Work cryptocurrency network</strong></p>
+[Project website](https://promirmir.github.io/AuronQ/) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report an issue](https://github.com/promirmir/AuronQ/issues)
 
-<p align="center">
-  <a href="https://github.com/promirmir/AuronQ/actions/workflows/ci.yml"><img src="https://github.com/promirmir/AuronQ/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml"><img src="https://github.com/promirmir/AuronQ/actions/workflows/network-hardening.yml/badge.svg" alt="Network hardening"></a>
-  <a href="https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml"><img src="https://github.com/promirmir/AuronQ/actions/workflows/reproducible-builds.yml/badge.svg" alt="Reproducible builds"></a>
-  <a href="https://github.com/promirmir/AuronQ/releases/latest"><img src="https://img.shields.io/github/v/release/promirmir/AuronQ?display_name=tag" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
-  <a href="go.mod"><img src="https://img.shields.io/github/go-mod/go-version/promirmir/AuronQ" alt="Go version"></a>
-  <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha"><img src="https://img.shields.io/badge/Universal%20Miner-v0.4.8%20Alpha-7c5cff" alt="Universal Miner v0.4.6 Alpha"></a>
-  <img src="https://img.shields.io/badge/Mainnet-Live-19a974" alt="Mainnet Live">
-</p>
+AuronQ is a public UTXO cryptocurrency written in Go. The network combines **AQM64 Proof-of-Work**, **ML-DSA-87 transaction signatures**, independent full-node validation and local wallets. Its mainnet is running; the software and wider network are still at an early stage of maturity.
 
-**AuronQ** is an open-source public cryptocurrency network written in Go. It combines a **UTXO ledger**, **Proof-of-Work**, **ML-DSA-87 post-quantum transaction signatures**, and the AuronQ-specific **AQM64** proof-of-work construction.
+> **Security notice:** AQM64 and the complete AuronQ consensus, wallet and networking implementations have not received an independent professional security or cryptographic audit. Do not treat the network as mature financial infrastructure or store substantial value without understanding the risks.
 
-The AuronQ Mainnet is live. The project is designed around **independent full-node validation, replaceable peer discovery, local wallets, local explorers and no privileged founder node**.
+## Download
 
-> [!IMPORTANT]
-> **Intelligent Miner update (8 October 2026):** PR [#118](https://github.com/promirmir/AuronQ/pull/118) is merged into `main` ([commit eb24ea8](https://github.com/promirmir/AuronQ/commit/eb24ea82230d06480a9c0439d5cbfc4c47436777)). Changes include a local deterministic adaptive batch agent (not a cloud AI model), two-pass accelerator autotuning, CUDA throughput refinements, NVIDIA fail-closed thermal protection, node-status watchdog and improved diagnostics; a follow-up fix [#121](https://github.com/promirmir/AuronQ/pull/121) throttles Solo status RPC calls and backs off when rate-limited. All five PR CI workflows passed, and the Windows CUDA test package was built successfully.
->
-> **Previous Windows GPU test build:** [GitHub Actions run 37832849518](https://github.com/promirmir/AuronQ/actions/runs/37837949129) → artifact `AuronQ-Universal-Miner-Windows-x64-GPU-TEST` (login may be required; artifacts expire). **This is not the v0.4.6-alpha GitHub Release asset.** Existing release download links below continue to point to the older tagged version. Independent long-duration and multi-device verification while a permanent Windows v0.4.8 Release asset is now available. No AQM64 consensus, Network ID, genesis or monetary rule changed.
+All packages are published through GitHub Releases. Use the release page to verify checksums and read compatibility notes.
 
-> [!IMPORTANT]
-> **Latest Windows miner: [AuronQ Intelligent Universal Miner v0.4.8 Alpha](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip)** · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) · [SHA-256](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/SHA256SUMS-AURONQ-MINER-v0.4.8.txt). Includes local adaptive batch tuning, CUDA/OpenCL/CPU selection, thermal safety and guarded recovery from full-node downtime ([#124](https://github.com/promirmir/AuronQ/pull/124)). The ZIP extracts once. Windows x64 only for this version; other-platform downloads below are older v0.4.6-alpha builds. Real-world 24/7 reliability is not yet independently proven. No mainnet consensus changes.
+| Software | Version | Download |
+| --- | --- | --- |
+| **Desktop / Full Node** | v1.7.13 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/v1.7.13) |
+| **Universal Miner** | v0.4.8 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and SHA-256](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
+| **Universal Miner, older platform builds** | v0.4.6 Alpha | [Linux GPU and portable CPU packages](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
+| **AuronQ Mobile** | v0.5.3 Alpha · Android | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha) |
 
-## 🚀 Start here
+The **Windows miner v0.4.8 Alpha** includes supported CUDA/OpenCL GPU backends, CPU fallback, local adaptive tuning and safety controls. Hardware support varies; alpha status means long-duration reliability is not yet established. The **Android wallet is a light client, not a validating full node**. Desktop Windows binaries are not currently Authenticode-signed.
 
-| Run the network | Mine AURQ | Inspect the chain |
-|---|---|---|
-| **AuronQ Desktop / Full Node v1.7.13** | **AuronQ Universal Miner v0.4.8 Alpha (Windows)** | **Public Explorer** |
-| Windows + Linux full validating node, wallet and local Explorer | AUTO CUDA→12.x Legacy→11.8 Kepler→OpenCL→CPU fallback, Windows GUI, portable Windows/Linux/macOS CPU builds, Solo/Pool | Blocks, transactions, peers and network state |
-| [⬇️ Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) | [⬇️ Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [All portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) | [🌐 Open Explorer](https://mir.taild63f46.ts.net/explorer) |
+## Get started
 
-> **Universal miner:** AUTO keeps the newest NVIDIA CUDA backend for current/new GPUs, then tries separate compatibility backends for Maxwell/Pascal/Volta (CUDA 12.x) and Kepler sm_35/sm_37 (CUDA 11.8), then vendor-neutral OpenCL for AMD/Intel/NVIDIA, and finally CPU AQM64. The CPU fallback uses a conservative memory/thread profile and is self-tested against canonical AQM64. Windows NVIDIA thermals use direct local NVML data. Portable CPU-safe CLI packages are CI-built for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64. Pool mode can use a user-supplied compatible external miner; AuronQ does not silently download third-party binaries.
+1. **Run a node:** download the full-node package, extract the entire archive and follow the [Windows guide](README-WINDOWS.md) or the release instructions for your platform.
+2. **Synchronize:** allow the node to discover peers and validate the blockchain locally.
+3. **Create a wallet:** back up recovery material securely before receiving or sending coins.
+4. **Mine, if you choose:** follow the [Universal Miner guide](UNIVERSAL-MINER-GUIDE.md) and [hardware support notes](HARDWARE-SUPPORT.md). Solo mining uses a local full node; pool mining depends on a compatible independent service.
 
-### Verify AuronQ yourself
+Full nodes can serve their own read-only Explorer at the **/explorer** endpoint. An independently hosted [public Explorer](https://mir.taild63f46.ts.net/explorer) may also be available; it is not a source of consensus authority.
 
-AuronQ is intended to be evaluated through **public code and independently observable network data**, not promotional claims.
+## Protocol overview
 
-- **Source code:** https://github.com/promirmir/AuronQ
-- **Latest releases:** https://github.com/promirmir/AuronQ/releases/latest
-- **Public Explorer:** https://mir.taild63f46.ts.net/explorer
-- **Technical whitepaper:** [WHITEPAPER.md](WHITEPAPER.md)
-- **Protocol specification:** [PROTOCOL.md](PROTOCOL.md)
-- **AQM64 specification:** [AQM64.md](AQM64.md)
-- **Mining pools:** [MeshPool](https://meshpool.net/pool/auronq-main) · [RPlant](https://pool.rplant.xyz/#auronq#connect)
-- **Independent tracking:** [MiningChamp](https://miningchamp.com/coin/auronq) · [CPU-Mining.info](https://cpu-mining.info/)
-
-If you want to follow the project rather than actively participate, **Star** or **Watch** the repository to keep AuronQ in your GitHub feed.
-
-## Exchange, listing & third-party integration
-
-**AURQ is open for independent third-party integration.** Exchanges, indexers, wallets, explorers, mining pools and other service providers may integrate or list AURQ **without prior project approval**. The network is public, the implementation is open source under the MIT License, and the canonical Mainnet identifiers and protocol documentation are available for independent verification.
-
-- **Integration / listing policy:** [EXCHANGE-INTEGRATION.md](EXCHANGE-INTEGRATION.md)
-- **Machine-readable project metadata:** [auronq-project.json](auronq-project.json)
-- **Canonical Mainnet specification:** [MAINNET.md](MAINNET.md)
-- **Protocol:** [PROTOCOL.md](PROTOCOL.md)
-- **Source and release history:** this repository and [GitHub Releases](https://github.com/promirmir/AuronQ/releases)
-
-A third-party listing or integration remains independently operated and does not imply endorsement by AuronQ. Integrators are responsible for their own technical review, security controls, legal/regulatory compliance and confirmation/risk policy.
-
-> [!WARNING]
-> AuronQ is a young public cryptocurrency network in an early stage of operational maturity. AQM64 and the complete consensus/network implementation have **not** yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not use AuronQ to store or transfer substantial value.
-
-## ⛏️ Official AuronQ Universal Miner v0.4.8 Alpha (Windows)
-
-The official miner now uses **AUTO compute selection**: current NVIDIA CUDA → CUDA 12.x legacy → CUDA 11.8 Kepler → vendor-neutral OpenCL GPU → native CPU AQM64. The portable release matrix covers Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64; Windows x64 also has the PL/EN GUI.
-
-<p align="center">
-  <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip"><strong>⬇️ Windows x64</strong></a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz"><strong>⬇️ Linux amd64</strong></a>
-  &nbsp;·&nbsp;
-  <a href="GPU-MINER-GUIDE.md">User guide</a>
-  &nbsp;·&nbsp;
-  <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha">Release page</a>
-</p>
-
-| Capability | Windows v0.4.8 Alpha |
-|---|---|
-| AUTO backend | ✅ Current CUDA → CUDA 12.x Maxwell/Pascal/Volta → CUDA 11.8 Kepler → OpenCL GPU (AMD/Intel/NVIDIA) → CPU |
-| Portable CPU platforms | ✅ Windows x64/ARM64 · Linux x64/ARM64 · macOS x64/ARM64 |
-| NVIDIA GPUs | ✅ Current CUDA 13.2 path for modern/new targets + CUDA 12.6 Maxwell/Pascal/Volta + CUDA 11.8 Kepler + OpenCL fallback |
-| Multi-GPU work | ✅ Separate worker per GPU with disjoint nonce ranges |
-| Automatic tuning | ✅ CUDA/OpenCL batch autotune; NVIDIA uses direct thermal control, generic OpenCL uses a conservative no-sensor duty profile |
-| Live performance | ✅ Rolling H/s + GPU telemetry + Windows CPU utilization/name/logical CPUs/AQM64 threads/nominal clock/memory |
-| Thermal protection | ✅ Smart Solo governor + stabilized AuronQ-side Pool duty controller, cooldown hold and independent catastrophic hard stop |
-| Solo mining | ✅ Uses the ordinary AuronQ full-node template/validation path |
-| Pool mode | ✅ First-class MeshMiner 0.8.35+ integration, MeshPool preset and compatible custom endpoints |
-| Platforms / UI | ✅ Windows x64 GUI (PL/EN) · Linux amd64 CLI |
-| Correctness check | ✅ CUDA/OpenCL/CPU backend vs canonical AQM64 equivalence self-test |
-
-The miner remains **alpha software**. Multi-GPU and cross-vendor OpenCL behavior still need broader real-device coverage, and the CUDA/OpenCL accelerator implementations have not received an independent professional audit. A valid block found in Solo mode is still submitted to an ordinary AuronQ full node and must pass the same Mainnet validation rules as every other block.
-
-## Long-term direction
-
-AuronQ Mainnet is intended to be a **persistent public cryptocurrency network**, not a disposable test chain. The project is being developed with a long time horizon: preserve a stable consensus foundation, reduce dependence on privileged infrastructure, and let the network prove itself through real operation rather than frequent protocol redesign.
-
-A core motivation is that computing hardware continues to become more capable. AuronQ therefore avoids simply copying an older mining design unchanged. Its **AQM64** Proof-of-Work deliberately uses a heavier compute-and-memory construction, while transaction authorization uses the standardized **ML-DSA-87** post-quantum signature scheme.
-
-The goal is not to claim that any design is permanently future-proof. The goal is to give AuronQ a foundation that can remain useful as hardware and cryptographic requirements evolve, while keeping Mainnet compatibility and decentralization as primary constraints.
-
-Accordingly, the development direction is:
-
-- **stability before features** — avoid unnecessary consensus changes once Mainnet rules are established;
-- **long-lived compatibility** — protect Network ID, genesis, monetary rules and transaction validity from casual redesign;
-- **hardware-aware PoW** — keep AQM64 focused on meaningful resource use on modern general-purpose hardware;
-- **post-quantum transaction signatures** — retain ML-DSA-87 as the transaction-signature foundation;
-- **independent operation** — grow the number of unrelated miners, pools, full nodes, discovery routes and explorers;
-- **real-world proving period** — let the live network accumulate operating history, external integrations and independent review before treating it as mature infrastructure;
-- **security and auditability** — keep the code open, reproducible and reviewable, and pursue independent professional review before substantial-value use.
-
-This direction is intentionally conservative: the aim is for AuronQ to survive technological change through stable rules, independent infrastructure and gradual hardening rather than constant consensus churn.
-
-## Current releases
-
-| Component | Current release | Status | Download |
-|---|---:|---|---|
-| Desktop / Full Node | **v1.7.13** | Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) |
-| Universal Miner | **v0.4.8 Alpha (Windows)** | AUTO CUDA→12.x Legacy→11.8 Kepler→OpenCL→CPU · Windows GUI · portable Windows/Linux/macOS · safe fallback | [Windows x64 GUI/GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Linux x64 GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz) · [portable builds](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
-| AuronQ Mobile | **0.5.3 Alpha** | Light wallet | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) |
-
-**Project site:** https://promirmir.github.io/AuronQ/
-
-**New cryptocurrency / AURQ technical overview:** https://promirmir.github.io/AuronQ/new-cryptocurrency.html
-
-**Official Bitcointalk ANN / community discussion:** https://bitcointalk.org/index.php?topic=5595868.0
-
-**Official Discord community:** https://discord.gg/rmmNY9RhA
-
-**Official project email:** auronqnetwork@gmail.com
-
-**Official brand assets:** [assets/brand/](assets/brand/)
-
-**Release archive:** [GitHub Releases](https://github.com/promirmir/AuronQ/releases) · **History:** [CHANGELOG.md](CHANGELOG.md)
-
-## ⛏️ Mine AURQ
-
-**Official miner:**
-- **AuronQ Universal Miner v0.4.8 Alpha (Windows):** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha
-- **Windows x64 GUI/GPU:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip
-- **Linux x64 GPU:** https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.6-alpha/AuronQ-Miner-v0.4.6-alpha-Linux-x64-GPU.tar.gz
-- **Portable Windows/Linux/macOS CPU-safe builds:** https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha
-- **Universal user guide:** [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md)
-- **NVIDIA accelerated guide:** [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md)
-- **Hardware support policy:** [HARDWARE-SUPPORT.md](HARDWARE-SUPPORT.md)
-- **Technical CUDA notes:** [gpu/cuda/README.md](gpu/cuda/README.md)
-
-**MeshMiner 0.8.35 integration:**
-- AuronQ Pool mode can launch a user-supplied MeshMiner 0.8.35+ directly with `--algo auronq`.
-- Supports CUDA, CPU or CUDA+CPU, selected NVIDIA devices, CPU thread override, `--fan auto` and an explicit Retune action.
-- Windows Pool mode adds AuronQ-side autonomous thermal control from direct local NVML hardware samples, with smooth duty-cycle regulation, automatic cooldown/resume at the configured limit and fail-safe stop if temperature or telemetry becomes unsafe. Pool/miner-reported temperatures are not used for safety decisions.
-- MeshMiner release: https://github.com/totom9000/meshminer/releases/tag/v.0.8.35
-- MeshMiner 0.8.35 reports a **0.5% dev fee on MeshPool and 1.2% elsewhere**.
-- The external binary is **not bundled or downloaded automatically**.
-
-**Independent pools and third-party miners:**
-- **MeshPool:** https://meshpool.net/pool/auronq-main
-- **RPlant:** https://pool.rplant.xyz/#auronq#connect
-- **MeshMiner 0.8.35:** https://github.com/totom9000/meshminer/releases/tag/v.0.8.35 — published AURQ support for CPU and NVIDIA GPUs
-
-The official AuronQ miner provides separate current, CUDA 12.x legacy, CUDA 11.8 Kepler, OpenCL GPU, **and native CPU fallback** paths. Its Pool mode is a launcher/bridge for a **user-supplied compatible external pool miner** because the AuronQ full node does not currently expose a native Stratum server. Third-party pools/miners are independently operated and are not part of AuronQ consensus. Verify fees, payout rules, binaries and connection parameters before use.
-
-
-### Current checksums
-
-```text
-7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1  AuronQ-1.7.13-Windows-x64.zip
-2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6  AuronQ-1.7.13-Linux-amd64.tar.gz
-# Universal Miner v0.4.6 Alpha:
-# verify against SHA256SUMS-AURONQ-MINER.txt on the miner-v0.4.6-alpha release page
-913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c  AuronQ-Mobile-0.5.3-alpha.apk
-```
-
-## What has been built
-
-| Area | Status | What AuronQ currently provides |
-|---|---|---|
-| Mainnet | ✅ Live | Fixed Network ID and genesis, persistent chain storage |
-| Full-node validation | ✅ | Local validation of blocks, transactions, signatures, timestamps, difficulty and cumulative work |
-| Wallets | ✅ | Local ML-DSA-87 wallet creation/import, send/receive and wallet history |
-| Proof-of-Work | ✅ | AQM64 CPU mining and cumulative-work chain selection |
-| P2P | ✅ | Persisted peers, peer gossip, replaceable seed hints, bounded bootstrap manifests and DNS-seed support |
-| Founder-node independence | ✅ Tested | Regression test removes the original bootstrap node permanently and joins a fresh node through a surviving peer |
-| Explorer | ✅ | Every full node serves its own read-only explorer from its locally validated chain |
-| Explorer network | ✅ | Public explorers can surface alternative HTTPS explorers learned through native P2P gossip |
-| Reorg resilience | ✅ | Higher-work fork validation, immediate post-reorg sync continuation |
-| Network hardening | ✅ | 20-node partition/fork/restart convergence tests, netgroup diversity, Sybil/eclipse concentration limits |
-| Fuzzing / race testing | ✅ | Transaction/block parser fuzzing and Linux race detector in CI |
-| Reproducible builds | ✅ | Release-style deterministic build checks on Linux and Windows |
-| Public health monitoring | ✅ | Scheduled checks for Network ID, height/tip agreement and Explorer availability |
-| Android light client | ✅ Alpha | Local header/AQM64 verification plus verified-chain multi-peer wallet-state quorum |
-| Independent external audit | ❌ Not yet | Required before treating AuronQ as mature financial infrastructure |
-| Broad independent node/miner set | ⚠️ Developing | More independently operated public nodes and miners are required |
-
-## Architecture
-
-AuronQ follows a **full-node-first** model.
-
-Each AuronQ full node:
-
-- stores and validates its own canonical blockchain;
-- independently verifies AQM64 proof-of-work and cumulative work;
-- validates UTXO spends and ML-DSA-87 signatures locally;
-- maintains its own mempool;
-- discovers and persists peers;
-- relays valid transactions and blocks;
-- serves its own local read-only blockchain Explorer.
-
-Bootstrap peers are **rendezvous hints, not authorities**. They cannot approve invalid blocks, select the canonical chain, change monetary rules or override a node's validation. Repeatedly failing seed peers are pruned from the running peer set.
-
-See [DECENTRALIZATION.md](DECENTRALIZATION.md) and [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md).
-
-## Quick start — Windows
-
-1. Download the current [Windows x64 release](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip).
-2. Verify its SHA-256 against the value above.
-3. Extract the **entire ZIP** to a new folder.
-4. Run **`START-AURONQ.cmd`**.
-5. Wait for the local full node to load and synchronize.
-6. Create or import a wallet and **back it up before using it**.
-7. Use the built-in Explorer, send/receive AURQ, and enable CPU mining only if you intentionally want to mine.
-
-Persistent Desktop data is stored under:
-
-`%AppData%\AuronQ`
-
-Windows binaries are not currently Authenticode-signed, so SmartScreen may warn on first launch.
-
-Detailed guide: [README-WINDOWS.md](README-WINDOWS.md)
-
-## Third-party mining pools and miners
-
-AURQ is now available through multiple independently operated mining services. These services and miners are **third-party infrastructure** and are not controlled, operated or endorsed by the AuronQ project.
-
-### MeshPool
-
-- AuronQ pool: https://meshpool.net/pool/auronq-main
-- Coin: **AuronQ (AURQ)**
-- Proof-of-Work: **AQM64**
-- Independent pool operator.
-
-### RPlant
-
-- AuronQ connection page: https://pool.rplant.xyz/#auronq#connect
-- Coin: **AuronQ (AURQ)**
-- Proof-of-Work: **AQM64**
-- Independent pool operator.
-
-### MeshMiner
-
-A third-party AURQ implementation is also available in **MeshMiner 0.8.35**:
-
-https://github.com/totom9000/meshminer/releases/tag/v.0.8.35
-
-The published release announcement reports AURQ support on **CPU and NVIDIA GPUs**. Hardware support, binaries and tuning are maintained independently from the AuronQ project.
-
-Third-party availability can change. Before mining with any external service or binary, independently verify its current connection parameters, fees, payout policy, download source and miner compatibility.
-
-Public mining/network tracking:
-- **MiningChamp — AuronQ profile & statistics:** https://miningchamp.com/coin/auronq
-- **MiningChamp — all pools:** https://miningchamp.com/pools
-- **MiningChamp — all coins:** https://miningchamp.com
-- **CPU-Mining.info:** https://cpu-mining.info/
-
-**Pool operators:** see [POOL-INTEGRATION.md](POOL-INTEGRATION.md) for the current HTTP/JSON mining interface, AQM64 share-validation requirements, stale-work handling and the recommended independent-pool architecture. Public decentralization coordination remains tracked in [issue #66](https://github.com/promirmir/AuronQ/issues/66).
-
-Solo CPU mining through an AuronQ full node remains supported and does not depend on any pool.
-
-## Mainnet identity
-
-| Parameter | Value |
-|---|---|
-| Symbol | **AURQ** |
-| Ledger | UTXO |
+| Property | AuronQ |
+| --- | --- |
+| Ledger model | UTXO |
+| Consensus | Proof of Work with cumulative-work chain selection |
+| Mining construction | AQM64 |
 | Transaction signatures | ML-DSA-87 |
-| Proof-of-Work | AQM64 |
-| Target block spacing | 600 seconds |
+| Target block interval | 600 seconds |
 | Nominal supply cap | 21,000,000 AURQ |
-| Genesis founder allocation | 210,000 AURQ |
-| Coinbase maturity | 100 blocks |
+| Full-node implementation | Go |
 
-**Network ID**
+For the **canonical Network ID, genesis hash, monetary rules and validation details**, use [MAINNET.md](MAINNET.md) and [PROTOCOL.md](PROTOCOL.md). A summary here must never replace the specifications used by nodes.
 
-`44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c`
+Every full node is intended to validate chain history, transactions and signatures independently. Bootstrap peers are discovery hints, not authorities that determine valid blocks or chain selection. See [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md), [DECENTRALIZATION.md](DECENTRALIZATION.md) and the [mainnet change policy](MAINNET-CHANGE-POLICY.md).
 
-**Genesis hash**
+**Stability comes first:** updates should preserve mainnet compatibility. Genesis, Network ID, AQM64, monetary rules and consensus validation must not be changed casually. Current stabilization criteria are recorded in [STABILIZATION.md](STABILIZATION.md).
 
-`5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4`
+## Mining pools and third-party integrations
 
-Canonical specification: [MAINNET.md](MAINNET.md)
+AURQ can be mined solo or through third-party services. The following services operate independently of this repository:
 
-## Explorer
+- [MeshPool — AuronQ](https://meshpool.net/pool/auronq-main)
+- [RPlant — AuronQ connection details](https://pool.rplant.xyz/#auronq#connect)
+- [MeshMiner 0.8.35 — third-party miner](https://github.com/totom9000/meshminer/releases/tag/v.0.8.35)
 
-There is **no canonical central AuronQ Explorer**.
+Review fees, payout policies, hardware compatibility, downloads and connection parameters directly with the operator. The official Universal Miner does **not** silently install third-party mining binaries.
 
-Every full node exposes a read-only Explorer at:
-
-`/explorer`
-
-The Explorer reads that node's own independently validated canonical chain. A public Explorer can additionally show alternative HTTPS full-node Explorers learned through AuronQ peer gossip.
-
-One currently reachable instance is:
-
-`https://mir.taild63f46.ts.net/explorer`
-
-Its availability does not determine consensus and it has no special authority.
-
-## AuronQ Mobile
-
-AuronQ Mobile 0.5.3 Alpha is a **light wallet, not a full node**.
-
-It:
-
-- keeps private keys and ML-DSA-87 signing local on the phone;
-- independently validates the Mainnet header chain from embedded genesis;
-- locally verifies AQM64 proof-of-work, difficulty, timestamps and hash continuity;
-- accepts balance/history/UTXO state only from peers matching the verified header chain;
-- compares canonical wallet state across agreeing peers and fails closed on conflicts;
-- broadcasts locally signed transactions to agreeing verified-chain peers.
-
-It does **not** reconstruct the entire UTXO set from every full block, so it must not be described as equivalent to a full node.
-
-## Engineering milestones
-
-- **Mainnet launch:** public Windows/Linux full-node releases with immutable Network ID and genesis.
-- **Wallet safety:** guarded local wallet deletion and backup warnings.
-- **Public networking:** HTTPS/DNS peer discovery, peer gossip, persistent peers and public endpoint advertisement.
-- **Observability:** wallet history API and estimated network hash power.
-- **Explorer:** built-in read-only Explorer, then Desktop integration and CSP hardening.
-- **Resilience:** direct bootstrap fallbacks, faster reorg recovery, 20-node partition convergence and hourly public health checks.
-- **P2P hardening:** peer netgroups, DNS parent-domain grouping and sync diversity.
-- **Founder independence:** startup seeds made prunable/replaceable; regression tests remove the original bootstrap node.
-- **Mobile trust reduction:** multi-peer agreement, then local header/AQM64 verification and verified-chain wallet-state quorum.
-- **Build integrity:** deterministic/reproducible build checks on Linux and Windows.
-- **Explorer decentralization:** peer-aware links between independently hosted full-node explorers.
-- **Mining correctness:** CLI/Desktop miners now cancel stale templates when the canonical tip advances or reorgs.
-- **Mining compatibility:** Universal Miner AUTO keeps current CUDA for new GPUs, then validates CUDA 12.x legacy, CUDA 11.8 Kepler, OpenCL GPU, and finally native CPU AQM64; portable CPU packages are CI-built for Windows/Linux/macOS x64/ARM64, with Windows Pool/MeshMiner integration and local hardware fail-safes.
-
-Detailed history: [CHANGELOG.md](CHANGELOG.md)
-
-## Roadmap
-
-### Stabilization and finalization gate
-
-AuronQ Mainnet consensus rules are already frozen for ordinary patch releases under [MAINNET-CHANGE-POLICY.md](MAINNET-CHANGE-POLICY.md). The current priority is therefore **stability, independent operation and observation**, not further consensus development.
-
-After a sustained period of stable Mainnet operation, no unresolved consensus or network-critical failures, and successful compatibility/safety checks, the project may enter a **finalization hardening** phase. That phase should strengthen protection of published tags/releases and repository rules while continuing to allow security and compatibility fixes that do not alter consensus.
-
-The finalization criteria are tracked in [STABILIZATION.md](STABILIZATION.md).
-
-The next engineering priorities are tracked in [ROADMAP.md](ROADMAP.md). The highest-value items are:
-
-1. more independently operated public full nodes and miners;
-2. additional discovery routes, including independently operated DNS seeds;
-3. continued adversarial P2P / eclipse / Sybil / DoS testing;
-4. further reduction of light-client trust in remote full-node state;
-5. independent professional review of AQM64, consensus and networking;
-6. production-grade signing/distribution hardening for binaries and mobile releases.
+Independent pools, wallets, exchanges and explorers may integrate the public network without prior project approval. See [pool integration](POOL-INTEGRATION.md), [exchange integration](EXCHANGE-INTEGRATION.md) and [machine-readable project metadata](auronq-project.json). An integration does not imply endorsement by AuronQ.
 
 ## Documentation
 
-| Topic | Document |
-|---|---|
-| Technical whitepaper | [WHITEPAPER.md](WHITEPAPER.md) |
-| Mainnet specification | [MAINNET.md](MAINNET.md) |
-| Stabilization / finalization gate | [STABILIZATION.md](STABILIZATION.md) |
-| Protocol | [PROTOCOL.md](PROTOCOL.md) |
-| AQM64 Proof-of-Work | [AQM64.md](AQM64.md) |
-| Mining pool integration | [POOL-INTEGRATION.md](POOL-INTEGRATION.md) |
-| Exchange / third-party integration | [EXCHANGE-INTEGRATION.md](EXCHANGE-INTEGRATION.md) |
-| Machine-readable project metadata | [auronq-project.json](auronq-project.json) |
-| Decentralization model | [DECENTRALIZATION.md](DECENTRALIZATION.md) |
-| Network independence | [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md) |
-| Public networking | [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md) |
-| Threat model | [THREAT-MODEL.md](THREAT-MODEL.md) |
-| Security policy | [SECURITY.md](SECURITY.md) |
-| Test matrix | [TEST-MATRIX.md](TEST-MATRIX.md) |
-| FAQ | [FAQ.md](FAQ.md) |
-| Windows guide | [README-WINDOWS.md](README-WINDOWS.md) |
-| Universal Miner guide | [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md) |
-| NVIDIA accelerated miner guide | [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md) |
-| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Release history | [CHANGELOG.md](CHANGELOG.md) |
-| Historical material | [docs/archive/README.md](docs/archive/README.md) |
+| Topic | Reference |
+| --- | --- |
+| Project and economics | [Whitepaper](WHITEPAPER.md) · [Mainnet specification](MAINNET.md) |
+| Consensus and mining | [Protocol](PROTOCOL.md) · [AQM64](AQM64.md) |
+| Software setup | [Windows](README-WINDOWS.md) · [Miner](UNIVERSAL-MINER-GUIDE.md) · [GPU guide](GPU-MINER-GUIDE.md) |
+| Network design | [Decentralization](DECENTRALIZATION.md) · [Network independence](NETWORK-INDEPENDENCE.md) |
+| Engineering evidence | [Test matrix](TEST-MATRIX.md) · [Threat model](THREAT-MODEL.md) · [Changelog](CHANGELOG.md) |
+| Project direction | [Roadmap](ROADMAP.md) · [Stabilization](STABILIZATION.md) |
+| Community and security | [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [FAQ](FAQ.md) |
 
-## Security
+The standardized ML-DSA-87 signature scheme does not, by itself, establish that the complete cryptocurrency is post-quantum secure. Independent cryptographic and implementation reviews remain a priority.
 
-AuronQ's use of ML-DSA-87 provides a standardized post-quantum signature scheme for transactions. That **does not** prove that the complete cryptocurrency is post-quantum secure or production secure.
+## Participate
 
-AQM64, consensus, networking, wallet behavior and implementation details still require independent review.
+Read the code, run an independent node, report reproducible defects and test interoperability. You can use the [issue tracker](https://github.com/promirmir/AuronQ/issues), [pull requests](https://github.com/promirmir/AuronQ/pulls) or [Bitcointalk project discussion](https://bitcointalk.org/index.php?topic=5595868.0).
 
-Please read [SECURITY.md](SECURITY.md) before reporting or evaluating security issues.
-
-## Thank you
-
-AuronQ is becoming a real public network because people are actually using it, testing it and challenging it.
-
-Thank you to everyone who runs a node, mines AURQ, operates or tests a pool, tries the wallets and miners, checks the Explorer, reports bugs, asks difficult technical questions, reviews the code, shares independent measurements, or simply takes the time to follow the project and provide feedback.
-
-Every independent node, miner, test, bug report and honest piece of criticism helps make the network more observable, more resilient and less dependent on any single person or machine.
-
-Special thanks to the community members, pool operators, infrastructure providers and external services that have chosen to support or monitor AuronQ independently.
-
-The project is still young, and that makes real-world participation especially valuable. Thank you to everyone contributing to that process.
-
-## Contributing
-
-Contributions, reproducible bug reports and independent review are welcome.
-
-- [Contributing guide](CONTRIBUTING.md)
-- [Security policy](SECURITY.md)
-- [Issue tracker](https://github.com/promirmir/AuronQ/issues)
-- [Pull requests](https://github.com/promirmir/AuronQ/pulls)
-- [Bitcointalk ANN / community discussion](https://bitcointalk.org/index.php?topic=5595868.0)
-- [Official Discord community](https://discord.gg/rmmNY9RhA)
-
-## License
-
-AuronQ is released under the [MIT License](LICENSE).
+Released under the [MIT License](LICENSE).
