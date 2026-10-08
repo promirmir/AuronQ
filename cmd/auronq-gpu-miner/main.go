@@ -548,7 +548,7 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 		template, err := client.Template(address)
 		for attempt := 0; err != nil; attempt++ {
 			delay := nodeRecoveryDelay(attempt)
-			fmt.Printf("NODE_TEMPLATE_RETRY wait=%s error=%v\\n", delay, err)
+			fmt.Printf("NODE_TEMPLATE_RETRY wait=%s error=%v\n", delay, err)
 			time.Sleep(delay)
 			template, err = client.Template(address)
 		}
