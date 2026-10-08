@@ -15,6 +15,7 @@ func TestValidateAutotuneTemperature(t *testing.T) {
 		{"limit", 81, 81, true},
 		{"too-hot", 90, 81, true},
 		{"invalid-negative", -50, 81, true},
+		{"missing-sensor", -1, 81, true},
 		{"invalid-positive", 140, 81, true},
 		{"invalid-limit-low", 50, 50, true},
 		{"invalid-limit-high", 50, 100, true},
