@@ -538,6 +538,7 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 	lastReport := start
 	var lastReportTotal uint64
 	var nextNonce uint64
+	var consecutiveStatusErrors int
 	var agent *adaptiveMiningAgent
 	if thermal != nil { agent = newAdaptiveMiningAgent() }
 
@@ -613,9 +614,18 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 			// template is fresh, and a tip change is detected before the next batch.
 			// Avoid a redundant blocking RPC on the critical GPU hot path.
 			st, statusErr := client.Status()
-			if statusErr == nil && !aq.MiningTemplateCurrent(template, st) {
-				fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
-				break
+			if statusErr != nil {
+				consecutiveStatusErrors++
+				fmt.Printf("NODE_STATUS_WARNING consecutive=%d error=%v\n", consecutiveStatusErrors, statusErr)
+				if consecutiveStatusErrors >= 3 {
+					return fmt.Errorf("node status unavailable for %d consecutive GPU batches: %w", consecutiveStatusErrors, statusErr)
+				}
+			} else {
+				consecutiveStatusErrors = 0
+				if !aq.MiningTemplateCurrent(template, st) {
+					fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
+					break
+				}
 			}
 			prevNonce := nextNonce
 			nextNonce += uint64(batch)
