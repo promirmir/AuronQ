@@ -558,12 +558,6 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				thermalPause = pause
 			}
 
-			st, err := client.Status()
-			if err == nil && !aq.MiningTemplateCurrent(template, st) {
-				fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
-				break
-			}
-
 			prepared, initial, err := buildBatch(template, nextNonce, batch)
 			if err != nil {
 				return err
@@ -605,8 +599,12 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				break
 			}
 
-			st, err = client.Status()
-			if err == nil && !aq.MiningTemplateCurrent(template, st) {
+			// One status poll after each compute batch is sufficient: the initial
+			// template is fresh, and a tip change is detected before the next batch.
+			// Avoid a redundant blocking RPC on the critical GPU hot path.
+			st, statusErr := client.Status()
+			if statusErr == nil && !aq.MiningTemplateCurrent(template, st) {
+				fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
 				break
 			}
 			prevNonce := nextNonce
