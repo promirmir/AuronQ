@@ -72,6 +72,7 @@ type minerState struct {
 	Mode        string  `json:"mode,omitempty"`
 	Backend     string  `json:"backend,omitempty"`
 	Hashrate    float64 `json:"hashrate"`
+	ActiveBatch int `json:"active_batch,omitempty"`
 	Height      uint64  `json:"height"`
 	BlocksFound uint64  `json:"blocks_found"`
 	LastBlock   string  `json:"last_block,omitempty"`
@@ -1536,6 +1537,21 @@ func (a *App) parseWorkerLine(line string) {
 	}
 	if strings.HasPrefix(line, "AUTO FALLBACK: ") {
 		a.miner.FallbackReason = strings.TrimSpace(strings.TrimPrefix(line, "AUTO FALLBACK: "))
+	}
+	if strings.HasPrefix(line, "AUTOTUNE OK ") {
+		if batch, ok := uintAfter(line, "best_batch="); ok && batch >= 1 && batch <= 64 {
+			a.miner.ActiveBatch = int(batch)
+		}
+	}
+	if strings.HasPrefix(line, "THERMAL ") {
+		if batchSpec, ok := wordAfter(line, "batch="); ok {
+			parts := strings.Split(batchSpec, "->")
+			if len(parts) == 2 {
+				if value, err := strconv.Atoi(parts[1]); err == nil && value >= 1 && value <= 64 {
+					a.miner.ActiveBatch = value
+				}
+			}
+		}
 	}
 	if strings.HasPrefix(line, "Mining height ") {
 		fields := strings.Fields(line)
