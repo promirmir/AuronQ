@@ -539,6 +539,7 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 	var lastReportTotal uint64
 	var nextNonce uint64
 	var consecutiveStatusErrors int
+	var lastStatusCheck time.Time
 	var agent *adaptiveMiningAgent
 	if thermal != nil { agent = newAdaptiveMiningAgent() }
 
@@ -610,23 +611,32 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				break
 			}
 
-			// One status poll after each compute batch is sufficient: the initial
-			// template is fresh, and a tip change is detected before the next batch.
-			// Avoid a redundant blocking RPC on the critical GPU hot path.
-			st, statusErr := client.Status()
-			if statusErr != nil {
-				consecutiveStatusErrors++
-				fmt.Printf("NODE_STATUS_WARNING consecutive=%d error=%v\n", consecutiveStatusErrors, statusErr)
-				if consecutiveStatusErrors >= 3 {
-					return fmt.Errorf("node status unavailable for %d consecutive GPU batches: %w", consecutiveStatusErrors, statusErr)
+			// A typical GPU batch takes a fraction of a second. The local node
+			// shares its API rate limit with the GUI: use one status poll every
+			// five seconds, not one RPC per nonce batch.
+			if time.Since(lastStatusCheck) >= 5*time.Second {
+				st, statusErr := client.Status()
+				for attempt := 0; statusErr != nil && attempt < 6; attempt++ {
+					consecutiveStatusErrors++
+					fmt.Printf("NODE_STATUS_WARNING consecutive=%d error=%v\n", consecutiveStatusErrors, statusErr)
+					// Pause GPU work during node errors. Backoff avoids rapidly
+					// exhausting the same shared rate limiter again.
+					delay := time.Duration(3*(attempt+1)) * time.Second
+					fmt.Printf("NODE_STATUS_BACKOFF wait=%s attempt=%d/6\n", delay, attempt+1)
+					time.Sleep(delay)
+					st, statusErr = client.Status()
 				}
-			} else {
+				if statusErr != nil {
+					return fmt.Errorf("node status unavailable after throttled retries: %w", statusErr)
+				}
 				consecutiveStatusErrors = 0
+				lastStatusCheck = time.Now()
 				if !aq.MiningTemplateCurrent(template, st) {
 					fmt.Printf("Tip changed at height %d; refreshing template\n", st.Height)
 					break
 				}
 			}
+
 			prevNonce := nextNonce
 			nextNonce += uint64(batch)
 			if nextNonce < prevNonce {
