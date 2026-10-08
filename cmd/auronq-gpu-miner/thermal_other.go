@@ -7,7 +7,9 @@ import (
  "time"
 )
 
-type thermalController struct{}
+// Keep field-compatible with Windows/Linux so portable CLI builds compile.
+// This unsupported platform never activates the thermal controller.
+type thermalController struct { lastTemp int; maxBatch int }
 
 func newThermalController(device, targetC, limitC, maxBatch int) *thermalController { return nil }
 func (t *thermalController) Target() int { return 0 }
