@@ -6,7 +6,7 @@
 
 
 
-**Current builds:** Windows x64 GUI/GPU v0.4.8 Alpha is the existing published release and remains unchanged. Linux x64 v0.4.8 Alpha has passed automated build and CPU/OpenCL packaging checks; its [CI test archive](https://github.com/promirmir/AuronQ/actions/runs/38089531174) is temporary and is not yet a permanent Release download. Historical Linux and portable CPU builds are available in the [v0.4.6 Alpha archive](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha). No Linux CUDA real-GPU validation has been claimed.
+**Current builds:** Windows x64 GUI/GPU v0.4.8 Alpha is the existing published release and remains unchanged. Linux x64 v0.4.8 Alpha has passed automated build and CPU/OpenCL packaging checks and is [published in GitHub Releases](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha). Historical Linux and portable CPU builds are available in the [v0.4.6 Alpha archive](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha). No Linux CUDA real-GPU validation has been claimed.
 
 AuronQ Universal Miner is designed to start safely on as many ordinary computers as possible without changing AuronQ Mainnet consensus.
 
