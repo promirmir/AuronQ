@@ -84,9 +84,9 @@ jobs:
           set -euo pipefail
           APK="android/app/build/outputs/apk/quick2stagev2/app-quick2stagev2.apk"
           test -s "$APK"
-          cp "$APK" AuronQ-Mobile-0.5.3-Two-Stage-V2-TEST.apk
+          cp "$APK" AuronQ-Mobile-0.5.3-Two-Stage-V2-Mempool-TEST.apk
           sha256sum AuronQ-Mobile-0.5.3-Two-Stage-V2-TEST.apk > SHA256SUMS-2-STAGE-V2.txt
-          TAG="android-v0.5.3-two-stage-v2-test-20261010"
+          TAG="android-v0.5.3-two-stage-v2-mempool-test-20261010"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Already published; refusing to overwrite signed artifact"
             exit 1
@@ -94,6 +94,6 @@ jobs:
           gh release create "$TAG" \
             AuronQ-Mobile-0.5.3-Two-Stage-V2-TEST.apk SHA256SUMS-2-STAGE-V2.txt \
             --target "$GITHUB_SHA" \
-            --title "AuronQ Mobile 0.5.3 corrected two-stage V2 (TEST ONLY)" \
+            --title "AuronQ Mobile 0.5.3 two-stage V2 mempool restored (TEST ONLY)" \
             --notes "EXPERIMENTAL CORRECTED TWO-STAGE V2 TEST. NOT FOR FUNDED MAINNET WALLETS. Based on 0.5.3, first checks 3 separate publicly routed IPv4 /16 or IPv6 /32 network groups, chain tip, balances, confirmed history and UTXOs. Different IP networks DO NOT prove separate ownership; all 3 may be Sybil or compromised. AQM64 replay from genesis independently runs in a separate background worker and does not block the first screen. Wallet balance is shown as PEER-OBSERVED, not cryptographically self-verified. Reorg/mismatched state disables sending and displays UNKNOWN, private keys stay locally and transaction signing stays original 0.5.3. Some public nodes connect over unencrypted HTTP and no independent adversarial network review has been performed. Do not import valuable secrets or rely on this build with funds. Separate app com.auronq.mobile.quick2stage avoids touching existing wallets. Need physical-phone fresh-install benchmark and adversarial/end-to-end payment audit prior to public promotion. Stable official mainnet and its wallet binaries are not modified." \
             --prerelease
