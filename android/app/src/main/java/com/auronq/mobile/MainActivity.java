@@ -74,6 +74,11 @@ public class MainActivity extends Activity {
     private String currentScreen = "home";
     private String lastHistoryKey = "";
     private boolean liveBusy = false;
+    // These describe a THREE-PEER observation, not independently verified AQM64.
+    private boolean quickAccountReady = false;
+    private long quickHeight = -1;
+    private String quickTip = "";
+    private long walletGeneration = 0;
     private boolean networkReachable = false;
 
     private FrameLayout content;
@@ -103,6 +108,8 @@ public class MainActivity extends Activity {
     private Button backupButton;
     private Button copyButton;
     private Button sendShortcutButton;
+    private Button sendButton;
+    private TextView walletTrustStatus;
     private Button deleteButton;
     private TextView walletHistoryStatus;
     private LinearLayout walletHistory;
@@ -159,6 +166,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        invalidateQuickAccount(tr("Ponownie sprawdzam bieżący stan konta…",
+                "Rechecking current account state…"));
         handler.removeCallbacks(liveLoop);
         handler.post(liveLoop);
     }
@@ -260,7 +269,7 @@ public class MainActivity extends Activity {
         root.addView(sub, mt(5));
 
         LinearLayout stats1 = row();
-        dashBalance = statCard(stats1, tr("SALDO", "BALANCE"), "0.00000000", "AURQ");
+        dashBalance = statCard(stats1, tr("SALDO", "BALANCE"), "—", "AURQ");
         dashHeight = statCard(stats1, tr("WYSOKOŚĆ", "HEIGHT"), "—", tr("łańcuch", "chain"));
         root.addView(stats1, mt(20));
 
@@ -309,8 +318,12 @@ public class MainActivity extends Activity {
 
         LinearLayout balanceCard = card();
         balanceCard.addView(section(tr("SALDO DOSTĘPNE", "SPENDABLE BALANCE")));
-        walletBalance = text("0.00000000 AURQ", 29, true);
+        walletBalance = text("— AURQ", 29, true);
         balanceCard.addView(walletBalance, mt(8));
+        walletTrustStatus = text(tr("Sprawdzam zgodność 3 grup węzłów…",
+                "Checking agreement across 3 network groups…"), 11, false);
+        walletTrustStatus.setTextColor(BLUE);
+        balanceCard.addView(walletTrustStatus, mt(8));
         root.addView(balanceCard, mt(18));
 
         LinearLayout addressCard = card();
@@ -345,6 +358,7 @@ public class MainActivity extends Activity {
 
         sendShortcutButton = primaryButton(tr("Wyślij AURQ", "Send AURQ"));
         sendShortcutButton.setOnClickListener(v -> showScreen("send"));
+        sendShortcutButton.setEnabled(false);
         root.addView(sendShortcutButton, mt(12));
 
         LinearLayout historyCard = card();
@@ -400,7 +414,8 @@ public class MainActivity extends Activity {
         card.addView(label(tr("HASŁO PORTFELA", "WALLET PASSWORD")), mt(14));
         card.addView(sendPassword, mt(6));
 
-        Button sendButton = primaryButton(tr("Wyślij transakcję", "Send transaction"));
+        sendButton = primaryButton(tr("Wyślij transakcję", "Send transaction"));
+        sendButton.setEnabled(false);
         sendButton.setOnClickListener(v -> sendTransaction());
         card.addView(sendButton, mt(16));
         root.addView(card, mt(18));
@@ -557,91 +572,187 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void updateSendButtons() {
+        boolean ready = quickAccountReady && walletFile.exists() && !walletAddress.isEmpty();
+        if (sendButton != null) sendButton.setEnabled(ready);
+        if (sendShortcutButton != null) sendShortcutButton.setEnabled(ready);
+    }
+
+    private void invalidateQuickAccount(String reason) {
+        quickAccountReady = false;
+        if (dashBalance != null) dashBalance.setText("—");
+        if (walletBalance != null) walletBalance.setText("— AURQ");
+        if (walletTrustStatus != null) {
+            walletTrustStatus.setText(reason);
+            walletTrustStatus.setTextColor(BLUE);
+        }
+        if (walletHistory != null) walletHistory.removeAllViews();
+        if (walletHistoryStatus != null) {
+            walletHistoryStatus.setText(tr("Historia niepotwierdzona — sprawdzanie węzłów",
+                    "History unconfirmed — checking peers"));
+            walletHistoryStatus.setTextColor(BLUE);
+        }
+        lastHistoryKey = "";
+        updateSendButtons();
+    }
+
     private void refreshAll() {
         if (liveBusy) return;
         liveBusy = true;
+        final long requestGeneration = walletGeneration;
         executor.execute(() -> {
             try {
-                String knownNodes = prefs.getString("known_nodes", "[]");
-
-                // First establish reachability and show it immediately. Fresh
-                // installs may need to verify hundreds of memory-hard AQM64
-                // headers; that work must not look like "no connection".
-                try {
-                    String preview = Bridge.quorumSnapshot(knownNodes, 1);
-                    final String finalPreview = preview;
-                    runOnUiThread(() -> applyNetworkPreview(finalPreview));
-                } catch (Exception ignored) {
-                }
-
-                String snapshot = Bridge.quorumSnapshotVerified(knownNodes, headerCacheFile.getAbsolutePath(), 6);
-                JSONObject snapshotState = new JSONObject(snapshot);
-                String node = snapshotState.optString("node", "").trim();
-                if (node.isEmpty()) throw new Exception("AuronQ quorum did not select a node");
-
-                // Show a successfully verified network snapshot immediately. Wallet
-                // quorum/history refreshes can be slower and must not leave the UI stuck
-                // on "Connecting…" after the chain itself is already verified.
-                final String connectedNode = node;
-                final String connectedSnapshot = snapshot;
+                String known = prefs.getString("known_nodes", "[]");
+                String raw = Bridge.quickNetworkSnapshot(known);
+                JSONObject state = new JSONObject(raw);
+                String node = state.optString("node", "");
+                long height = state.optLong("height", -1);
+                String tip = state.optString("tip", "");
                 runOnUiThread(() -> {
-                    nodeUrl = connectedNode;
-                    applySnapshot(connectedSnapshot);
+                    if (requestGeneration != walletGeneration) return;
+                    applyQuickNetwork(raw);
                 });
-
-                rememberNetwork(node);
-
-                String balance = null;
-                String history = null;
-                String historyError = null;
-                if (walletFile.exists()) {
+                String address = "";
+                if (walletFile.exists()) address = Bridge.walletAddress(walletFile.getAbsolutePath());
+                final String requestedAddress = address;
+                if (!address.isEmpty()) {
+                    String account = Bridge.quickAccountSnapshot(known, address, 50);
+                    runOnUiThread(() -> {
+                        if (requestGeneration != walletGeneration
+                                || !walletAddress.equals(requestedAddress)) return;
+                        applyQuickAccount(account);
+                    });
+                }
+                // Full recent-block downloads are read-only, secondary UI.
+                // Never delay account reads with bulky transaction signatures.
+                if ("network".equals(currentScreen) && !node.isEmpty()) {
                     try {
-                        String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
-                        balance = Bridge.quorumBalanceVerified(
-                                prefs.getString("known_nodes", "[]"),
-                                addr,
-                                snapshotState.optString("verified_tip"),
-                                snapshotState.optString("verified_chain_work"),
-                                snapshotState.optLong("verified_height"));
-                        if ("wallet".equals(currentScreen)) {
-                            String historyKey = addr + ":" + snapshotState.optLong("height") + ":" + snapshotState.optInt("mempool");
-                            if (!historyKey.equals(lastHistoryKey)) {
-                                try {
-                                    history = Bridge.quorumHistoryVerified(
-                                            prefs.getString("known_nodes", "[]"),
-                                            addr,
-                                            snapshotState.optString("verified_tip"),
-                                            snapshotState.optString("verified_chain_work"),
-                                            snapshotState.optLong("verified_height"),
-                                            50);
-                                    lastHistoryKey = historyKey;
-                                } catch (Exception e) {
-                                    historyError = e.getMessage();
-                                }
-                            }
-                        }
-                    } catch (Exception ignored) {
-                    }
+                        String blocks = Bridge.networkSnapshot(node, 6);
+                        runOnUiThread(() -> {
+                            if (requestGeneration != walletGeneration
+                                    || quickHeight != height || !quickTip.equalsIgnoreCase(tip))
+                                return;
+                            applyQuickRecentBlocks(blocks);
+                        });
+                    } catch (Exception ignored) { }
                 }
-
-                final String finalBalance = balance;
-                final String finalHistory = history;
-                final String finalHistoryError = historyError;
-                runOnUiThread(() -> {
-                    if (finalBalance != null) applyBalance(finalBalance);
-                    if (finalHistory != null) {
-                        applyHistory(finalHistory);
-                    } else if (finalHistoryError != null && "wallet".equals(currentScreen)) {
-                        walletHistoryStatus.setText(tr("Historia niedostępna: ", "History unavailable: ") + finalHistoryError);
-                        walletHistoryStatus.setTextColor(DANGER);
-                    }
-                });
             } catch (Exception e) {
-                runOnUiThread(() -> handleNetworkRefreshFailure(e.getMessage()));
+                String message = e.getMessage();
+                runOnUiThread(() -> {
+                    if (requestGeneration != walletGeneration) return;
+                    invalidateQuickAccount(tr("Brak zgodności 3 grup węzłów — saldo nieustalone",
+                            "Three network groups disagree — balance unavailable"));
+                    dashNode.setText(tr("● Niepotwierdzona sieć", "● Network unconfirmed"));
+                    dashNode.setTextColor(BLUE);
+                    netStatus.setText(tr("● Oczekiwanie na 3 zgodne grupy węzłów",
+                            "● Waiting for 3 agreeing network groups"));
+                    netStatus.setTextColor(BLUE);
+                    netObserved.setText(message == null ? "—" : message);
+                });
             } finally {
                 liveBusy = false;
             }
         });
+    }
+
+    private void applyQuickNetwork(String raw) {
+        try {
+            JSONObject state = new JSONObject(raw);
+            if (!state.has("height") || !state.has("tip")
+                    || state.optInt("peer_agreement", 0) < 3
+                    || state.optJSONArray("network_groups") == null
+                    || state.optJSONArray("network_groups").length() < 3) {
+                invalidateQuickAccount(tr("Nie można potwierdzić stanu sieci",
+                        "Could not confirm network state"));
+                return;
+            }
+            long height = state.optLong("height", -1);
+            String tip = state.optString("tip", "");
+            if (height < 1 || tip.length() != 128) {
+                invalidateQuickAccount(tr("Nieprawidłowe dane węzłów", "Invalid peer data"));
+                return;
+            }
+            if (height != quickHeight || !tip.equalsIgnoreCase(quickTip)) {
+                invalidateQuickAccount(tr("Nowy stan sieci — sprawdzam konto",
+                        "New network state — verifying account"));
+            }
+            networkReachable = true;
+            quickHeight = height;
+            quickTip = tip;
+            nodeUrl = state.optString("node", "");
+            verifiedHeight = -1;
+            verifiedTip = "";
+            verifiedWork = "";
+            dashHeight.setText(String.valueOf(height));
+            dashPeers.setText(String.valueOf(state.optInt("peers")));
+            dashMempool.setText(String.valueOf(state.optInt("mempool")));
+            dashNode.setText(tr("● Zgodność 3 grup sieci • bez pełnej weryfikacji AQM64",
+                    "● 3 network groups agree • full AQM64 not verified"));
+            dashNode.setTextColor(BLUE);
+            dashTip.setText("Tip: " + shortHash(tip));
+            netStatus.setText(tr("● Potwierdzone przez 3 grupy IP, nie kryptograficznie od genesis",
+                    "● Observed by 3 IP groups, not cryptographically verified from genesis"));
+            netStatus.setTextColor(BLUE);
+            netHeight.setText(String.valueOf(height));
+            netPeers.setText(String.valueOf(state.optInt("peers")));
+            netMempool.setText(String.valueOf(state.optInt("mempool")));
+            netIssued.setText(String.format(Locale.US, "%.8f", state.optDouble("issued_coins")));
+            netNode.setText(nodeUrl);
+            netNetworkId.setText(state.optString("network_id"));
+            netTip.setText(tip);
+            netWork.setText(state.optString("chain_work"));
+            netObserved.setText(state.optString("observed_at"));
+            topNetworkDot.setTextColor(BLUE);
+        } catch (Exception e) {
+            invalidateQuickAccount(tr("Odpowiedź sieci niepoprawna", "Invalid network response"));
+        }
+    }
+
+    private void applyQuickAccount(String raw) {
+        try {
+            JSONObject state = new JSONObject(raw);
+            String address = state.optString("address", "");
+            String tip = state.optString("tip", "");
+            long height = state.optLong("height", -1);
+            String value = state.optString("spendable", "");
+            JSONArray items = state.optJSONArray("items");
+            if (!walletAddress.equals(address) || !quickTip.equalsIgnoreCase(tip)
+                    || quickHeight != height || state.optInt("peer_agreement", 0) != 3
+                    || !value.matches("[0-9]+\\\\.[0-9]{8}") || items == null) {
+                invalidateQuickAccount(tr("Brak spójnych danych konta z 3 węzłów",
+                        "Missing consistent account data from 3 peers"));
+                return;
+            }
+            // Rendering MUST be atomic for this current wallet and chain tip.
+            dashBalance.setText(value);
+            walletBalance.setText(value + " AURQ");
+            walletTrustStatus.setText(tr("Zgodne 3 grupy sieci • nie jest to pełny dowód blockchaina",
+                    "3 network groups agree • not a full blockchain proof"));
+            walletTrustStatus.setTextColor(BLUE);
+            applyHistory(raw);
+            quickAccountReady = true;
+            updateSendButtons();
+        } catch (Exception e) {
+            invalidateQuickAccount(tr("Nie można zweryfikować danych konta",
+                    "Could not verify account data"));
+        }
+    }
+
+    private void applyQuickRecentBlocks(String raw) {
+        try {
+            JSONObject s = new JSONObject(raw);
+            if (s.optLong("height", -1) != quickHeight
+                    || !quickTip.equalsIgnoreCase(s.optString("tip", ""))) return;
+            JSONArray blocks = s.optJSONArray("blocks");
+            if (blocks == null) return;
+            recentBlocks.removeAllViews();
+            for (int i = 0; i < blocks.length(); i++) {
+                JSONObject b = blocks.optJSONObject(i);
+                if (b == null || !b.has("transactions")) continue;
+                recentBlocks.addView(blockRow(b.optLong("height"), b.optString("hash"),
+                        b.optLong("timestamp"), b.optInt("transactions")));
+            }
+        } catch (Exception ignored) { }
     }
 
     private void applySnapshot(String raw) {
@@ -950,8 +1061,9 @@ public class MainActivity extends Activity {
             toast(tr("Najpierw utwórz albo zaimportuj portfel", "Create or import a wallet first"));
             return;
         }
-        if (nodeUrl.isEmpty() || verifiedHeight < 0 || verifiedTip.isEmpty() || verifiedWork.isEmpty()) {
-            toast(tr("Brak niezależnie zweryfikowanego stanu AuronQ Mainnet", "No independently verified AuronQ Mainnet state"));
+        if (!quickAccountReady || nodeUrl.isEmpty() || quickHeight < 0 || quickTip.isEmpty()) {
+            toast(tr("Zaczekaj na zgodność 3 grup węzłów i bieżące saldo",
+                    "Wait for three network groups and current wallet balance"));
             return;
         }
         String password = sendPassword.getText().toString();
@@ -961,20 +1073,17 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(tr("Potwierdź wysyłkę", "Confirm transaction"))
                 .setMessage(tr(
-                        "Wyślij " + amount + " AURQ na:\n\n" + to + "\n\nTransakcja po zatwierdzeniu w blockchainie jest nieodwracalna.",
-                        "Send " + amount + " AURQ to:\n\n" + to + "\n\nA confirmed blockchain transaction is irreversible."))
+                        "Wyślij " + amount + " AURQ na:\n\n" + to
+                        + "\n\nUwaga: saldo potwierdzają 3 grupy węzłów, nie pełna weryfikacja łańcucha. Transakcja jest nieodwracalna.",
+                        "Send " + amount + " AURQ to:\n\n" + to
+                        + "\n\nWarning: 3 network groups confirm the balance; full chain verification is not performed. Sending is irreversible."))
                 .setNegativeButton(tr("Anuluj", "Cancel"), null)
                 .setPositiveButton(tr("Wyślij", "Send"), (d, w) ->
                         run(tr("Podpisywanie i wysyłanie…", "Signing and sending…"),
-                                () -> Bridge.sendMultiVerified(
+                                () -> Bridge.sendWithQuickQuorum(
                                         prefs.getString("known_nodes", "[]"),
                                         walletFile.getAbsolutePath(),
-                                        password,
-                                        to,
-                                        amount,
-                                        verifiedTip,
-                                        verifiedWork,
-                                        verifiedHeight),
+                                        password, to, amount),
                                 value -> {
                                     try {
                                         JSONObject j = new JSONObject(value);
@@ -1022,11 +1131,13 @@ public class MainActivity extends Activity {
     }
 
     private void loadWalletState() {
+        walletGeneration++;
+        invalidateQuickAccount(tr("Sprawdzam stan nowego portfela…",
+                "Checking newly selected wallet…"));
         if (!walletFile.exists()) {
             walletAddress = "";
             walletAddressText.setText(tr("Brak lokalnego portfela", "No local wallet"));
-            walletBalance.setText("0.00000000 AURQ");
-            dashBalance.setText("0.00000000");
+            invalidateQuickAccount(tr("Brak lokalnego portfela", "No local wallet"));
             backupButton.setEnabled(false);
             copyButton.setEnabled(false);
             sendShortcutButton.setEnabled(false);
@@ -1038,16 +1149,20 @@ public class MainActivity extends Activity {
             }
             return;
         }
+        final long generation = walletGeneration;
+        walletAddress = "";
         executor.execute(() -> {
             try {
                 String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
                 runOnUiThread(() -> {
+                    if (generation != walletGeneration) return;
                     walletAddress = addr;
                     walletAddressText.setText(addr);
                     backupButton.setEnabled(true);
                     copyButton.setEnabled(true);
-                    sendShortcutButton.setEnabled(true);
+                    updateSendButtons();
                     deleteButton.setEnabled(true);
+                    refreshAll();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> toast(tr("Błąd portfela: ", "Wallet error: ") + e.getMessage()));
