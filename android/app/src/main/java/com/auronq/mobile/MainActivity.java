@@ -444,8 +444,8 @@ public class MainActivity extends Activity {
         root.addView(netStatus, mt(16));
 
         TextView firstSyncNote = text(tr(
-                "Aplikacja korzysta z wbudowanego, wcześniej zweryfikowanego punktu kontrolnego (blok 1284) i sprawdza AQM64 od tego punktu. Starsza historia jest zaufanym punktem startu wydania, a nie sprawdzana na telefonie od genesis.",
-                "The app starts from a previously verified, bundled release checkpoint (block 1284), checking AQM64 for subsequent headers. Earlier history is trusted as a release anchor; it is not revalidated from genesis on the phone."), 11, false);
+                "Aplikacja korzysta z wbudowanego, sprawdzonego punktu kontrolnego (blok 1284). Kolejne bloki weryfikuje i automatycznie zapisuje w telefonie. Nowe punkty startowe dla instalacji są przygotowywane do niezależnego przeglądu, a nie przyjmowane automatycznie z internetu.",
+                "The app starts from a reviewed release checkpoint (block 1284). New headers are verified and automatically stored on this phone. Future release checkpoints require review and are not blindly trusted from the internet."), 11, false);
         firstSyncNote.setTextColor(MUTED);
         root.addView(firstSyncNote, mt(8));
 
