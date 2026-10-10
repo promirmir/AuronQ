@@ -1,0 +1,89 @@
+name: Android 0.5.3 quick three-netgroup TEST build
+
+on:
+  push:
+    branches:
+      - fix/mobile053-three-netgroups-quick-wallet-20261010
+    paths:
+      - '.github/workflows/android-053-quick3-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Verify original 0.5.3 frozen Mainnet code unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e bfdc46bd91115ce8dc072b839845a135f3782f09^{commit}
+          git diff --exit-code bfdc46bd91115ce8dc072b839845a135f3782f09 HEAD -- \
+            internal/auronq/ go.mod go.sum cmd/ network.json genesis.json
+          echo "Mainnet consensus, transaction signatures, UTXO rules and original wallet files unchanged"
+      - name: Fast quorum and regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./mobile/bridge -run '^TestQuick' -count=1 -v
+          go test -race ./mobile/bridge -run '^TestQuick' -count=1 -timeout=10m
+          go test ./...
+          go vet ./...
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK / NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Compile AuronQ 0.5.3 Go mobile binding
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile isolated 3-peer quick-start test APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleQuick3test
+      - name: Publish immutable prerelease (test only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/quick3test/app-quick3test.apk"
+          test -s "$APK"
+          cp "$APK" AuronQ-Mobile-0.5.3-Quick-3Netgroups-TEST.apk
+          sha256sum AuronQ-Mobile-0.5.3-Quick-3Netgroups-TEST.apk > SHA256SUMS-QUICK3.txt
+          TAG="android-v0.5.3-quick-three-netgroups-test-20261010"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Immutable prerelease exists - will not overwrite an APK"
+            exit 1
+          fi
+          gh release create "$TAG" \
+            AuronQ-Mobile-0.5.3-Quick-3Netgroups-TEST.apk SHA256SUMS-QUICK3.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile 0.5.3 - experimental fast 3-netgroup wallet" \
+            --notes "ISOLATED TEST ONLY, NOT AUDITED FOR PRODUCTION FUNDS. Fresh installation avoids O(chain-height) AQM64 replay by requiring matching status, balance, UTXOs and confirmed history from 3 reachable public IP /16 or IPv6 /32 network groups. Network groups do NOT establish truly independent operators or prove the actual blockchain state; initial data may be missing when fewer than 3 reachable groups agree. Locally signs using unchanged 0.5.3 AuronQ wallet code; send rechecks three peers before constructing a transaction. Never trusts or imports automatic checkpoints; no consensus change. Public IPv4 bootstrap may use HTTP, which offers no transport authenticity. Do not treat a peer-confirmed balance as full AQM64 historical proof. Requires real Android clean-install and send/receive tests before any official promotion. Separate com.auronq.mobile.quick3test package; never uninstall or wipe a funded wallet, and do not import a valuable key into the experimental build. CI debug signing may change." \
+            --prerelease
