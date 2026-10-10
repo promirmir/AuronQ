@@ -27,7 +27,7 @@ func TestParseRecentBlockTxCountsRejectsFabricatedMissingMalformedData(t *testin
         `{"blocks":[{"height":3,"hash":"abc","transactions":4}]}`,
         fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":-1}]}`,goodHash),
         fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":1},{"height":3,"hash":"%s","transactions":1}]}`,goodHash,goodHash),
-        fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":0},{"height":2,"hash":"%s","transactions":1}]}`,goodHash,goodHash),
+        fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":0},{"height":2,"hash":"%s","transactions":1},{"height":1,"hash":"%s","transactions":2}]}`,goodHash,goodHash,goodHash),
         `{"blocks":[{}`, // invalid JSON
     }
     for i,input:=range testcases{
