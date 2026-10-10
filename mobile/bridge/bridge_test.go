@@ -88,21 +88,35 @@ func TestFreshHeaderCacheAnchorsExactMainnetGenesis(t *testing.T) {
 }
 
 func TestHeaderCacheRoundTripPreservesVerifiedAnchor(t *testing.T) {
-	cache, err := freshHeaderCache()
-	if err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(t.TempDir(), "headers", "mainnet.json")
-	if err := saveHeaderCache(path, cache); err != nil {
-		t.Fatal(err)
-	}
-	got, err := loadHeaderCache(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.VerifiedTip != cache.VerifiedTip || got.ChainWork != cache.ChainWork || got.NetworkID != mainnetNetworkID {
-		t.Fatalf("cache mismatch: got=%+v want=%+v", got, cache)
-	}
+    cache,err:=reviewedCheckpointCache()
+    if err!=nil {t.Fatal(err)}
+    path:=filepath.Join(t.TempDir(),"headers","mainnet.json")
+    if err:=saveHeaderCache(path,cache);err!=nil {t.Fatal(err)}
+    got,err:=loadHeaderCache(path)
+    if err!=nil {t.Fatal(err)}
+    if got.VerifiedHeight!=cache.VerifiedHeight ||
+       got.VerifiedTip!=cache.VerifiedTip ||
+       got.ChainWork!=cache.ChainWork || got.NetworkID!=mainnetNetworkID {
+        t.Fatalf("checkpoint not preserved got=%+v want=%+v",got,cache)
+    }
+}
+func TestMissingOrOldCacheUsesPinnedCheckpointWithoutFullReplay(t *testing.T) {
+    path:=filepath.Join(t.TempDir(),"header-cache.json")
+    got,err:=loadHeaderCache(path)
+    if err!=nil {t.Fatal(err)}
+    if got.VerifiedHeight!=verifiedCheckpointHeight ||
+      got.VerifiedTip!=verifiedCheckpointTip ||
+      len(got.History)<62 {
+        t.Fatalf("cold start must use immutable release checkpoint: %+v",got)
+    }
+    genesis,err:=freshHeaderCache()
+    if err!=nil {t.Fatal(err)}
+    if err:=saveHeaderCache(path,genesis);err!=nil {t.Fatal(err)}
+    got,err=loadHeaderCache(path)
+    if err!=nil {t.Fatal(err)}
+    if got.VerifiedHeight!=verifiedCheckpointHeight {
+       t.Fatalf("stale genesis cache should be upgraded to checkpoint: %d",got.VerifiedHeight)
+    }
 }
 
 
