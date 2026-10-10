@@ -1,0 +1,71 @@
+name: Signed AuronQ Mobile checkpoint publisher
+
+on:
+  schedule:
+    - cron: '13 2,14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auronq-signed-mobile-checkpoints
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      AURONQ_PREVIOUS_SIGNED_MANIFEST: /tmp/auronq-previous-signed-checkpoint.json
+      AURONQ_CHECKPOINT_OUTPUT_PATH: /tmp/auronq-next-signed-checkpoint.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+
+      - name: Read most recent published signed checkpoint
+        shell: bash
+        run: |
+          if git fetch origin automation/mobile-checkpoints; then
+            git show origin/automation/mobile-checkpoints:latest.json > "$AURONQ_PREVIOUS_SIGNED_MANIFEST" || true
+          fi
+
+      - name: Check secret availability, independently verify and sign
+        shell: bash
+        env:
+          AURONQ_CP_ED25519_PRIVATE_KEY: ${{ secrets.AURONQ_CP_ED25519_PRIVATE_KEY }}
+        run: |
+          if [ -z "$AURONQ_CP_ED25519_PRIVATE_KEY" ]; then
+            echo "::notice::Signed checkpoint updates are dormant until AURONQ_CP_ED25519_PRIVATE_KEY is configured securely as a repository Actions secret."
+            exit 0
+          fi
+          AURONQ_GENERATE_SIGNED_CHECKPOINT=1 go test ./mobile/bridge -count=1 -run '^TestGenerateScheduledSignedCheckpoint$' -timeout 48m -v
+
+      - name: Publish signed checkpoint without altering Mainnet or APK
+        shell: bash
+        run: |
+          if [ ! -s "$AURONQ_CHECKPOINT_OUTPUT_PATH" ]; then
+            echo "No newer verified and signed checkpoint: previous manifest unchanged."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git show-ref --verify --quiet refs/remotes/origin/automation/mobile-checkpoints; then
+            git checkout -B automation/mobile-checkpoints origin/automation/mobile-checkpoints
+          else
+            git checkout -b automation/mobile-checkpoints
+          fi
+          cp "$AURONQ_CHECKPOINT_OUTPUT_PATH" latest.json
+          git add latest.json
+          if git diff --cached --quiet; then
+            echo "Unchanged checkpoint."
+            exit 0
+          fi
+          git commit -m "chore(checkpoint): publish Ed25519-authenticated mobile checkpoint"
+          git push origin HEAD:automation/mobile-checkpoints

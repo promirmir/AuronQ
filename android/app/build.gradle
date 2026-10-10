@@ -10,14 +10,24 @@ android {
         applicationId 'com.auronq.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 9
-        versionName '0.5.3-alpha'
+        versionCode 10
+        versionName '0.5.4-alpha'
         manifestPlaceholders = [appLabel: 'AuronQ Mobile']
     }
 
     buildTypes {
         debug {
             minifyEnabled false
+        }
+
+        // A dedicated side-by-side build protects both the real wallet and
+        // earlier syncprobe installations, even when debug signing keys differ.
+        autocp {
+            initWith debug
+            applicationIdSuffix '.autocp'
+            versionNameSuffix '-checkpoint-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile (Auto CP Test)']
         }
 
         // Separate installable diagnostic build. It uses a different package

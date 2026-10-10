@@ -444,8 +444,8 @@ public class MainActivity extends Activity {
         root.addView(netStatus, mt(16));
 
         TextView firstSyncNote = text(tr(
-                "Aplikacja korzysta z wbudowanego, wcześniej zweryfikowanego punktu kontrolnego (blok 1284) i sprawdza AQM64 od tego punktu. Starsza historia jest zaufanym punktem startu wydania, a nie sprawdzana na telefonie od genesis.",
-                "The app starts from a previously verified, bundled release checkpoint (block 1284), checking AQM64 for subsequent headers. Earlier history is trusted as a release anchor; it is not revalidated from genesis on the phone."), 11, false);
+                "Aplikacja sprawdza nagłówki od wbudowanego punktu kontrolnego i może automatycznie przyjąć nowszy checkpoint podpisany Ed25519 oraz potwierdzony przez peery. Starszej historii nie weryfikuje na telefonie od genesis.",
+                "The app starts from a release-pinned checkpoint and can use newer Ed25519-signed checkpoints after independent peer checks. The historical prefix is trusted to the signed checkpoint publisher, not reverified from genesis on the phone."), 11, false);
         firstSyncNote.setTextColor(MUTED);
         root.addView(firstSyncNote, mt(8));
 
@@ -610,6 +610,23 @@ public class MainActivity extends Activity {
         lastVerifyStartMs = now;
         headerVerificationExecutor.execute(() -> {
             try {
+                // Signed checkpoint updates only touch the header cache. The
+                // wallet files, secret keys and transaction logic are unchanged.
+                long lastCheck = prefs.getLong("last_signed_checkpoint_check", 0L);
+                long currentTime = System.currentTimeMillis();
+                if (currentTime - lastCheck > 6L * 60L * 60L * 1000L) {
+                    try {
+                        Bridge.updateSignedCheckpoint(
+                                prefs.getString("known_nodes", "[]"),
+                                headerCacheFile.getAbsolutePath());
+                    } catch (Exception ignored) {
+                        // Never block the user's existing verified cache due
+                        // to a missing, expired or unreachable manifest.
+                    } finally {
+                        prefs.edit().putLong("last_signed_checkpoint_check",
+                                currentTime).apply();
+                    }
+                }
                 String snapshot = Bridge.quorumSnapshotVerified(
                         prefs.getString("known_nodes", "[]"),
                         headerCacheFile.getAbsolutePath(), 6);
