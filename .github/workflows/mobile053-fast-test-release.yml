@@ -41,8 +41,8 @@ jobs:
             android/app/src/main/java/com/auronq/mobile/MainActivity.java > /tmp/auronq-ui.diff
           test "$(grep -c '^+[^+]' /tmp/auronq-ui.diff)" -eq 1
           test "$(grep -c '^-[^-]' /tmp/auronq-ui.diff)" -eq 1
-          grep -Fq '+                String preview = Bridge.quorumSnapshot(knownNodes, 0);' /tmp/auronq-ui.diff
-          grep -Fq -- '-                String preview = Bridge.quorumSnapshot(knownNodes, 1);' /tmp/auronq-ui.diff
+          grep -Fq '+                    String preview = Bridge.quorumSnapshot(knownNodes, 0);' /tmp/auronq-ui.diff
+          grep -Fq -- '-                    String preview = Bridge.quorumSnapshot(knownNodes, 1);' /tmp/auronq-ui.diff
           echo "Original wallet behavior, balance, history, send/receive and header verification are byte-identical to 0.5.3."
       - name: Test bounded recent full-block loading and preserve consensus
         shell: bash
