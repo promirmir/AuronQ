@@ -40,6 +40,16 @@ android {
             manifestPlaceholders = [appLabel: 'AuronQ Mobile (P2P Checkpoints)']
         }
 
+        // Isolated beta for a UI-only transaction-count correction. It cannot
+        // overwrite the current Android wallet or any earlier test build.
+        txfix {
+            initWith debug
+            applicationIdSuffix '.txfix'
+            versionNameSuffix '-block-count-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile (TX Count Test)']
+        }
+
         // Separate installable diagnostic build. It uses a different package
         // ID, so it cannot replace or erase a user's existing wallet/data.
         syncprobe {
