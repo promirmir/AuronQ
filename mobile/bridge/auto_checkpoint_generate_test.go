@@ -33,9 +33,15 @@ func TestGenerateScheduledSignedCheckpoint(t *testing.T) {
         if raw,readErr:=os.ReadFile(path);readErr==nil {
             c,verifyErr:=ReadSignedCheckpointForCI(raw)
             if verifyErr!=nil {
-                t.Fatalf("previous signed certificate invalid; refusing publication: %v",verifyErr)
-            }
-            if c.VerifiedHeight>=prior.VerifiedHeight {prior=c}
+                if strings.Contains(verifyErr.Error(),"expired") {
+                    // Recompute from the immutable APK release anchor after
+                    // an outage longer than the manifest validity period.
+                    // Never trust an expired certificate as new authority.
+                    t.Log("previous certificate expired; rebuilding PoW history from release anchor")
+                } else {
+                    t.Fatalf("previous signed certificate invalid; refusing publication: %v",verifyErr)
+                }
+            } else if c.VerifiedHeight>=prior.VerifiedHeight {prior=c}
         } else if !os.IsNotExist(readErr) {
             t.Fatalf("could not read existing signed manifest: %v",readErr)
         }
