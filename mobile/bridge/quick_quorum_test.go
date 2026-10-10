@@ -3,6 +3,7 @@ package bridge
 import (
  "strings"
  "testing"
+ aq "auronq/internal/auronq"
 )
 
 func TestQuickNetgroupClassification(t *testing.T) {
@@ -41,4 +42,21 @@ func TestQuickInvalidOrGenesisTipRejected(t *testing.T){
  if quickStateValid(10,"junk","123"){t.Fatal("invalid hash accepted")}
  if quickStateValid(10,strings.Repeat("a",128),"not-a-hex-work"){t.Fatal("invalid chainwork accepted")}
  if !quickStateValid(10000,strings.Repeat("a",128),"123abc"){t.Fatal("valid reported tip rejected")}
+}
+
+func TestQuickHistoryKeepsPendingFromDifferentMempools(t *testing.T) {
+ confirmed:=aq.WalletHistoryItem{TXID:"confirmed-tx",Status:"confirmed"}
+ pending:=aq.WalletHistoryItem{TXID:"pending-tx",Status:"pending"}
+ observations:=[]historyObservation{
+  {Node:"peer1",Items:[]aq.WalletHistoryItem{confirmed}},
+  {Node:"peer2",Items:[]aq.WalletHistoryItem{confirmed,pending}},
+  {Node:"peer3",Items:[]aq.WalletHistoryItem{confirmed}},
+ }
+ if historyFingerprint(observations[0].Items)!=historyFingerprint(observations[1].Items) {
+  t.Fatal("pending gossip differences must not invalidate confirmed-history agreement")
+ }
+ merged:=mergeHistoryPending(observations)
+ if len(merged)!=2 || merged[0].TXID!="pending-tx" || merged[0].Status!="pending" || merged[1].TXID!="confirmed-tx" {
+  t.Fatalf("pending transaction lost or history reordered: %+v",merged)
+ }
 }
