@@ -26,7 +26,8 @@ jobs:
           test -s linux-release/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz
           test -s linux-release/SHA256SUMS-LINUX-0.4.8.txt
           ( cd linux-release && sha256sum -c SHA256SUMS-LINUX-0.4.8.txt )
-          tar -tzf linux-release/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz | grep -q auronq-miner
+          tar -tzf linux-release/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz > /tmp/auronq-linux-archive-list.txt
+          grep -q 'auronq-miner' /tmp/auronq-linux-archive-list.txt
       - name: Attach Linux only to existing release
         env:
           GH_TOKEN: ${{ github.token }}
