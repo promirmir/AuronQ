@@ -564,16 +564,10 @@ public class MainActivity extends Activity {
             try {
                 String knownNodes = prefs.getString("known_nodes", "[]");
 
-                // First establish reachability and show it immediately. Fresh
-                // installs may need to verify hundreds of memory-hard AQM64
-                // headers; that work must not look like "no connection".
-                try {
-                    String preview = Bridge.quorumSnapshot(knownNodes, 1);
-                    final String finalPreview = preview;
-                    runOnUiThread(() -> applyNetworkPreview(finalPreview));
-                } catch (Exception ignored) {
-                }
-
+                // Avoid probing the same peer set twice on every refresh.
+                // quorumSnapshotVerified performs peer discovery/quorum checks itself;
+                // the old preliminary quorumSnapshot repeated the same network probes
+                // before header verification and added several seconds to startup.
                 String snapshot = Bridge.quorumSnapshotVerified(knownNodes, headerCacheFile.getAbsolutePath(), 6);
                 JSONObject snapshotState = new JSONObject(snapshot);
                 String node = snapshotState.optString("node", "").trim();
