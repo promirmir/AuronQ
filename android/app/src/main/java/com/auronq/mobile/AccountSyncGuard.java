@@ -1,7 +1,5 @@
 package com.auronq.mobile;
 
-import java.util.Locale;
-
 /**
  * Pure-Java, side-effect-free safety checks for wallet UI presentation.
  * This class does NOT trust peer balances, update chain state, or sign funds.
