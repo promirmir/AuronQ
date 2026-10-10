@@ -858,7 +858,7 @@ public class MainActivity extends Activity {
         top.setOrientation(LinearLayout.HORIZONTAL);
         TextView h = text(tr("Blok #", "Block #") + height, 14, true);
         top.addView(h, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        TextView tx = text(txs + " tx", 11, true);
+        TextView tx = text(txs < 0 ? "— tx" : (txs + " tx"), 11, true);
         tx.setTextColor(BLUE);
         top.addView(tx);
         row.addView(top);
