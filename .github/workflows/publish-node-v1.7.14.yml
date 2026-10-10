@@ -1,12 +1,9 @@
 name: Publish AuronQ Full Node 1.7.14 P2P Checkpoints
 
+# Build and publish only after an explicit release decision.
+# Merging code to main NEVER upgrades live nodes or publishes a Mainnet binary.
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/publish-node-v1.7.14.yml'
-      - 'cmd/auronq/main.go'
-      - 'cmd/auronq-desktop/main.go'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,10 +18,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version: '1.23.2'
           cache: false
+      - name: Require current main and unchanged frozen consensus implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+          BASE=c1001ee2950158781f216820cc5e4911aa0044a9
+          git cat-file -e "$BASE^{commit}"
+          # Only peer-service changes are allowed after the audited PR #145.
+          changed="$(git diff --name-only "$BASE" HEAD -- internal/auronq)"
+          while IFS= read -r file; do
+            case "$file" in
+              ""|internal/auronq/node.go|internal/auronq/p2p_checkpoint_test.go) ;;
+              *) echo "Consensus-package change blocks node release: $file"; exit 1;;
+            esac
+          done <<< "$changed"
+          git diff --exit-code "$BASE" HEAD -- network.json bootstrap.json
+          echo "Frozen Mainnet identity and blockchain validation code unchanged."
+
       - name: Fail closed on version or protocol identity drift
         shell: bash
         run: |
@@ -35,6 +53,7 @@ jobs:
           go test ./internal/auronq -run '^TestP2PSignedCheckpoint|^TestP2PCheckpoint|^TestNetworkContinuesAfterOriginalSeedNodesDisappear$' -count=1 -timeout=10m
           go test ./...
           go vet ./...
+          go test -race ./internal/auronq -run '^TestP2P' -count=1 -timeout=8m
 
   windows:
     needs: safety
@@ -115,5 +134,5 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "AuronQ v1.7.14 — independent P2P checkpoints" \
-            --notes "Optional non-consensus full-node update. Independent AuronQ validating nodes create, locally persist and self-sign advisory P2P checkpoint attestations every 256 fully validated blocks. HTTP GET /p2p/checkpoint serves the signed hint without GitHub or any shared signing key. Signature identifies the issuing peer; it DOES NOT prove historic consensus or authorize fast-sync state, balance or payments. Genesis, Network ID, AQM64, difficulty, emission and wallet/UTXO rules are unchanged. Existing Mainnet nodes remain protocol compatible. Updated binaries must be deployed by each node operator; GitHub release alone does not upgrade live peers. Back up node data and stop the process before a binary replacement. Early non-consensus patch; full independent security audit is pending." \
+            --notes "Optional non-consensus full-node canary update. P2P checkpoint service is DISABLED BY DEFAULT. Node operators can pilot it with AURONQ_ENABLE_P2P_CHECKPOINTS=1 after copying node data and checking status. When enabled, a validating node signs advisory checkpoints every 256 validated blocks. P2P checkpoint traffic is separately rate-limited and cannot starve block submissions. HTTP GET /p2p/checkpoint serves the signed hint without GitHub or any shared signing key. Signature identifies the issuing peer; it DOES NOT prove historic consensus or authorize fast-sync state, balance or payments. Genesis, Network ID, AQM64, difficulty, emission and wallet/UTXO rules are unchanged. Existing Mainnet nodes remain protocol compatible. Updated binaries must be deployed by each node operator; GitHub release alone does not upgrade live peers. Back up node data and stop the process before a binary replacement. Released only after explicit manual dispatch and Mainnet identity, consensus-file, Go/race and cross-platform build gates. Canary first; avoid upgrading all nodes at once. Full independent security audit is pending." \
             --prerelease
