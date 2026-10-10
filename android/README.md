@@ -1,49 +1,41 @@
-# AuronQ Mobile — Android
+# AuronQ Mobile — decentralized P2P checkpoint diagnostics
 
-**Current published APK: v0.5.4 Alpha.** AuronQ is experimental financial software. This application is a light wallet, not a full validating node; AQM64 and the overall wallet/network implementation have not been independently audited.
+## Download / installation
 
-## Download (GitHub Releases)
+**Current experimental release: v0.5.5 Alpha P2P.**
 
-| Package | Intended use |
-| --- | --- |
-| [AuronQ-Mobile-0.5.4-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.4-alpha/AuronQ-Mobile-0.5.4-alpha.apk) | Regular package ID `com.auronq.mobile`; **new installs only unless Android confirms signing certificate compatibility**. |
-| [AuronQ-Mobile-0.5.4-alpha-Isolated-Test.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.4-alpha/AuronQ-Mobile-0.5.4-alpha-Isolated-Test.apk) | Installs as `com.auronq.mobile.autocp`, independently of existing AuronQ wallets, for no-funds functionality testing. |
-| [GitHub Release and SHA-256](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.4-alpha) | Verify downloaded assets and see limitations. |
-| [Legacy v0.5.3-alpha APK](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha) | Unmodified previous release. |
+- [Download standard Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk)
+- [Download isolated Android test APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p-Isolated-Test.apk)
+- [Release information and SHA-256 checksums](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p)
+- [Previous v0.5.4 Alpha release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.4-alpha)
 
-SHA-256 (published v0.5.4):
-- Regular APK: `12de641331d3db9a4415ba1a303f254bce7ba9a58d6b050ce8f6a0e590c66d7e`
-- Isolated test APK: `dcf1c0a29574a9b089ff80f07daa774173138a11ee67322c874aef8ab3da42fe`
+SHA-256:
+- Standard: `32ea0db682b1a0d9efb30806f532490a26da888537f6bd1dfbddc0835030379e`
+- Isolated: `758dada75ce369b46efb76fb950c5542f50f3741bf56be4ec63a7def27b7bd78`
 
-**Critical compatibility note:** the regular APK is signed with the CI debug key. Android may reject installing it over a previously installed AuronQ app signed with a different certificate. **Never uninstall a wallet holding funds or erase app data merely to force an APK update.** Back up recovery material using the existing application first. The isolated test app cannot access or replace your existing wallet data; do not import a wallet holding real funds into the test app.
+**Protect existing wallet data:** Builds are CI debug-signed and may have an Android certificate incompatible with prior installations. **Never uninstall an existing wallet containing funds or clear its application data just to update**. The isolated `com.auronq.mobile.p2pcheck` package is independent; it does not migrate, overwrite or read the installed wallet. Do not import private keys holding funds into experimental builds.
 
-## How synchronization works
+## No private checkpoint keys to configure
 
-The included initial, previously checked release checkpoint is height **1284**. Headers after the local trusted checkpoint are verified using the unchanged AQM64 PoW, difficulty and timestamp rules. Previously verified progress is stored atomically in Android app-private storage.
+Every **updated AuronQ full node**, regardless of operator or hosting provider, autonomously derives an advisory checkpoint every 256 blocks from its own fully validated history and signs it with a locally generated Ed25519 **node-identity key**, not an AuronQ wallet key.
 
-New v0.5.4 functionality:
-- At most once every six hours, the application **attempts** to download a newer checkpoint from the official project GitHub checkpoint publication branch.
-- It validates the **Ed25519 signature using a public key pinned in the APK**, domain separation, Mainnet Network ID and genesis, release anchor, expiration, increasing chainwork, and protection against reverting locally verified state.
-- Before adopting it, the application checks the same checkpoint height/hash using **two public node network groups**. This cross-check is supplementary to the digital signature, not independent proof of historical consensus.
-- Unavailable, expired, invalid, conflicting or unauthenticated checkpoint updates are **discarded**. The application continues using its existing cache and ordinary header verification.
+- It stores `peer-checkpoints/latest.json` alongside the node's full chain.
+- It makes the current checkpoint available at `GET /p2p/checkpoint`.
+- It needs no GitHub access, CI runners, Sigstore, founder-owned infrastructure, manually entered secrets or trusted remote checkpoint signer.
+- The mobile app probes reachable node endpoints in the background and verifies node signatures, Mainnet Network ID and genesis. It shows observed signatures and peer groups as network diagnostics.
+- The phone does **not** promote self-signed peer observations into authenticated chain history, wallet balance, UTXO state, or a spending authorization. Those require its existing verified-header and peer-consistency rules.
+- The previous GitHub-based signed-checkpoint update *call* is disabled in the new Android build. Its saved header cache and embedded release checkpoint continue to work without GitHub.
 
-**Trust boundary:** a newly downloaded checkpoint is trusted because it was signed by the project's checkpoint publishing authority after its CI verification; the mobile device does **not** independently repeat all historic AQM64 work before that checkpoint. Full-node validation remains available separately. This is not a consensus rule change or a guarantee of complete trustlessness.
+## Why signatures from several peers are not automatically trusted
 
-## Automatic publisher activation
+A peer signature proves only that a given peer identity signed the claim. An attacker can create many identities (Sybil attack). Even two or more different IP ranges cannot guarantee independent operators. Accepting their checkpoint as a fully authenticated historical chain without independently verifiable history could allow a fake chain. Therefore signed P2P checkpoints are deliberately **advisory** until a stronger, audited lightweight proof mechanism is available.
 
-**The updater and the periodic publisher code are installed, but periodic publication cannot produce signatures until an operator provisions the private key in a GitHub Actions repository secret.** This is deliberate: the private key must not be embedded in the open-source app or stored in GitHub source control.
+This is **not a promise of instantly trustless first sync** for a brand-new phone years into the chain's history. Historical checkpoint trust still depends on a release anchor or an independently checked chain, while incremental AQM64 validation remains mandatory. Do not disable full-node consensus validation to accelerate wallet bootstrapping.
 
-1. Obtain and securely store the operator's private checkpoint signing seed **outside the repository**. It must match the Ed25519 public key pinned in `mobile/bridge/signed_checkpoint.go`.
-2. In repository **Settings → Secrets and variables → Actions → New repository secret**, create the exact name `AURONQ_CP_ED25519_PRIVATE_KEY`. Set its value to the base64-encoded 32-byte seed (not the filename or the entire explanatory note). Do not put this value in an issue, commit, PR, email or chat.
-3. Verify that repository Actions can write the independent publication branch `automation/mobile-checkpoints`. The workflow [Signed AuronQ Mobile checkpoint publisher](../.github/workflows/mobile-signed-checkpoints.yml) is scheduled twice a day and can be run manually with `workflow_dispatch`. It signs and publishes only after PoW verification and independent peer checks pass.
-4. Verify that the published `latest.json` appears on the publication branch. The app will only adopt newer candidates if their signatures and peer checks succeed.
+## Keeping the blockchain alive without GitHub
 
-The signing process does not accept raw unverified peer heights as checkpoints. Its Go validator runs the normal AQM64 header rules from the previous **already signed** checkpoint and ensures monotonic cumulative work.
+The P2P checkpoint endpoint, node block database, peer gossip, locally stored peers and independent full-node validators do not require GitHub once installed. You still need at least one genuinely reachable validating node with complete history and miners producing new blocks. If all independent full nodes go offline or all chain backups are lost, signatures and checkpoints cannot recreate missing blocks or keep the network alive.
 
-For the full threat model and operational steps, see [Signed checkpoint operations](../mobile/bridge/SIGNED-CHECKPOINTS.md).
+Full technical explanation: [Decentralized advisory checkpoints](../docs/DECENTRALIZED-CHECKPOINTS.md).
 
-## What was not changed
-
-Private keys, encrypted wallet format, address derivation, signing, `SendMultiVerified`, UTXO quorum verification, genesis, Network ID, AQM64 and Mainnet consensus. A light wallet is **not** equivalent to a locally validating full node.
-
-[Security policy](../SECURITY.md) · [Mainnet specification](../MAINNET.md) · [Report an issue](https://github.com/promirmir/AuronQ/issues)
+[Mainnet information](../MAINNET.md) · [Security](../SECURITY.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
