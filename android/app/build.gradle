@@ -10,13 +10,24 @@ android {
         applicationId 'com.auronq.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 9
-        versionName '0.5.3-alpha'
+        versionCode 10
+        versionName '0.5.3-fast-alpha'
+        manifestPlaceholders = [appLabel: 'AuronQ Mobile']
     }
 
     buildTypes {
         debug {
             minifyEnabled false
+        }
+
+        // Test package is independent of any existing AuronQ wallet.
+        // Never require users to uninstall a funded app to try this version.
+        fast053 {
+            initWith debug
+            applicationIdSuffix '.fast053'
+            versionNameSuffix '-isolated-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile 0.5.3 Fast TEST']
         }
     }
 
