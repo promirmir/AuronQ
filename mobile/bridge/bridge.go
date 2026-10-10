@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	mobileVersion       = "0.5.3-alpha"
+	mobileVersion       = "0.5.4-alpha"
 	mainnetNetworkID    = "44e62c2ace002a6660c14e252173c1aa303529c68e40c998e92da2b453f44f30b1e58c94d533587e2186004593fb856c433fcdb5418ed430ec8617e29529365c"
 	bootstrapManifestURL = "https://raw.githubusercontent.com/promirmir/AuronQ/main/bootstrap.json"
 )
