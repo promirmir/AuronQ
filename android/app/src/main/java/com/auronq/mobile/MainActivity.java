@@ -93,6 +93,9 @@ public class MainActivity extends Activity {
     // Changed only on the Android UI thread. Async callbacks carry the
     // session they started with and cannot update a different wallet/tip.
     private long accountEpoch = 0;
+    // Wallet file lifecycle is independent of network sync epochs. Otherwise
+    // a fast network response could cancel the first asynchronous wallet load.
+    private long walletLoadEpoch = 0;
     private boolean balanceVerifiedForCurrentTip = false;
     private boolean networkReachable = false;
 
@@ -187,8 +190,10 @@ public class MainActivity extends Activity {
         super.onResume();
         // Never show a previously verified balance as current after returning
         // from the background while new blocks might have been mined.
-        invalidateAccountPresentation(tr("Oczekiwanie na aktualną synchronizację…",
-                "Waiting for current synchronization…"), true);
+        if (!walletAddress.isEmpty()) {
+            invalidateAccountPresentation(tr("Oczekiwanie na aktualną synchronizację…",
+                    "Waiting for current synchronization…"), true);
+        }
         handler.removeCallbacks(liveLoop);
         handler.post(liveLoop);
     }
@@ -1302,6 +1307,7 @@ public class MainActivity extends Activity {
     }
 
     private void loadWalletState() {
+        final long walletGeneration = ++walletLoadEpoch;
         // Do this synchronously before starting file IO. Previous wallet
         // balance/history can never survive a Create/Import/Delete transition.
         invalidateAccountPresentation(tr("Trwa weryfikacja aktualnego salda…",
@@ -1318,12 +1324,11 @@ public class MainActivity extends Activity {
             walletHistoryStatus.setTextColor(MUTED);
             return;
         }
-        final long requestEpoch = accountEpoch;
         executor.execute(() -> {
             try {
                 String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
                 runOnUiThread(() -> {
-                    if (requestEpoch != accountEpoch || !walletFile.exists()) return;
+                    if (walletGeneration != walletLoadEpoch || !walletFile.exists()) return;
                     walletAddress = addr;
                     walletAddressText.setText(addr);
                     backupButton.setEnabled(true);
@@ -1334,7 +1339,7 @@ public class MainActivity extends Activity {
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
-                    if (requestEpoch != accountEpoch) return;
+                    if (walletGeneration != walletLoadEpoch) return;
                     toast(tr("Błąd portfela: ", "Wallet error: ") + e.getMessage());
                 });
             }
