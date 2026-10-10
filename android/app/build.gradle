@@ -10,8 +10,8 @@ android {
         applicationId 'com.auronq.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 10
-        versionName '0.5.4-alpha'
+        versionCode 11
+        versionName '0.5.5-alpha'
         manifestPlaceholders = [appLabel: 'AuronQ Mobile']
     }
 
@@ -28,6 +28,16 @@ android {
             versionNameSuffix '-checkpoint-test'
             signingConfig signingConfigs.debug
             manifestPlaceholders = [appLabel: 'AuronQ Mobile (Auto CP Test)']
+        }
+
+        // Standalone test installation. It cannot touch an existing AuronQ
+        // wallet, including older syncprobe and autocp test installations.
+        keyless {
+            initWith debug
+            applicationIdSuffix '.keyless'
+            versionNameSuffix '-keyless-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile (Keyless Test)']
         }
 
         // Separate installable diagnostic build. It uses a different package
