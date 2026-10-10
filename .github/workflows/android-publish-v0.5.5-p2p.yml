@@ -1,0 +1,91 @@
+name: Build AuronQ Mobile P2P Checkpoint APK
+
+on:
+  push:
+    branches:
+      - feat/p2p-local-checkpoint-attestation-20261010
+    paths:
+      - '.github/workflows/android-publish-v0.5.5-p2p.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+
+      - name: Mainnet code tests and vet
+        run: |
+          go test ./...
+          go vet ./...
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK and NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+
+      - name: Install gomobile
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+
+      - name: Bind AuronQ bridge
+        run: |
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build normal and isolated APKs
+        working-directory: android
+        run: gradle --no-daemon :app:assembleDebug :app:assembleP2pcheck
+
+      - name: Verify APKs and publish prerelease
+        shell: bash
+        env:
+          TAG: android-v0.5.5-alpha-p2p
+        run: |
+          set -euo pipefail
+          REGULAR="android/app/build/outputs/apk/debug/app-debug.apk"
+          ISOLATED="android/app/build/outputs/apk/p2pcheck/app-p2pcheck.apk"
+          test -s "$REGULAR" && test -s "$ISOLATED"
+          cp "$REGULAR" AuronQ-Mobile-0.5.5-alpha-p2p.apk
+          cp "$ISOLATED" AuronQ-Mobile-0.5.5-alpha-p2p-Isolated-Test.apk
+          sha256sum AuronQ-Mobile-0.5.5-alpha-p2p*.apk > SHA256SUMS-Mobile-P2P.txt
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to overwrite tested binaries."
+            exit 1
+          fi
+          gh release create "$TAG" \
+            AuronQ-Mobile-0.5.5-alpha-p2p.apk \
+            AuronQ-Mobile-0.5.5-alpha-p2p-Isolated-Test.apk \
+            SHA256SUMS-Mobile-P2P.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile 0.5.5 Alpha - decentralized P2P checkpoints" \
+            --notes "Android prerelease: full nodes independently generate self-signed advisory checkpoints every 256 fully validated blocks without GitHub, central signer, user key or protocol change. The wallet discovers and checks peer signatures for network diagnostics ONLY; a peer's self-signature is NOT a secure proof of consensus and never bypasses local AQM64 validation or authorizes spending. The old GitHub-based signed checkpoint update call has been removed from this Android build. Existing wallet encryption, keys, signing and transaction verification are untouched. The normal APK may have a different debug certificate than older installations; NEVER delete wallet data or uninstall to force upgrade. The Isolated-Test APK has a separate application ID and cannot touch installed wallets. Check SHA-256 before installation. Earlier v0.5.4 release remains available." \
+            --prerelease
