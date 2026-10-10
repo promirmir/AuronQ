@@ -19,6 +19,13 @@ android {
         debug {
             minifyEnabled false
         }
+        quick2stage {
+            initWith debug
+            applicationIdSuffix '.quick2stage'
+            versionNameSuffix '-two-stage-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel:'AuronQ Mobile 2-Stage TEST']
+        }
         quick3test {
             initWith debug
             applicationIdSuffix '.quick3test'
