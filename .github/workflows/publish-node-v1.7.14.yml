@@ -1,0 +1,119 @@
+name: Publish AuronQ Full Node 1.7.14 P2P Checkpoints
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-node-v1.7.14.yml'
+      - 'cmd/auronq/main.go'
+      - 'cmd/auronq-desktop/main.go'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auronq-node-1.7.14-release
+  cancel-in-progress: false
+
+jobs:
+  safety:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+      - name: Fail closed on version or protocol identity drift
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'const version = "1.7.14"' cmd/auronq/main.go
+          grep -Fq 'const desktopVersion = "1.7.14"' cmd/auronq-desktop/main.go
+          go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1
+          go test ./internal/auronq -run '^TestP2PSignedCheckpoint|^TestP2PCheckpoint|^TestNetworkContinuesAfterOriginalSeedNodesDisappear$' -count=1 -timeout=10m
+          go test ./...
+          go vet ./...
+
+  windows:
+    needs: safety
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+      - shell: pwsh
+        run: |
+          $ErrorActionPreference="Stop"
+          $env:CGO_ENABLED="0"
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid= -H=windowsgui" -o AuronQ-Desktop.exe ./cmd/auronq-desktop
+          if ($LASTEXITCODE -ne 0) { throw "desktop build failed" }
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq-cli.exe ./cmd/auronq
+          if ($LASTEXITCODE -ne 0) { throw "cli build failed" }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item AuronQ-Desktop.exe,auronq-cli.exe,network.json,bootstrap.json,README-WINDOWS.md,START-AURONQ.cmd,START-PUBLIC-NODE.cmd,START-SEED-NODE.cmd dist\
+          Get-FileHash dist\AuronQ-Desktop.exe -Algorithm SHA256 | Format-List | Out-File dist\SHA256SUMS-Windows.txt
+          Get-FileHash dist\auronq-cli.exe -Algorithm SHA256 | Format-List | Out-File -Append dist\SHA256SUMS-Windows.txt
+          Compress-Archive -Path dist\* -DestinationPath AuronQ-1.7.14-Windows-x64.zip -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auronq-p2p-windows
+          path: AuronQ-1.7.14-Windows-x64.zip
+
+  linux:
+    needs: safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+      - shell: bash
+        run: |
+          set -euo pipefail
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq ./cmd/auronq
+          mkdir -p dist
+          cp auronq network.json bootstrap.json README.md MAINNET.md dist/
+          sha256sum dist/auronq > dist/SHA256SUMS-Linux.txt
+          tar -C dist -czf AuronQ-1.7.14-Linux-amd64.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auronq-p2p-linux
+          path: AuronQ-1.7.14-Linux-amd64.tar.gz
+
+  release:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Publish immutable full-node binaries only after safety checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd artifacts
+          test -s AuronQ-1.7.14-Windows-x64.zip
+          test -s AuronQ-1.7.14-Linux-amd64.tar.gz
+          sha256sum AuronQ-1.7.14-Windows-x64.zip AuronQ-1.7.14-Linux-amd64.tar.gz > SHA256SUMS.txt
+          if gh release view v1.7.14 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists. Refusing to overwrite immutable binaries."
+            exit 0
+          fi
+          gh release create v1.7.14 \
+            AuronQ-1.7.14-Windows-x64.zip \
+            AuronQ-1.7.14-Linux-amd64.tar.gz \
+            SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ v1.7.14 — independent P2P checkpoints" \
+            --notes "Optional non-consensus full-node update. Independent AuronQ validating nodes create, locally persist and self-sign advisory P2P checkpoint attestations every 256 fully validated blocks. HTTP GET /p2p/checkpoint serves the signed hint without GitHub or any shared signing key. Signature identifies the issuing peer; it DOES NOT prove historic consensus or authorize fast-sync state, balance or payments. Genesis, Network ID, AQM64, difficulty, emission and wallet/UTXO rules are unchanged. Existing Mainnet nodes remain protocol compatible. Updated binaries must be deployed by each node operator; GitHub release alone does not upgrade live peers. Back up node data and stop the process before a binary replacement. Early non-consensus patch; full independent security audit is pending." \
+            --prerelease
