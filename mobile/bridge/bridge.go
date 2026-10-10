@@ -393,6 +393,26 @@ func saveHeaderCache(path string, h headerCache) error {
 	return os.Rename(tmp, path)
 }
 
+// HeaderSyncProgress is a read-only progress display for Android. It never
+// authorizes spending, returns a trusted wallet balance, or replaces the full
+// independent header verification required by QuorumSnapshotVerified.
+func HeaderSyncProgress(cachePath string) (string, error) {
+    cache, err := loadHeaderCache(cachePath)
+    if err != nil {
+        return "", err
+    }
+    out := map[string]any{
+        "verified_height": cache.VerifiedHeight,
+        "verified_tip": cache.VerifiedTip,
+        "network_id": cache.NetworkID,
+    }
+    b, err := json.Marshal(out)
+    if err != nil {
+        return "", err
+    }
+    return string(b), nil
+}
+
 func fetchHeaderBatch(node string, start uint64, limit int) ([]aq.BlockHeader, error) {
 	node = normalizeMobileNode(node)
 	if node == "" {
