@@ -58,6 +58,13 @@ public class MainActivity extends Activity {
     private static final int DANGER = Color.rgb(255, 111, 130);
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    // AQM64 replay must NEVER occupy the fast account/network executor.
+    private final ExecutorService deepVerifier = Executors.newSingleThreadExecutor();
+    private boolean deepBusy = false;
+    private long deepVerifiedHeight = -1;
+    private String deepVerifiedTip = "";
+    private String deepVerifiedWork = "";
+    private TextView verificationStageText;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private SharedPreferences prefs;
@@ -286,6 +293,10 @@ public class MainActivity extends Activity {
         dashTip.setTextColor(MUTED);
         dashTip.setTextIsSelectable(true);
         networkCard.addView(dashTip, mt(6));
+        verificationStageText = text(tr("Etap 1/2 — oczekiwanie na 3 węzły",
+                "Stage 1/2 — waiting for 3 peers"), 11, false);
+        verificationStageText.setTextColor(BLUE);
+        networkCard.addView(verificationStageText, mt(8));
 
         Button openNetwork = primaryButton(tr("Szczegóły sieci na żywo", "Live network details"));
         openNetwork.setOnClickListener(v -> showScreen("network"));
@@ -621,6 +632,11 @@ public class MainActivity extends Activity {
                         if (requestGeneration != walletGeneration
                                 || !walletAddress.equals(requestedAddress)) return;
                         applyQuickAccount(account);
+                        maybeStartDeepVerification(known);
+                    });
+                } else {
+                    runOnUiThread(() -> {
+                        if (requestGeneration == walletGeneration) maybeStartDeepVerification(known);
                     });
                 }
                 // Full recent-block downloads are read-only, secondary UI.
@@ -655,6 +671,70 @@ public class MainActivity extends Activity {
         });
     }
 
+    // Stage 2 replays EVERY AQM64 header from the embedded Mainnet genesis.
+    // It runs only after fast peer observations become usable. It NEVER gives
+    // spending authority by itself and never overwrites the quorum balance.
+    private void maybeStartDeepVerification(String known) {
+        if (deepBusy || !networkReachable || quickHeight < 1) return;
+        if (deepVerifiedHeight == quickHeight
+                && deepVerifiedTip.equalsIgnoreCase(quickTip)) return;
+        deepBusy = true;
+        if (verificationStageText != null) {
+            verificationStageText.setText(tr("Etap 1/2 aktywny • niezależna weryfikacja AQM64 trwa w tle",
+                    "Stage 1/2 active • independent AQM64 verification runs in background"));
+        }
+        deepVerifier.execute(() -> {
+            String report = null, failure = null;
+            try {
+                report = Bridge.quorumSnapshotVerified(known, headerCacheFile.getAbsolutePath(), 0);
+            } catch (Exception e) {
+                failure = e.getMessage();
+            }
+            final String completedReport = report;
+            final String completedError = failure;
+            runOnUiThread(() -> {
+                deepBusy = false;
+                if (completedReport != null) {
+                    try {
+                        JSONObject j = new JSONObject(completedReport);
+                        if (j.optBoolean("header_verified", false)) {
+                            long h = j.optLong("verified_height", -1);
+                            String tip = j.optString("verified_tip", "");
+                            String work = j.optString("verified_chain_work", "");
+                            if (h >= 0 && tip.length() == 128 && !work.isEmpty()) {
+                                deepVerifiedHeight = h;
+                                deepVerifiedTip = tip;
+                                deepVerifiedWork = work;
+                                // Validated AQM64 contradicts an equally high
+                                // quorum-reported tip: fail closed for spending.
+                                if (quickHeight == h && !quickTip.equalsIgnoreCase(tip)) {
+                                    invalidateQuickAccount(tr("Sprzeczny łańcuch — wysyłanie zablokowane",
+                                            "Conflicting chain — spending disabled"));
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) { }
+                }
+                if (verificationStageText == null) return;
+                if (deepVerifiedHeight == quickHeight && quickHeight >= 1
+                        && deepVerifiedTip.equalsIgnoreCase(quickTip)) {
+                    verificationStageText.setText(tr(
+                        "Etap 2/2 — cała historia nagłówków AQM64 zweryfikowana lokalnie • saldo nadal z 3 węzłów",
+                        "Stage 2/2 — entire AQM64 header history verified locally • balance still from 3 peers"));
+                    verificationStageText.setTextColor(ACCENT);
+                } else {
+                    verificationStageText.setText(tr(
+                        "Etap 1/2 — tryb 3 węzłów; pełna walidacja AQM64 nieukończona",
+                        "Stage 1/2 — three-peer mode; full AQM64 verification incomplete"));
+                    verificationStageText.setTextColor(BLUE);
+                    // Old, newer or unavailable peer status is NOT equivalent
+                    // to an independently validated tip.
+                    if (completedError != null) netObserved.setText(completedError);
+                }
+            });
+        });
+    }
+
     private void applyQuickNetwork(String raw) {
         try {
             JSONObject state = new JSONObject(raw);
@@ -683,6 +763,17 @@ public class MainActivity extends Activity {
             verifiedHeight = -1;
             verifiedTip = "";
             verifiedWork = "";
+            if (verificationStageText != null) {
+                if (deepVerifiedHeight == height && deepVerifiedTip.equalsIgnoreCase(tip)) {
+                    verificationStageText.setText(tr("Etap 2/2 — AQM64 lokalnie zweryfikowane (stan konta z 3 węzłów)",
+                        "Stage 2/2 — AQM64 verified locally (account data from 3 peers)"));
+                    verificationStageText.setTextColor(ACCENT);
+                } else {
+                    verificationStageText.setText(tr("Etap 1/2 — 3 węzły zgodne; AQM64 weryfikowane w tle",
+                        "Stage 1/2 — 3 peers agree; AQM64 checking in background"));
+                    verificationStageText.setTextColor(BLUE);
+                }
+            }
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(state.optInt("peers")));
             dashMempool.setText(String.valueOf(state.optInt("mempool")));
@@ -718,7 +809,7 @@ public class MainActivity extends Activity {
             JSONArray items = state.optJSONArray("items");
             if (!walletAddress.equals(address) || !quickTip.equalsIgnoreCase(tip)
                     || quickHeight != height || state.optInt("peer_agreement", 0) != 3
-                    || !value.matches("[0-9]+\\\\.[0-9]{8}") || items == null) {
+                    || !value.matches("[0-9]+\\.[0-9]{8}") || items == null) {
                 invalidateQuickAccount(tr("Brak spójnych danych konta z 3 węzłów",
                         "Missing consistent account data from 3 peers"));
                 return;
@@ -1441,6 +1532,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacks(liveLoop);
         executor.shutdownNow();
+        deepVerifier.shutdownNow();
         super.onDestroy();
     }
 }
