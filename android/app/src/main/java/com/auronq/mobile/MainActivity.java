@@ -60,6 +60,8 @@ public class MainActivity extends Activity {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     // AQM64 replay must NEVER occupy the fast account/network executor.
     private final ExecutorService deepVerifier = Executors.newSingleThreadExecutor();
+    private final ExecutorService historyExecutor = Executors.newSingleThreadExecutor();
+    private boolean historyBusy = false;
     private boolean deepBusy = false;
     private long deepVerifiedHeight = -1;
     private long lastDeepAttemptMillis = 0;
@@ -637,6 +639,9 @@ public class MainActivity extends Activity {
                         if (requestGeneration != walletGeneration
                                 || !walletAddress.equals(requestedAddress)) return;
                         applyQuickAccount(account);
+                        if (quickAccountReady) {
+                            scheduleVerifiedPeerHistory(known, requestedAddress, requestGeneration);
+                        }
                         maybeStartDeepVerification(known);
                     });
                 } else {
@@ -673,6 +678,53 @@ public class MainActivity extends Activity {
             } finally {
                 liveBusy = false;
             }
+        });
+    }
+
+    // Account history can become expensive on a large full-node blockchain.
+    // It must not block fast balances or the original transaction signer.
+    private void scheduleVerifiedPeerHistory(String known, String address, long generation) {
+        if (historyBusy || !"wallet".equals(currentScreen) || !quickAccountReady) return;
+        final long height = quickHeight;
+        final String tip = quickTip;
+        final String key = address + ":" + height + ":" + tip;
+        if (key.equals(lastHistoryKey)) return;
+        historyBusy = true;
+        walletHistoryStatus.setText(tr("Pobieram potwierdzoną historię w tle…",
+                "Loading confirmed history in background…"));
+        walletHistoryStatus.setTextColor(BLUE);
+        historyExecutor.execute(() -> {
+            String response = null, failure = null;
+            try {
+                response = Bridge.quickHistorySnapshot(known, address, 50);
+            } catch (Exception e) {
+                failure = e.getMessage();
+            }
+            final String raw = response;
+            final String error = failure;
+            runOnUiThread(() -> {
+                historyBusy = false;
+                if (generation != walletGeneration || !quickAccountReady
+                        || !walletAddress.equals(address) || quickHeight != height
+                        || !quickTip.equalsIgnoreCase(tip)) return;
+                if (raw != null) {
+                    try {
+                        JSONObject j = new JSONObject(raw);
+                        if (j.optLong("height", -1) == height
+                                && tip.equalsIgnoreCase(j.optString("tip", ""))
+                                && address.equals(j.optString("address", ""))
+                                && j.optInt("peer_agreement", 0) == 3
+                                && j.optJSONArray("items") != null) {
+                            applyHistory(raw);
+                            lastHistoryKey = key;
+                            return;
+                        }
+                    } catch (Exception ignored) { }
+                }
+                walletHistoryStatus.setText(tr("Nie udało się potwierdzić historii: ",
+                        "Unable to corroborate history: ") + (error == null ? "—" : error));
+                walletHistoryStatus.setTextColor(BLUE);
+            });
         });
     }
 
@@ -831,7 +883,6 @@ public class MainActivity extends Activity {
             walletTrustStatus.setText(tr("Zgodne 3 grupy sieci • nie jest to pełny dowód blockchaina",
                     "3 network groups agree • not a full blockchain proof"));
             walletTrustStatus.setTextColor(BLUE);
-            applyHistory(raw);
             quickAccountReady = true;
             updateSendButtons();
         } catch (Exception e) {
@@ -1544,6 +1595,7 @@ public class MainActivity extends Activity {
         handler.removeCallbacks(liveLoop);
         executor.shutdownNow();
         deepVerifier.shutdownNow();
+        historyExecutor.shutdownNow();
         super.onDestroy();
     }
 }
