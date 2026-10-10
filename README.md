@@ -4,91 +4,81 @@
 
 # AuronQ (AURQ)
 
-**Open-source Proof-of-Work cryptocurrency · Public mainnet · MIT License**
+**Open-source Proof-of-Work cryptocurrency · Public Mainnet · MIT License**
 
-[Project website](https://promirmir.github.io/AuronQ/) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report an issue](https://github.com/promirmir/AuronQ/issues)
+[Project website](https://promirmir.github.io/AuronQ/) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
-AuronQ is a public UTXO cryptocurrency written in Go. The network combines **AQM64 Proof-of-Work**, **ML-DSA-87 transaction signatures**, independent full-node validation and local wallets. Its mainnet is running; the software and wider network are still at an early stage of maturity.
+AuronQ is a public UTXO Layer-1 network written in Go. Full nodes independently validate transactions and blocks using AQM64 Proof of Work and ML-DSA-87 transaction signatures. **Mainnet is live, but the project remains experimental and in stabilization.**
 
-> **Security notice:** AQM64 and the complete AuronQ consensus, wallet and networking implementations have not received an independent professional security or cryptographic audit. Do not treat the network as mature financial infrastructure or store substantial value without understanding the risks.
+> **Security notice:** The complete consensus, wallet, peer-to-peer and cryptographic implementations have not received an independent professional security audit. Do not store substantial value or treat this software as mature financial infrastructure.
 
-## Download
+## Downloads
 
-All packages are published through GitHub Releases. Use the release page to verify checksums and read compatibility notes.
+These are **published builds**, not claims of defect-free or production-ready operation. Each download points to a specific GitHub Release.
 
-| Software | Version | Download |
+| Software | Published release | Download and details |
 | --- | --- | --- |
 | **Desktop / Full Node** | v1.7.13 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/v1.7.13) |
-| **Universal Miner** | v0.4.8 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and SHA-256](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
-| **Universal Miner, older platform builds** | v0.4.6 Alpha | [Linux GPU and portable CPU packages](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
-| **AuronQ Mobile** | v0.5.3 Alpha · Android | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha) |
+| **AuronQ Mobile** | v0.5.3 Alpha · Android | [APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha) · [Android guide](android/README.md) |
+| **Universal Miner** | v0.4.8 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
+| **Universal Miner, other platforms** | v0.4.6 Alpha · older builds | [Linux and portable CPU packages](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
 
-The **Windows miner v0.4.8 Alpha** includes supported CUDA/OpenCL GPU backends, CPU fallback, local adaptive tuning and safety controls. Hardware support varies; alpha status means long-duration reliability is not yet established. The **Android wallet is a light client, not a validating full node**. Desktop Windows binaries are not currently Authenticode-signed.
+**Android APK identity (published v0.5.3 Alpha):** `AuronQ-Mobile-0.5.3-alpha.apk` · **9,574,566 bytes** · SHA-256:
+`913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c`
 
-## Get started
+This fingerprint identifies the **published GitHub APK**, not necessarily a different build already installed on someone's phone. A matching version name is not sufficient evidence of binary identity. **Do not uninstall an existing working wallet or clear its data to investigate a download difference. Back up recovery material first.**
 
-1. **Run a node:** download the full-node package, extract the entire archive and follow the [Windows guide](README-WINDOWS.md) or the release instructions for your platform.
-2. **Synchronize:** allow the node to discover peers and validate the blockchain locally.
-3. **Create a wallet:** back up recovery material securely before receiving or sending coins.
-4. **Mine, if you choose:** follow the [Universal Miner guide](UNIVERSAL-MINER-GUIDE.md) and [hardware support notes](HARDWARE-SUPPORT.md). Solo mining uses a local full node; pool mining depends on a compatible independent service.
+The Android wallet is a **light client, not a full validating node**. Initial verification can take time; instant payments or synchronization cannot be guaranteed. Miner GPU/CPU support and operating temperatures vary by machine. Alpha builds remain unverified for long-term reliability.
 
-Full nodes can serve their own read-only Explorer at the **/explorer** endpoint. An independently hosted [public Explorer](https://mir.taild63f46.ts.net/explorer) may also be available; it is not a source of consensus authority.
+## Getting started
 
-## Protocol overview
+1. **Desktop node:** download, extract the complete archive, and follow [Start here](START-HERE.md) or the [Windows guide](README-WINDOWS.md). Full nodes validate the chain themselves.
+2. **Android wallet:** read the [Android guide](android/README.md), compare the APK checksum and securely back up wallet recovery material before changes or transactions.
+3. **Mining (optional):** follow the [Universal Miner guide](UNIVERSAL-MINER-GUIDE.md) and [hardware guidance](HARDWARE-SUPPORT.md). Solo mining uses a local full node; pool mining uses a third-party service.
 
-| Property | AuronQ |
+## Network and protocol
+
+| Property | AuronQ Mainnet |
 | --- | --- |
-| Ledger model | UTXO |
-| Consensus | Proof of Work with cumulative-work chain selection |
-| Mining construction | AQM64 |
+| Ledger / consensus | UTXO · Proof of Work · cumulative-work chain selection |
+| Mining algorithm | AQM64 |
 | Transaction signatures | ML-DSA-87 |
 | Target block interval | 600 seconds |
-| Nominal supply cap | 21,000,000 AURQ |
-| Full-node implementation | Go |
+| Nominal maximum supply | 21,000,000 AURQ (including genesis allocation) |
+| Default P2P port | TCP 18444 |
 
-For the **canonical Network ID, genesis hash, monetary rules and validation details**, use [MAINNET.md](MAINNET.md) and [PROTOCOL.md](PROTOCOL.md). A summary here must never replace the specifications used by nodes.
+**Canonical network identity and consensus rules:** [Mainnet](MAINNET.md) · [Protocol](PROTOCOL.md) · [AQM64](AQM64.md). Live peer counts, block height and estimated hashrate are deliberately not hardcoded here: they change and must be obtained from a validating node.
 
-Every full node is intended to validate chain history, transactions and signatures independently. Bootstrap peers are discovery hints, not authorities that determine valid blocks or chain selection. See [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md), [DECENTRALIZATION.md](DECENTRALIZATION.md) and the [mainnet change policy](MAINNET-CHANGE-POLICY.md).
+Bootstrap servers are discovery hints, not consensus authorities. Network operation without the original project machines is a goal **still requiring an independent offline-bootstrap drill**, not a proven guarantee. See [Network independence](NETWORK-INDEPENDENCE.md), [Decentralization](DECENTRALIZATION.md) and [Stabilization](STABILIZATION.md).
 
-**Stability comes first:** updates should preserve mainnet compatibility. Genesis, Network ID, AQM64, monetary rules and consensus validation must not be changed casually. Current stabilization criteria are recorded in [STABILIZATION.md](STABILIZATION.md).
+**Stability before features:** consensus-critical parameters (genesis, Network ID, AQM64, difficulty, monetary rules and transaction/block validation) must not be changed in an ordinary maintenance release. See the [Mainnet change policy](MAINNET-CHANGE-POLICY.md).
 
-## Mining pools and third-party integrations
+## Independent ecosystem
 
-AURQ can be mined solo or through third-party services. The following services operate independently of this repository:
+These links refer to **third-party services**; they are not operated by AuronQ and may be unavailable or inaccurate. Their presence does not imply endorsement, verified compatibility, or an independent security audit.
 
-- [MeshPool — AuronQ](https://meshpool.net/pool/auronq-main)
-- [RPlant — AuronQ connection details](https://pool.rplant.xyz/#auronq#connect)
-- [MeshMiner 0.8.35 — third-party miner](https://github.com/totom9000/meshminer/releases/tag/v.0.8.35)
+| Category | Resources |
+| --- | --- |
+| Mining pools | [MeshPool — AuronQ](https://meshpool.net/pool/auronq-main) · [RPlant — AuronQ](https://pool.rplant.xyz/#auronq#connect) |
+| Third-party miner | [MeshMiner 0.8.35](https://github.com/totom9000/meshminer/releases/tag/v.0.8.35) |
+| Independent tracking | [MiningChamp — AuronQ](https://miningchamp.com/coin/auronq) · [CPU-Mining.info — AURQ](https://cpu-mining.info/coins/AURQ) |
+| Public community Explorer | [Independent Explorer](https://mir.taild63f46.ts.net/explorer) (availability not guaranteed) |
 
-Review fees, payout policies, hardware compatibility, downloads and connection parameters directly with the operator. The official Universal Miner does **not** silently install third-party mining binaries.
+**Use AURQ-specific pages, not data for similarly named coins.** External statistics may be stale, incomplete or mistaken (including mining rewards and network hashrate). The source of consensus truth is a locally validating full node, not a pool, aggregator or Explorer.
 
-Independent pools, wallets, exchanges and explorers may integrate the public network without prior project approval. See [pool integration](POOL-INTEGRATION.md), [exchange integration](EXCHANGE-INTEGRATION.md) and [machine-readable project metadata](auronq-project.json). An integration does not imply endorsement by AuronQ.
-
-## Independent network tracking
-
-External services have started collecting AuronQ mining and network statistics. These independently operated data sources are useful for comparing observations outside the project's own Explorer:
-
-- **[MiningChamp — AuronQ (AURQ)](https://miningchamp.com/coin/auronq):** dedicated AuronQ coin page, rather than the multi-coin RPlant overview.
-- **[CPU-Mining.info — AuronQ (AURQ)](https://cpu-mining.info/coins/AURQ):** dedicated AURQ page with AQM64 identification and externally reported mining/network estimates.
-
-These are **third-party, unverified estimates, not official consensus data, an independent security audit or an endorsement**. Some displayed fields (for example, block reward, worker count or network hashrate) may be missing, stale or incorrect. Compare reported figures with your own validating full node rather than treating aggregator pages as authoritative. Thanks to independent services for including AURQ.
+Permissionless independent integrations are welcome: [Pool integration](POOL-INTEGRATION.md) · [Exchange integration](EXCHANGE-INTEGRATION.md) · [Machine-readable metadata](auronq-project.json).
 
 ## Documentation
 
-| Topic | Reference |
+| Subject | References |
 | --- | --- |
-| Project and economics | [Whitepaper](WHITEPAPER.md) · [Mainnet specification](MAINNET.md) |
-| Consensus and mining | [Protocol](PROTOCOL.md) · [AQM64](AQM64.md) |
-| Software setup | [Windows](README-WINDOWS.md) · [Miner](UNIVERSAL-MINER-GUIDE.md) · [GPU guide](GPU-MINER-GUIDE.md) |
-| Network design | [Decentralization](DECENTRALIZATION.md) · [Network independence](NETWORK-INDEPENDENCE.md) |
-| Engineering evidence | [Test matrix](TEST-MATRIX.md) · [Threat model](THREAT-MODEL.md) · [Changelog](CHANGELOG.md) |
-| Project direction | [Roadmap](ROADMAP.md) · [Stabilization](STABILIZATION.md) |
-| Community and security | [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [FAQ](FAQ.md) |
-
-The standardized ML-DSA-87 signature scheme does not, by itself, establish that the complete cryptocurrency is post-quantum secure. Independent cryptographic and implementation reviews remain a priority.
+| Overview | [Whitepaper](WHITEPAPER.md) · [FAQ](FAQ.md) · [Roadmap](ROADMAP.md) |
+| Installation | [Start here](START-HERE.md) · [Windows](README-WINDOWS.md) · [Android](android/README.md) · [Miner](UNIVERSAL-MINER-GUIDE.md) · [GPU guide](GPU-MINER-GUIDE.md) |
+| Network | [Mainnet](MAINNET.md) · [Protocol](PROTOCOL.md) · [Network independence](NETWORK-INDEPENDENCE.md) |
+| Safety and maintenance | [Security](SECURITY.md) · [Threat model](THREAT-MODEL.md) · [Test matrix](TEST-MATRIX.md) · [Stabilization](STABILIZATION.md) |
 
 ## Participate
 
-Read the code, run an independent node, report reproducible defects and test interoperability. You can use the [issue tracker](https://github.com/promirmir/AuronQ/issues), [pull requests](https://github.com/promirmir/AuronQ/pulls) or [Bitcointalk project discussion](https://bitcointalk.org/index.php?topic=5595868.0).
+Read the source, operate a full node, test interoperability and report reproducible defects through [GitHub Issues](https://github.com/promirmir/AuronQ/issues), [Pull Requests](https://github.com/promirmir/AuronQ/pulls) or [Bitcointalk](https://bitcointalk.org/index.php?topic=5595868.0).
 
-Released under the [MIT License](LICENSE).
+Distributed under the [MIT License](LICENSE). ML-DSA-87 is standardized, but that alone does not establish end-to-end post-quantum security.
