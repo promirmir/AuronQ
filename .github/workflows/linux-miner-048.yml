@@ -1,0 +1,52 @@
+name: AuronQ Miner 0.4.8 Linux isolated build
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/linux-miner-048.yml'
+  push:
+    branches:
+      - release/linux-miner-048-isolated
+    paths:
+      - '.github/workflows/linux-miner-048.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Check CPU implementation and miner code
+        run: |
+          set -euo pipefail
+          go test ./internal/argon2pure ./cmd/auronq-gpu-miner ./cmd/auronq
+      - name: Build Linux x64 without touching Windows artifacts
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y g++ make libopencl1 ocl-icd-opencl-dev
+          bash ./build-gpu-miner-linux.sh 0.4.8-alpha
+          test -s dist/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz
+          test -s dist/AuronQ-Miner-v0.4.8-alpha-Linux-amd64/auronq-miner
+          test -s dist/AuronQ-Miner-v0.4.8-alpha-Linux-amd64/libauronq-aqm64-opencl.so
+          file dist/AuronQ-Miner-v0.4.8-alpha-Linux-amd64/auronq-miner
+          tar -tzf dist/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz | grep 'auronq-miner'
+          cd dist
+          sha256sum AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz > SHA256SUMS-LINUX-0.4.8.txt
+      - name: Publish isolated CI artifact for verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuronQ-Miner-0.4.8-Linux-x64-TEST
+          path: |
+            dist/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz
+            dist/SHA256SUMS-LINUX-0.4.8.txt
+          if-no-files-found: error
+          retention-days: 14
