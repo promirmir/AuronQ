@@ -24,7 +24,6 @@ These are **published builds**, not claims of defect-free or production-ready op
 | --- | --- | --- |
 | **Desktop / Full Node** | v1.7.13 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/v1.7.13) |
 | **AuronQ Mobile** | v0.5.6 Alpha · Fast Sync · Android arm64 | **[Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)** · [Release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync) |
-| **AuronQ Mobile (previous)** | v0.5.5 Alpha P2P · Android | **[Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk)** · [Install / verify SHA-256](android/README.md) · [Release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p) |
 | **Universal Miner** | v0.4.8 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
 | **Universal Miner, other platforms** | v0.4.6 Alpha · older builds | [Linux and portable CPU packages](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
 
