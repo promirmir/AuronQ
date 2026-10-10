@@ -4,11 +4,11 @@
 ## AuronQ full-node v1.7.14 — decentralized P2P checkpoint update (non-consensus)
 
 - Builds upon merged [PR #145](https://github.com/promirmir/AuronQ/pull/145), which passed Linux, Windows and Android tests before merging.
-- Participating full nodes independently produce a self-signed, node-local advisory checkpoint for every 256 already fully validated blocks. Each node independently generates its own Ed25519 node-identity key; no founder, GitHub, Sigstore, pool or wallet signing secret is needed.
-- Checkpoints are locally persisted, and `GET /p2p/checkpoint` reports the signed hint. The new endpoint and background checkpoint loop do not affect mining, mempool, wallet data, canonical block selection or chain validation.
+- **Disabled by default for v1.7.14 canary rollout.** Explicit operator opt-in with `AURONQ_ENABLE_P2P_CHECKPOINTS=1` enables node-local Ed25519 advisory checkpoints every 256 fully validated blocks. The node generates its own identity automatically; no founder, GitHub, Sigstore, pool or wallet key is required.
+- The experimental endpoint has a separate request-rate budget so it cannot exhaust the ordinary block/header submission allowance. When enabled, checkpoints are locally persisted and `GET /p2p/checkpoint` reports the signed hint. The new endpoint and background checkpoint loop do not affect mining, mempool, wallet data, canonical block selection or chain validation.
 - Peer signatures **authenticate claimed authorship only**, not a full consensus proof. No mobile wallet or full node may import signed hints as verified historical AQM64/UTXO state without separate validation.
 - All consensus-critical Mainnet constants and genesis remain unchanged. Older full nodes remain protocol compatible but do not automatically host the new endpoint.
-- v1.7.14 Windows/Linux binaries are prepared by a separate gated release workflow; operators must explicitly install them. Preserve existing node data and backups.
+- The v1.7.14 release workflow is **manual-only** and requires an unchanged frozen Mainnet consensus implementation, identity tests, Go/vet/race tests, and Windows/Linux builds. Publication is NOT triggered by merging; no automatic updating of live nodes. Canary operators must preserve chain data and backups before installing.
 - Network survival depends on independently maintained full-node history, reachable public peers, miners and alternative distribution channels. Checkpoint hints cannot reconstruct lost blockchain history.
 
 
