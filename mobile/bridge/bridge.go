@@ -44,7 +44,7 @@ const (
 	maxMobileProbeCandidates = 16
 	headerCacheVersion       = 1
 	headerCacheKeep          = 128
-	headerBatchLimit         = 64
+	headerBatchLimit         = 256
 	mainnetGenesisHash       = "5750a455c04bfe93c9edfef1a12744b05e29ac6da1a9dd5b790566629dea2080c581beb2f0324efba2067c9efb113ed7a29598fd3ffbed965ced31f265d0cec4"
 	mainnetGenesisHeaderJSON = `{"version":2,"pow_algo":1,"height":0,"prev_hash":"00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","merkle_root":"4ec627ff8d4b6ec5957fd476d60d0b5cbc533476206983bdda1dcea08554198e84a987036fd223aca6b330a926fcba54365e98008a154061f35b46f49bff60be","timestamp":1790951480,"target":"003fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","nonce":169}`
 )
