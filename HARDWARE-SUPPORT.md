@@ -13,7 +13,7 @@ canonical result accepted by ordinary full-node validation. The official miner
 therefore treats hardware support as a **runtime correctness property**, not a
 marketing list of model names.
 
-## Official Universal Miner v0.4.6 Alpha
+## Universal Miner backend selection
 
 AUTO order on accelerated Windows/Linux packages:
 
@@ -25,6 +25,8 @@ AUTO order on accelerated Windows/Linux packages:
 
 Every GPU backend must pass the canonical byte-for-byte AQM64 self-test before
 it is allowed to mine.
+
+**Published platform status:** Windows 0.4.8 Alpha GUI/GPU release remains unchanged. Linux 0.4.8 Alpha is available as a [temporary CI test artifact](https://github.com/promirmir/AuronQ/actions/runs/38089531174), with CPU self-test and OpenCL packaging verified; real-device CUDA mining is not yet certified. Historical Linux/portable CPU releases remain archived under [v0.4.6 Alpha](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha).
 
 ## Hardware matrix
 
@@ -84,7 +86,7 @@ AuronQ does not invent hardware telemetry.
 
 ## Specialized mining hardware
 
-The official v0.4.6 miner is intentionally focused on general-purpose CPU/GPU
+The official Universal Miner is intentionally focused on general-purpose CPU/GPU
 participation. It does not add a dedicated integration for specialized mining
 appliances.
 
