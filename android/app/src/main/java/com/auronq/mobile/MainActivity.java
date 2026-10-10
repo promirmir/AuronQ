@@ -62,6 +62,7 @@ public class MainActivity extends Activity {
     private final ExecutorService deepVerifier = Executors.newSingleThreadExecutor();
     private boolean deepBusy = false;
     private long deepVerifiedHeight = -1;
+    private long lastDeepAttemptMillis = 0;
     private String deepVerifiedTip = "";
     private String deepVerifiedWork = "";
     private TextView verificationStageText;
@@ -584,7 +585,11 @@ public class MainActivity extends Activity {
     }
 
     private void updateSendButtons() {
-        boolean ready = quickAccountReady && walletFile.exists() && !walletAddress.isEmpty();
+        boolean conflictingValidatedTip = deepVerifiedHeight == quickHeight
+                && deepVerifiedHeight >= 0 && !deepVerifiedTip.isEmpty()
+                && !deepVerifiedTip.equalsIgnoreCase(quickTip);
+        boolean ready = quickAccountReady && !conflictingValidatedTip
+                && walletFile.exists() && !walletAddress.isEmpty();
         if (sendButton != null) sendButton.setEnabled(ready);
         if (sendShortcutButton != null) sendShortcutButton.setEnabled(ready);
     }
@@ -676,9 +681,12 @@ public class MainActivity extends Activity {
     // spending authority by itself and never overwrites the quorum balance.
     private void maybeStartDeepVerification(String known) {
         if (deepBusy || !networkReachable || quickHeight < 1) return;
+        long now = android.os.SystemClock.elapsedRealtime();
+        if (now - lastDeepAttemptMillis < 120000) return;
         if (deepVerifiedHeight == quickHeight
                 && deepVerifiedTip.equalsIgnoreCase(quickTip)) return;
         deepBusy = true;
+        lastDeepAttemptMillis = now;
         if (verificationStageText != null) {
             verificationStageText.setText(tr("Etap 1/2 aktywny • niezależna weryfikacja AQM64 trwa w tle",
                     "Stage 1/2 active • independent AQM64 verification runs in background"));
@@ -711,6 +719,7 @@ public class MainActivity extends Activity {
                                     invalidateQuickAccount(tr("Sprzeczny łańcuch — wysyłanie zablokowane",
                                             "Conflicting chain — spending disabled"));
                                 }
+                                updateSendButtons();
                             }
                         }
                     } catch (Exception ignored) { }
@@ -808,7 +817,9 @@ public class MainActivity extends Activity {
             String value = state.optString("spendable", "");
             JSONArray items = state.optJSONArray("items");
             if (!walletAddress.equals(address) || !quickTip.equalsIgnoreCase(tip)
-                    || quickHeight != height || state.optInt("peer_agreement", 0) != 3
+                    || quickHeight != height || (deepVerifiedHeight == height
+                        && !deepVerifiedTip.isEmpty() && !deepVerifiedTip.equalsIgnoreCase(tip))
+                    || state.optInt("peer_agreement", 0) != 3
                     || !value.matches("[0-9]+\\.[0-9]{8}") || items == null) {
                 invalidateQuickAccount(tr("Brak spójnych danych konta z 3 węzłów",
                         "Missing consistent account data from 3 peers"));
