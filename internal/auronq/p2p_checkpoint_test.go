@@ -9,7 +9,6 @@ import (
     "path/filepath"
     "strings"
     "testing"
-    "time"
 )
 
 func buildCheckpointChainFixture(t *testing.T) *Chain {
@@ -107,5 +106,4 @@ func TestP2PCheckpointHTTPAvailabilityAndNoConsensusSideEffects(t *testing.T) {
         before.ChainWork!=after.ChainWork || before.Issued!=after.Issued {
         t.Fatal("checkpoint endpoint modified consensus state")
     }
-    _=time.Second // keep useful bounded fixture independent of wall clock
 }
