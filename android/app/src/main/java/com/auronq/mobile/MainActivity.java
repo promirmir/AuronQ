@@ -140,6 +140,9 @@ public class MainActivity extends Activity {
     private TextView netObserved;
     private TextView netCheckpointPeers;
     private LinearLayout recentBlocks;
+    // Only informational block counts. Indexed by independently checked
+    // header height/hash; never used for wallet balance or sending funds.
+    private final java.util.HashMap<String, TextView> recentTxLabels = new java.util.HashMap<>();
 
     private final Runnable liveLoop = new Runnable() {
         @Override
@@ -683,6 +686,16 @@ public class MainActivity extends Activity {
                     networkPreviewExecutor.execute(() -> rememberNetwork(node));
                 }
                 refreshVerifiedWallet(state);
+
+                // Separate short, bounded explorer request AFTER the verified
+                // snapshot has been scheduled to render. A stalled explorer
+                // must not delay header checks or a wallet balance refresh.
+                try {
+                    String summary = Bridge.recentBlockTransactionCounts(node, 6);
+                    runOnUiThread(() -> applyRecentBlockTxCounts(node, summary));
+                } catch (Exception ignored) {
+                    // An unknown count remains "— tx" (never pretend it is 0).
+                }
             } catch (Exception e) {
                 runOnUiThread(() -> handleNetworkRefreshFailure(e.getMessage()));
             } finally {
@@ -812,6 +825,7 @@ public class MainActivity extends Activity {
             topNetworkDot.setTextColor(headerVerified ? ACCENT : DANGER);
 
             recentBlocks.removeAllViews();
+            recentTxLabels.clear();
             JSONArray blocks = j.optJSONArray("blocks");
             if (blocks == null || blocks.length() == 0) {
                 TextView empty = text(tr("Brak danych o blokach", "No block data"), 12, false);
@@ -904,6 +918,28 @@ public class MainActivity extends Activity {
         verifiedHeight = -1;
     }
 
+    private void applyRecentBlockTxCounts(String source, String raw) {
+        // A node's block count is only supplementary explorer metadata; show
+        // it only when BOTH height and hash match the already rendered headers.
+        if (!source.equals(nodeUrl)) return;
+        try {
+            JSONArray items = new JSONObject(raw).optJSONArray("blocks");
+            if (items == null) return;
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.optJSONObject(i);
+                if (item == null || !item.has("transactions")) continue;
+                int count = item.optInt("transactions", -1);
+                if (count < 0) continue;
+                long height = item.optLong("height", -1);
+                String hash = item.optString("hash", "").toLowerCase(Locale.ROOT);
+                TextView label = recentTxLabels.get(height + ":" + hash);
+                if (label != null) label.setText(count + " tx");
+            }
+        } catch (Exception ignored) {
+            // Never show a fabricated number on malformed explorer responses.
+        }
+    }
+
     private View blockRow(long height, String hash, long timestamp, int txs) {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
@@ -915,6 +951,7 @@ public class MainActivity extends Activity {
         TextView h = text(tr("Blok #", "Block #") + height, 14, true);
         top.addView(h, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         TextView tx = text(txs < 0 ? "— tx" : (txs + " tx"), 11, true);
+        recentTxLabels.put(height + ":" + hash.toLowerCase(Locale.ROOT), tx);
         tx.setTextColor(BLUE);
         top.addView(tx);
         row.addView(top);
