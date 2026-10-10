@@ -1,45 +1,40 @@
-# AuronQ Mobile 0.4.2 Alpha
+# AuronQ Mobile — Android
 
-Android light-wallet client for the public AuronQ Mainnet.
+**Current published release: v0.5.3 Alpha · Experimental Mainnet light wallet**
 
-## Multi-peer model
+This guide describes the current GitHub release. It replaces the former v0.4.2 Alpha documentation. AuronQ Mobile is **not a full validating node** and has not undergone an independent professional security audit.
 
-Version 0.4.2 no longer silently relies on one selected node for its network view.
+## Published APK and verification
 
-It:
-- remembers public HTTPS AuronQ nodes learned from native P2P gossip;
-- compares Mainnet observations from multiple replaceable nodes;
-- groups peers by exact height, tip and reported chain work;
-- exposes the observed/agreement count in the UI;
-- prefers a state reported by multiple peers over a lone endpoint claiming much greater work;
-- compares wallet balances only across peers that report the same chain state;
-- refuses to present a quorum balance when same-chain peers return conflicting balances;
-- broadcasts the same locally signed transaction directly to multiple reachable AuronQ nodes.
+- [Download the v0.5.3 Alpha APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk)
+- [Release notes](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha)
+- Filename: `AuronQ-Mobile-0.5.3-alpha.apk`
+- Size: `9574566` bytes
+- SHA-256: `913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c`
 
-Bundled bootstrap addresses and the optional GitHub manifest are **rendezvous hints**, not consensus authorities.
+This hash identifies the **published** APK. An app previously installed under the same version label may be a different binary. To investigate differences, compare APK hashes and package metadata rather than assuming they are identical. **Never uninstall a working wallet or erase its local data before safely backing up recovery material.**
 
-## Wallet model
+## Network model in v0.5.3 Alpha
 
-The encrypted wallet and private seed remain in Android app-private storage. The password is not stored. ML-DSA-87 transaction signing happens locally using the same portable Go implementation as the Desktop/full-node software.
+The [published release notes](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha) describe:
 
-Remote nodes receive only public addresses, queries and already-signed transactions. They cannot derive or use the wallet private key.
+- Multiple replaceable Mainnet peers and direct globally routable public IPv4 fallbacks.
+- HTTPS required for DNS-named nodes; cleartext communication limited to literal public IP addresses, excluding private, loopback, CGNAT and documentation ranges.
+- Local verification of Mainnet headers, AQM64 Proof of Work, difficulty, timestamps and hash continuity.
+- Persisted verification progress after successful header batches, for resuming interrupted synchronization.
+- Separate display of connectivity and header verification status; transient errors should not erase verified state.
+- Wallet-state queries constrained to peers agreeing on the verified chain state.
 
-## What the mobile app verifies
+These are **release design claims**, not a substitute for independent implementation review or testing on a particular Android device. Verification from genesis may take longer as the blockchain grows. Multi-peer agreement and header verification are not equivalent to replaying and validating all transactions and blocks in a full node.
 
-AuronQ Mobile verifies that contacted nodes report the exact AuronQ Mainnet Network ID and it cross-checks several peer-visible states.
+## Wallet safety
 
-It is still a **light client, not a full node**. It does not yet independently replay every transaction or verify the complete AQM64 proof-of-work/header chain. Multi-peer agreement reduces single-endpoint dependence but must not be described as equivalent to full-node validation.
+Protect passwords, local recovery material and private keys. Keep a tested offline backup before sending AURQ, changing phones, upgrading, reinstalling or clearing app data. Do not include wallet secrets in issue reports.
 
-## Independence from the original computers
+For independent full-chain validation use the [Desktop / Full Node](../START-HERE.md). Also see [Security policy](../SECURITY.md) and [Mainnet specification](../MAINNET.md).
 
-Previously learned public peers are cached locally. The app can therefore move away from the bootstrap addresses after it learns other reachable AuronQ nodes. A fresh installation still needs at least one reachable discovery route because an unknown peer address cannot be discovered from nothing.
+## Reporting a difference between APK versions
 
-The long-term target remains the same as Desktop: the original project machines should be removable without affecting a network that already contains independently operated reachable nodes.
+Provide the GitHub release URL, SHA-256 of each available APK, Android version and the exact behavior or visible interface difference. Do **not** send private keys, recovery material or passwords.
 
-## Release
-
-- APK: [AuronQ-Mobile-0.4.2-alpha.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.4.2-alpha/AuronQ-Mobile-0.4.2-alpha.apk)
-- Release: [android-v0.4.2-alpha](https://github.com/promirmir/AuronQ/releases/tag/android-v0.4.2-alpha)
-- SHA-256: `0224f45dca6b721577a60dc5dcd03d5734c0468c1abcac6f4c4e183b19c59736`
-
-This remains debug-signed alpha software and has not received an independent security audit. Do not use substantial value.
+[Open an issue](https://github.com/promirmir/AuronQ/issues).
