@@ -1,0 +1,91 @@
+name: Autonomous AuronQ Keyless Checkpoints
+
+on:
+  schedule:
+    - cron: '23 */4 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mobile-keyless-checkpoints.yml'
+      - 'mobile/bridge/keyless_checkpoint_generate_test.go'
+      - 'mobile/bridge/keyless_checkpoint.go'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: auronq-keyless-checkpoint-publisher
+  cancel-in-progress: false
+
+jobs:
+  verify-sign-and-publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      AURONQ_PREVIOUS_KEYLESS_PAYLOAD: /tmp/auronq-previous-checkpoint.json
+      AURONQ_KEYLESS_PAYLOAD_OUTPUT: /tmp/auronq-new-checkpoint.json
+      CP_IDENTITY: https://github.com/promirmir/AuronQ/.github/workflows/mobile-keyless-checkpoints.yml@refs/heads/main
+      CP_ISSUER: https://token.actions.githubusercontent.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - uses: sigstore/cosign-installer@v4.1.0
+      - name: Inspect last signed checkpoint (reject untrusted data)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git fetch origin automation/mobile-checkpoints; then
+            git show origin/automation/mobile-checkpoints:latest.json > /tmp/auronq-previous-checkpoint.json
+            git show origin/automation/mobile-checkpoints:latest.sigstore.json > /tmp/auronq-previous.sigstore.json
+            cosign verify-blob /tmp/auronq-previous-checkpoint.json \
+              --bundle /tmp/auronq-previous.sigstore.json \
+              --certificate-identity "$CP_IDENTITY" \
+              --certificate-oidc-issuer "$CP_ISSUER"
+          else
+            echo "No previous authenticated checkpoint; start from release anchor 1284."
+          fi
+      - name: Validate 256 new AQM64 blocks and independent witnesses
+        shell: bash
+        run: |
+          AURONQ_GENERATE_KEYLESS_CHECKPOINT=1 go test ./mobile/bridge \
+            -run '^TestGenerateKeylessCheckpointEvery256Blocks$' -count=1 -timeout 48m -v
+      - name: Sign with GitHub OIDC Sigstore (no private key configuration)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s "$AURONQ_KEYLESS_PAYLOAD_OUTPUT" ]; then exit 0; fi
+          cosign sign-blob "$AURONQ_KEYLESS_PAYLOAD_OUTPUT" \
+            --bundle /tmp/auronq-new.sigstore.json --yes
+          cosign verify-blob "$AURONQ_KEYLESS_PAYLOAD_OUTPUT" \
+            --bundle /tmp/auronq-new.sigstore.json \
+            --certificate-identity "$CP_IDENTITY" \
+            --certificate-oidc-issuer "$CP_ISSUER"
+      - name: Publish authenticated manifest and transparency proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -s "$AURONQ_KEYLESS_PAYLOAD_OUTPUT" ]; then
+            echo "No new 256-block interval; leave existing checkpoint unchanged."
+            exit 0
+          fi
+          test -s /tmp/auronq-new.sigstore.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git show-ref --verify --quiet refs/remotes/origin/automation/mobile-checkpoints; then
+            git checkout -B automation/mobile-checkpoints origin/automation/mobile-checkpoints
+          else
+            git checkout -b automation/mobile-checkpoints
+          fi
+          cp "$AURONQ_KEYLESS_PAYLOAD_OUTPUT" latest.json
+          cp /tmp/auronq-new.sigstore.json latest.sigstore.json
+          git add latest.json latest.sigstore.json
+          git commit -m 'chore: publish keyless GitHub OIDC signed AuronQ checkpoint'
+          git push origin HEAD:automation/mobile-checkpoints
