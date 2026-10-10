@@ -568,7 +568,7 @@ public class MainActivity extends Activity {
                 // installs may need to verify hundreds of memory-hard AQM64
                 // headers; that work must not look like "no connection".
                 try {
-                    String preview = Bridge.quorumSnapshot(knownNodes, 1);
+                    String preview = Bridge.quorumSnapshot(knownNodes, 0);
                     final String finalPreview = preview;
                     runOnUiThread(() -> applyNetworkPreview(finalPreview));
                 } catch (Exception ignored) {
