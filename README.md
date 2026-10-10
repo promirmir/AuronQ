@@ -8,7 +8,7 @@
 
 [Project website](https://promirmir.github.io/AuronQ/) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
-**Android wallet — one public download:** [**AuronQ Mobile 0.5.5 Alpha P2P (APK)**](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk) · [Release checksum and installation guidance](android/README.md). This is the current reference **experimental** mobile build for new installations, not an independently audited release. Wallet owners must not erase an existing installation to update.
+**Android wallet — user-tested fast-sync build:** [**AuronQ Mobile 0.5.3 Two-Stage V2 Mempool TEST (APK)**](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-two-stage-v2-mempool-test-20261010/AuronQ-Mobile-0.5.3-Two-Stage-V2-Mempool-TEST.apk) · [Release and SHA-256 file](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-two-stage-v2-mempool-test-20261010) · [Installation guidance](android/README.md). The project operator reported successful hands-on operation and faster startup; pending-mempool history has been restored in this build. This remains an **experimental, unaudited, separately installed test APK**, not a production-safe replacement for funded wallets. Never uninstall or erase an existing wallet to try it.
 
 **Project state — maintenance/freeze:** the Mainnet consensus and existing desktop v1.7.13 are held unchanged; no new features or node rollouts are scheduled. Security/availability fixes still require review and testing. [Release/freeze decision](PROJECT-FREEZE.md).
 
@@ -23,7 +23,8 @@ These are **published builds**, not claims of defect-free or production-ready op
 | Software | Published release | Download and details |
 | --- | --- | --- |
 | **Desktop / Full Node** | v1.7.13 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/v1.7.13) |
-| **AuronQ Mobile** | v0.5.5 Alpha P2P · Android | **[Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk)** · [Install / verify SHA-256](android/README.md) · [Release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p) |
+| **AuronQ Mobile (user-tested fast sync)** | v0.5.3 Two-Stage V2 Mempool TEST · Android arm64 | **[Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-two-stage-v2-mempool-test-20261010/AuronQ-Mobile-0.5.3-Two-Stage-V2-Mempool-TEST.apk)** · [Release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-two-stage-v2-mempool-test-20261010) |
+| **AuronQ Mobile (earlier)** | v0.5.5 Alpha P2P · Android | **[Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk)** · [Install / verify SHA-256](android/README.md) · [Release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p) |
 | **Universal Miner** | v0.4.8 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
 | **Universal Miner, other platforms** | v0.4.6 Alpha · older builds | [Linux and portable CPU packages](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
 
