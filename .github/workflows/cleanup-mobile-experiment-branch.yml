@@ -1,0 +1,30 @@
+name: Remove archived mobile experiment branch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cleanup-mobile-experiment-branch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  delete-stale-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release pin and delete only obsolete ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          BRANCH='fix/mobile053-three-netgroups-quick-wallet-20261010'
+          EXPECTED='0af05c1757fbd00d6629a12619efab87a03e6990'
+          ACTUAL="$(gh api "repos/$GH_REPO/git/ref/heads/$BRANCH" --jq '.object.sha')"
+          test "$ACTUAL" = "$EXPECTED"
+          RELEASE_SHA="$(gh api "repos/$GH_REPO/git/ref/tags/android-v0.5.6-alpha-fast-sync" --jq '.object.sha')"
+          test "$RELEASE_SHA" = "$EXPECTED"
+          test "$(gh api "repos/$GH_REPO/pulls?state=open&head=promirmir:$BRANCH" --jq 'length')" = "0"
+          gh api --method DELETE "repos/$GH_REPO/git/refs/heads/$BRANCH"
+          echo "Deleted obsolete mobile experiment branch; release tag and APK remain untouched."
