@@ -1,0 +1,78 @@
+name: Build isolated Android TX-count correction APK
+
+on:
+  push:
+    branches:
+      - fix/android-recent-block-tx-counts-20261010
+    paths:
+      - '.github/workflows/android-tx-count-test-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-build-publish-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Confirm no consensus changes and exercise UI data decoder
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git diff --exit-code origin/main HEAD -- internal/auronq network.json genesis.json
+          go test ./mobile/bridge -run '^TestParseRecentBlockTxCounts' -count=1 -v
+          go test ./...
+          go vet ./...
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK and NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Build mobile Go AAR
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build isolated test app
+        working-directory: android
+        run: gradle --no-daemon :app:assembleTxfix
+      - name: Publish immutable test-only build and SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android/app/build/outputs/apk/txfix/app-txfix.apk
+          cp android/app/build/outputs/apk/txfix/app-txfix.apk AuronQ-Mobile-TX-Counts-Isolated-Test.apk
+          sha256sum AuronQ-Mobile-TX-Counts-Isolated-Test.apk > SHA256SUMS-TX-COUNTS.txt
+          if gh release view android-ui-tx-counts-test-20261010 >/dev/null 2>&1; then
+            echo "Immutable test release exists; refusing to replace it."
+            exit 1
+          fi
+          gh release create android-ui-tx-counts-test-20261010 \
+            AuronQ-Mobile-TX-Counts-Isolated-Test.apk SHA256SUMS-TX-COUNTS.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile - isolated recent block TX count fix TEST" \
+            --notes "TEST ONLY, not a replacement for the official Alpha wallet. This separate package (com.auronq.mobile.txfix) fetches tiny read-only /v1/explorer/blocks summaries from the selected peer after fast header rendering. It displays a TX count only when the height and block hash match the displayed verified-header snapshot. If the peer is unavailable, it retains an honest dash instead of inventing zero. No consensus, wallet format, keys, balances, history, transaction authorization or Mainnet changes. DEBUG-signed with an ephemeral CI key. NEVER uninstall a funded wallet; do NOT import valuable keys into the test app. This build is to verify only the recent block TX-number UI." \
+            --prerelease
