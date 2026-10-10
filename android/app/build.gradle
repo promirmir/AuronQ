@@ -50,6 +50,16 @@ android {
             manifestPlaceholders = [appLabel: 'AuronQ Mobile (TX Count Test)']
         }
 
+        // Rebuilt security-checked TX count test package. New ID keeps the
+        // earlier test APK intact even when GitHub CI signing keys differ.
+        txfix2 {
+            initWith debug
+            applicationIdSuffix '.txfix2'
+            versionNameSuffix '-block-count-verified-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile (TX Verified Test)']
+        }
+
         // Separate installable diagnostic build. It uses a different package
         // ID, so it cannot replace or erase a user's existing wallet/data.
         syncprobe {
