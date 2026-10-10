@@ -5,6 +5,7 @@ on:
       - feat/mobile-keyless-checkpoint-v055-20261010
     paths:
       - '.github/workflows/mobile-keyless-dependencies.yml'
+      - 'mobile/bridge/keyless_checkpoint_generate_test.go'
 permissions:
   contents: write
 jobs:
