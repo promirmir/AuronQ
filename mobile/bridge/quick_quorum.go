@@ -221,7 +221,12 @@ func QuickAccountSnapshot(knownJSON,address string,limit int)(string,error){
  nodes:=make([]string,0,len(views))
  ng:=make([]string,0,len(views))
  for _,x:=range views{nodes=append(nodes,x.Obs.Node);ng=append(ng,x.Group)}
- items:=mergeHistoryPending([]historyObservation{{Node:v.Obs.Node,Items:v.History,Key:historyFingerprint(v.History)}})
+ // Pending mempool entries may differ between honest full nodes.
+ // Never portray pending observed at just ONE peer as confirmed by THREE.
+ items:=make([]aq.WalletHistoryItem,0,len(v.History))
+ for _,item:=range v.History{
+  if item.Status!="pending"{items=append(items,item)}
+ }
  if len(items)>limit && limit>0{items=items[:limit]}
  out:=map[string]any{
   "address":strings.TrimSpace(address),"height":v.Obs.Height,"tip":v.Obs.Tip,
