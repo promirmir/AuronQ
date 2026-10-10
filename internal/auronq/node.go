@@ -22,6 +22,8 @@ import (
 )
 
 type NodeConfig struct {
+	// Optional pilot feature: false by default to protect existing Mainnet nodes.
+	EnablePeerCheckpoints bool
 	Listen        string
 	Advertise     string
 	Peers         []string
@@ -66,6 +68,7 @@ const (
 	requestRateWindowDuration    = 10 * time.Second
 	maxRequestsPerIPWindow       = 320
 	maxBlocksPerIPWindow         = 8
+	maxCheckpointRequestsPerIPWindow = 4
 	maxHistoryRequestsPerIPWindow = 12
 	maxExplorerRequestsPerIPWindow = 60
 	maxRateEntries               = 8192
@@ -179,6 +182,12 @@ func (n *Node) ClearPublicAdvertise(expected string) bool {
 }
 
 func NewNode(chain *Chain, cfg NodeConfig) *Node {
+    // Opt-in is intentionally strict. Neither newly installed binaries nor
+    // existing nodes start checkpoint publishing without an explicit canary
+    // selection. This does not affect full block/transaction validation.
+    if os.Getenv("AURONQ_ENABLE_P2P_CHECKPOINTS") == "1" {
+        cfg.EnablePeerCheckpoints = true
+    }
 	if cfg.LookupHost == nil {
 		cfg.LookupHost = net.DefaultResolver.LookupHost
 	}
@@ -961,6 +970,13 @@ func (n *Node) allowBlockRequest(r *http.Request) bool {
 	return n.allowRate(ip+"|block", maxBlocksPerIPWindow)
 }
 
+func (n *Node) allowCheckpointRequest(r *http.Request) bool {
+    ip := requestSourceIP(r.RemoteAddr)
+    // Completely separate from the block submission/header fetch budget.
+    // A noisy checkpoint crawler cannot exhaust miners' block endpoint quota.
+    return n.allowRate(ip+"|checkpoint", maxCheckpointRequestsPerIPWindow)
+}
+
 func (n *Node) allowHistoryRequest(r *http.Request) bool {
 	ip := requestSourceIP(r.RemoteAddr)
 	return n.allowRate(ip+"|history", maxHistoryRequestsPerIPWindow)
@@ -1174,8 +1190,9 @@ func (n *Node) handler() http.Handler {
 	// authenticate node identity, not historical consensus or peer majority.
 	// Never use these attestations as automatic consensus trust anchors.
 	mux.HandleFunc("/p2p/checkpoint",func(w http.ResponseWriter,r *http.Request){
+        if !n.cfg.EnablePeerCheckpoints {w.WriteHeader(http.StatusNotFound);return}
 		if r.Method!=http.MethodGet {w.WriteHeader(http.StatusMethodNotAllowed);return}
-		if !n.allowBlockRequest(r) {
+		if !n.allowCheckpointRequest(r) {
 			writeJSON(w,http.StatusTooManyRequests,map[string]string{"error":"checkpoint request rate limit exceeded"})
 			return
 		}
@@ -1378,7 +1395,9 @@ func parseHeight(s string) (uint64, error) {
 func (n *Node) Run(ctx context.Context) error {
 	n.server = &http.Server{Addr: n.cfg.Listen, Handler: n.handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
 	go n.syncLoop(ctx)
-	go n.checkpointLoop(ctx) // advisory checkpoints never gate block validation
+	if n.cfg.EnablePeerCheckpoints {
+        go n.checkpointLoop(ctx) // isolated opt-in: never gates block validation
+    }
 	errc := make(chan error, 1)
 	go func() {
 		log.Printf("AuronQ node listening on %s network=%s id=%s", n.cfg.Listen, n.Chain.network.Name, n.Chain.NetworkID().String()[:16])
