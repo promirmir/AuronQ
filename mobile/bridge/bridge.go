@@ -1132,6 +1132,72 @@ func quorumBalanceFromNodes(nodes []string, address string) (string, error) {
 	return string(raw), nil
 }
 
+// QuorumBalanceLight is a fast, peer-attested balance view. It is NOT a
+// cryptographic proof of UTXO inclusion or an independently verified chain.
+// Require two agreeing endpoints rather than silently trusting one server.
+func QuorumBalanceLight(knownNodesJSON, address string) (string, error) {
+    obs, err := collectNodeObservations(knownNodesJSON)
+    if err != nil { return "", err }
+    _, nodes, err := chooseNodeQuorum(obs)
+    if err != nil { return "", err }
+    if len(nodes) < 2 { return "", errors.New("light wallet requires at least two agreeing network peers") }
+    raw, err := quorumBalanceFromNodes(nodes, address)
+    if err != nil { return "", err }
+    var result map[string]any
+    if err := json.Unmarshal([]byte(raw), &result); err != nil { return "", err }
+    if result["multi_peer_confirmed"] != true { return "", errors.New("light balance not confirmed by multiple peers") }
+    result["state_trust"] = "peer-quorum-unverified-pow"
+    result["header_verified"] = false
+    b, _ := json.Marshal(result)
+    return string(b), nil
+}
+
+// SendMultiLight is an explicitly lower-assurance SPV-like path for wallets
+// that have not yet verified all AQM64 headers. Peers must agree on chain
+// state and on spendable UTXOs; private keys never leave the device.
+func SendMultiLight(knownNodesJSON, walletPath, password, to, amount string) (string, error) {
+    w, err := aq.LoadWallet(walletPath, password)
+    if err != nil { return "", err }
+    defer w.Close()
+    if w.File.NetworkByte != aq.MainnetNetworkByte { return "", errors.New("wallet is not an AuronQ Mainnet wallet") }
+    amt, err := aq.ParseAmount(strings.TrimSpace(amount))
+    if err != nil { return "", err }
+    obs, err := collectNodeObservations(knownNodesJSON)
+    if err != nil { return "", err }
+    _, agreeing, err := chooseNodeQuorum(obs)
+    if err != nil { return "", err }
+    if len(agreeing) < 2 { return "", errors.New("light payments require at least two agreeing chain peers") }
+    type observation struct { node string; items []aq.UTXORecord; fingerprint string }
+    var observations []observation
+    for _, node := range agreeing {
+        cl := aq.NewClient(node)
+        cl.HTTP = mobileHTTP(8 * time.Second)
+        items, err := cl.UTXOs(w.Address())
+        if err == nil { observations = append(observations, observation{node, items, utxoFingerprint(items)}) }
+    }
+    groups := map[string][]observation{}
+    for _, o := range observations { groups[o.fingerprint] = append(groups[o.fingerprint], o) }
+    var best []observation
+    for _, group := range groups { if len(group) > len(best) { best = group } }
+    if len(best) < 2 { return "", errors.New("light payment requires agreement on UTXOs from at least two peers") }
+    tx, fee, err := w.BuildTransaction(best[0].items, strings.TrimSpace(to), amt, aq.MainnetNetworkByte)
+    if err != nil { return "", err }
+    accepted := []string{}
+    for _, o := range best {
+        cl := aq.NewClient(o.node)
+        cl.HTTP = mobileHTTP(10 * time.Second)
+        if _, err := cl.SubmitTx(tx); err == nil { accepted = append(accepted, o.node) }
+    }
+    if len(accepted) == 0 { return "", errors.New("no agreeing peer accepted the transaction") }
+    out := map[string]any{"txid": tx.ID().String(), "fee_atoms": fee,
+        "fee": aq.FormatAmount(fee), "broadcast_attempted": len(best),
+        "direct_accepted": len(accepted), "accepted_nodes": accepted,
+        "utxo_peer_observed": len(observations), "utxo_peer_agreement": len(best),
+        "state_trust": "peer-quorum-unverified-pow"}
+    b, _ := json.Marshal(out)
+    return string(b), nil
+}
+
 func QuorumBalance(knownNodesJSON, address string) (string, error) {
 	obs, err := collectNodeObservations(knownNodesJSON)
 	if err != nil {
