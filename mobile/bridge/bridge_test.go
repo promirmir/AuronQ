@@ -285,7 +285,7 @@ func TestHeaderSyncProgressFreshCacheAndPersistedHeight(t *testing.T) {
     if err := json.Unmarshal([]byte(raw), &progress); err != nil {
         t.Fatal(err)
     }
-    if progress.Height != 0 || progress.Tip != mainnetGenesisHash || progress.Network != mainnetNetworkID {
+    if progress.Height != verifiedCheckpointHeight || progress.Tip != verifiedCheckpointTip || progress.Network != mainnetNetworkID {
         t.Fatalf("unexpected fresh progress %+v", progress)
     }
     cache, err := freshHeaderCache()
@@ -302,7 +302,7 @@ func TestHeaderSyncProgressFreshCacheAndPersistedHeight(t *testing.T) {
     if err := json.Unmarshal([]byte(raw), &progress); err != nil {
         t.Fatal(err)
     }
-    if progress.Height != 0 || progress.Tip != mainnetGenesisHash {
+    if progress.Height != verifiedCheckpointHeight || progress.Tip != verifiedCheckpointTip {
         t.Fatalf("unexpected persisted progress %+v", progress)
     }
     if _, err := os.Stat(path); err != nil {
