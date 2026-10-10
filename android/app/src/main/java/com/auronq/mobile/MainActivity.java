@@ -65,6 +65,11 @@ public class MainActivity extends Activity {
     // operations or block the quick (unverified) network status preview.
     private final ExecutorService networkPreviewExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService headerVerificationExecutor = Executors.newSingleThreadExecutor();
+    // Peer checkpoint signatures are diagnostic hints only. Never mix this
+    // task with AQM64 validation, wallet keys or verified spending.
+    private final ExecutorService peerCheckpointExecutor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean peerCheckpointBusy = new AtomicBoolean(false);
+    private long lastPeerCheckpointProbe = -900_000L;
     private final AtomicBoolean previewBusy = new AtomicBoolean(false);
     private final AtomicBoolean verificationBusy = new AtomicBoolean(false);
     private static final long PREVIEW_INTERVAL_MS = 12_000L;
@@ -133,6 +138,7 @@ public class MainActivity extends Activity {
     private TextView netTip;
     private TextView netWork;
     private TextView netObserved;
+    private TextView netCheckpointPeers;
     private LinearLayout recentBlocks;
 
     private final Runnable liveLoop = new Runnable() {
@@ -444,8 +450,8 @@ public class MainActivity extends Activity {
         root.addView(netStatus, mt(16));
 
         TextView firstSyncNote = text(tr(
-                "Aplikacja sprawdza nagłówki od wbudowanego punktu kontrolnego i może automatycznie przyjąć nowszy checkpoint podpisany Ed25519 oraz potwierdzony przez peery. Starszej historii nie weryfikuje na telefonie od genesis.",
-                "The app starts from a release-pinned checkpoint and can use newer Ed25519-signed checkpoints after independent peer checks. The historical prefix is trusted to the signed checkpoint publisher, not reverified from genesis on the phone."), 11, false);
+                "Każdy pełny node może sam tworzyć podpisane checkpointy P2P co 256 bloków, bez GitHuba i bez Twoich kluczy. Podpisy peerów są jedynie wskazówkami. Portfel nie ufa im automatycznie: nadal sam sprawdza AQM64 od lokalnego zweryfikowanego punktu kontrolnego.",
+                "Each validating full node can self-sign P2P checkpoint hints every 256 blocks, without GitHub or user keys. Peer signatures are advisory only. The wallet does NOT silently trust them and continues validating AQM64 after its local release checkpoint."), 11, false);
         firstSyncNote.setTextColor(MUTED);
         root.addView(firstSyncNote, mt(8));
 
@@ -466,6 +472,8 @@ public class MainActivity extends Activity {
         netTip = kv(details, "Tip", "—");
         netWork = kv(details, "Chain work", "—");
         netObserved = kv(details, tr("Ostatni odczyt", "Last update"), "—");
+        netCheckpointPeers = kv(details, tr("Podpisane checkpointy P2P (wskazówki)", "P2P signed checkpoint hints"),
+                tr("Sprawdzanie niezależnych źródeł…", "Checking independent sources…"));
         root.addView(details, mt(16));
 
         LinearLayout live = card();
@@ -573,6 +581,7 @@ public class MainActivity extends Activity {
     private void refreshAll() {
         refreshPreview();
         refreshVerification();
+        refreshPeerCheckpointHints();
     }
 
     private void refreshPreview() {
@@ -603,6 +612,51 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void refreshPeerCheckpointHints() {
+        long now = SystemClock.elapsedRealtime();
+        if (peerCheckpointBusy.get() || now - lastPeerCheckpointProbe < 900_000L) return;
+        if (!peerCheckpointBusy.compareAndSet(false, true)) return;
+        lastPeerCheckpointProbe = now;
+        peerCheckpointExecutor.execute(() -> {
+            try {
+                String response = Bridge.peerCheckpointSummary(
+                        prefs.getString("known_nodes", "[]"));
+                JSONObject report = new JSONObject(response);
+                int signed = report.optInt("verified_signatures", 0);
+                int groups = report.optInt("netgroups", 0);
+                int matching = report.optInt("matching_netgroups", 0);
+                long height = report.optLong("matching_height", 0);
+                runOnUiThread(() -> {
+                    if (netCheckpointPeers == null) return;
+                    String caption;
+                    if (height > 0) {
+                        caption = tr("Węzły: " + signed + " podpisów, " + matching
+                                + " grup zgodnych na #" + height
+                                + " (tylko wskazówka)",
+                                "Nodes: " + signed + " signed, " + matching
+                                + " groups match at #" + height
+                                + " (hint only)");
+                    } else {
+                        caption = tr("Podpisy: " + signed + ", grupy: " + groups
+                                + " — nie są dowodem konsensusu",
+                                "Signatures: " + signed + ", groups: " + groups
+                                + " — not consensus proof");
+                    }
+                    netCheckpointPeers.setText(caption);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    if (netCheckpointPeers != null) {
+                        netCheckpointPeers.setText(tr("Checkpointy P2P niedostępne, portfel działa normalnie",
+                                "P2P checkpoint hints unavailable; wallet remains operational"));
+                    }
+                });
+            } finally {
+                peerCheckpointBusy.set(false);
+            }
+        });
+    }
+
     private void refreshVerification() {
         long now = SystemClock.elapsedRealtime();
         if (verificationBusy.get() || now - lastVerifyStartMs < VERIFY_RETRY_INTERVAL_MS) return;
@@ -610,23 +664,8 @@ public class MainActivity extends Activity {
         lastVerifyStartMs = now;
         headerVerificationExecutor.execute(() -> {
             try {
-                // Signed checkpoint updates only touch the header cache. The
-                // wallet files, secret keys and transaction logic are unchanged.
-                long lastCheck = prefs.getLong("last_signed_checkpoint_check", 0L);
-                long currentTime = System.currentTimeMillis();
-                if (currentTime - lastCheck > 6L * 60L * 60L * 1000L) {
-                    try {
-                        Bridge.updateSignedCheckpoint(
-                                prefs.getString("known_nodes", "[]"),
-                                headerCacheFile.getAbsolutePath());
-                    } catch (Exception ignored) {
-                        // Never block the user's existing verified cache due
-                        // to a missing, expired or unreachable manifest.
-                    } finally {
-                        prefs.edit().putLong("last_signed_checkpoint_check",
-                                currentTime).apply();
-                    }
-                }
+                // No central GitHub/Signstore checkpoint publisher is required.
+                // Local header verification remains authoritative.
                 String snapshot = Bridge.quorumSnapshotVerified(
                         prefs.getString("known_nodes", "[]"),
                         headerCacheFile.getAbsolutePath(), 6);
@@ -1416,6 +1455,7 @@ public class MainActivity extends Activity {
         executor.shutdownNow();
         networkPreviewExecutor.shutdownNow();
         headerVerificationExecutor.shutdownNow();
+        peerCheckpointExecutor.shutdownNow();
         super.onDestroy();
     }
 }

@@ -10,8 +10,8 @@ android {
         applicationId 'com.auronq.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 10
-        versionName '0.5.4-alpha'
+        versionCode 11
+        versionName '0.5.5-alpha-p2p'
         manifestPlaceholders = [appLabel: 'AuronQ Mobile']
     }
 
@@ -28,6 +28,16 @@ android {
             versionNameSuffix '-checkpoint-test'
             signingConfig signingConfigs.debug
             manifestPlaceholders = [appLabel: 'AuronQ Mobile (Auto CP Test)']
+        }
+
+        // Independent P2P-checkpoint preview app. Never touches existing
+        // production, syncprobe, autocp or other test wallets.
+        p2pcheck {
+            initWith debug
+            applicationIdSuffix '.p2pcheck'
+            versionNameSuffix '-separate-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile (P2P Checkpoints)']
         }
 
         // Separate installable diagnostic build. It uses a different package
