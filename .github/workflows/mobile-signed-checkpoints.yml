@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 55
     env:
-      AURONQ_CP_ED25519_PRIVATE_KEY: ${{ secrets.AURONQ_CP_ED25519_PRIVATE_KEY }}
       AURONQ_PREVIOUS_SIGNED_MANIFEST: /tmp/auronq-previous-signed-checkpoint.json
       AURONQ_CHECKPOINT_OUTPUT_PATH: /tmp/auronq-next-signed-checkpoint.json
     steps:
@@ -39,6 +38,8 @@ jobs:
 
       - name: Check secret availability, independently verify and sign
         shell: bash
+        env:
+          AURONQ_CP_ED25519_PRIVATE_KEY: ${{ secrets.AURONQ_CP_ED25519_PRIVATE_KEY }}
         run: |
           if [ -z "$AURONQ_CP_ED25519_PRIVATE_KEY" ]; then
             echo "::notice::Signed checkpoint updates are dormant until AURONQ_CP_ED25519_PRIVATE_KEY is configured securely as a repository Actions secret."
