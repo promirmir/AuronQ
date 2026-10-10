@@ -444,8 +444,8 @@ public class MainActivity extends Activity {
         root.addView(netStatus, mt(16));
 
         TextView firstSyncNote = text(tr(
-                "Aplikacja sprawdza nagłówki od wbudowanego punktu kontrolnego i może automatycznie przyjąć nowszy checkpoint podpisany Ed25519 oraz potwierdzony przez peery. Starszej historii nie weryfikuje na telefonie od genesis.",
-                "The app starts from a release-pinned checkpoint and can use newer Ed25519-signed checkpoints after independent peer checks. The historical prefix is trusted to the signed checkpoint publisher, not reverified from genesis on the phone."), 11, false);
+                "Aplikacja zaczyna od punktu kontrolnego i może samoczynnie przyjąć nowszy checkpoint po sprawdzeniu podpisu Sigstore powiązanego z oficjalnym GitHub Actions oraz zgodności peerów. Nie potrzebujesz żadnego klucza. Starszej historii nie weryfikuje na telefonie od genesis.",
+                "The app starts from a pinned checkpoint and can automatically use newer Sigstore GitHub Actions identity-signed checkpoints after independent peer checks. No user signing key is required. The historical prefix is trusted to the signed checkpoint publisher, not reverified from genesis on the phone."), 11, false);
         firstSyncNote.setTextColor(MUTED);
         root.addView(firstSyncNote, mt(8));
 
@@ -612,18 +612,18 @@ public class MainActivity extends Activity {
             try {
                 // Signed checkpoint updates only touch the header cache. The
                 // wallet files, secret keys and transaction logic are unchanged.
-                long lastCheck = prefs.getLong("last_signed_checkpoint_check", 0L);
+                long lastCheck = prefs.getLong("last_keyless_checkpoint_check", 0L);
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastCheck > 6L * 60L * 60L * 1000L) {
                     try {
-                        Bridge.updateSignedCheckpoint(
+                        Bridge.updateKeylessCheckpoint(
                                 prefs.getString("known_nodes", "[]"),
                                 headerCacheFile.getAbsolutePath());
                     } catch (Exception ignored) {
                         // Never block the user's existing verified cache due
                         // to a missing, expired or unreachable manifest.
                     } finally {
-                        prefs.edit().putLong("last_signed_checkpoint_check",
+                        prefs.edit().putLong("last_keyless_checkpoint_check",
                                 currentTime).apply();
                     }
                 }
