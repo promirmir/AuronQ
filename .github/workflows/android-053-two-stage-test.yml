@@ -40,7 +40,7 @@ jobs:
           grep -Fq 'Bridge.quorumSnapshotVerified(known, headerCacheFile.getAbsolutePath(), 0)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
           grep -Fq 'private void invalidateQuickAccount(String reason)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
           grep -Fq 'walletBalance = text("— AURQ", 29, true)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
-          grep -Fq 'sendWithQuickQuorum(' mobile/bridge/quick_quorum.go
+          grep -Fq 'func SendWithQuickQuorum(' mobile/bridge/quick_quorum.go
           echo "Two-stage flow present, default balance is unknown and protected consensus unchanged"
       - name: Test three-network-group fail-closed quorum
         shell: bash
