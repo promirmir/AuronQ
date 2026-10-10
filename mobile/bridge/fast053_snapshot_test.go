@@ -33,8 +33,9 @@ func TestFast053RecentSnapshotPreservesFullBlockHistory(t *testing.T) {
   out:=fetchRecentSnapshotBlocks(srv.URL,11,3)
   if len(out)!=3 {t.Fatalf("want 3 got %d",len(out))}
   for i,height:=range []uint64{11,10,9} {
-    if out[i].Height!=height || out[i].Hash!=blocks[height].Hash().String() ||
-       out[i].Transactions!=len(blocks[height].Transactions) {
+    block:=blocks[height]
+    if out[i].Height!=height || out[i].Hash!=block.Hash().String() ||
+       out[i].Transactions!=len(block.Transactions) {
         t.Fatalf("wrong block at index %d: %+v",i,out[i])
     }
   }
