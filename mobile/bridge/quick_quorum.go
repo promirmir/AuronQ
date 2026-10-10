@@ -85,13 +85,15 @@ func quickMatchingFromCandidates(candidates []string) []mobileNodeObservation{
   case obs:=<-ch:
    pending--
    if obs.Node!="" {results=append(results,obs)}
-   if selected:=matchingThreeNetgroups(results);len(selected)>=quickMinGroups{
-    return selected
-   }
+   // Do not accept the first three matching replies while other probes are
+   // pending: a later higher-work or same-height fork must be considered.
+   // The bounded deadline still limits first-start latency.
   case <-timer.C:pending=0
   }
  }
- return nil
+ // Evaluate the whole observed set after all peers responded or the deadline.
+ // Silence and timeouts cannot establish independence or cryptographic truth.
+ return matchingThreeNetgroups(results)
 }
 
 func matchingThreeNetgroups(obs []mobileNodeObservation) []mobileNodeObservation {
