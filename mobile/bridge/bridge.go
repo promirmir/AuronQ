@@ -1,6 +1,7 @@
 package bridge
 
 import (
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -38,6 +39,20 @@ type bootstrapManifest struct {
 	Peers     []string `json:"peers"`
 	ExpiresAt int64    `json:"expires_at,omitempty"`
 }
+
+// The checkpoint is a RELEASE-TRUST ANCHOR, NOT a Mainnet consensus parameter.
+// It was independently validated from genesis by the reviewed GitHub Actions
+// checkpoint-generation job and then cross-checked against other peers.
+// Pin its identity independently of the embedded JSON to prevent accidental
+// acceptance of a different chain or a silently rewritten checkpoint.
+const (
+	verifiedCheckpointHeight uint64 = 1284
+	verifiedCheckpointTip = "72d933ab3974ade0caa203674b9492387688a29c96053b218f2987844c189dfbc411db07853cc531475e932717869383ef655419f137be460d4eada8d0390454"
+	verifiedCheckpointWork = "2a7791705"
+)
+
+//go:embed verified-checkpoint.json
+var reviewedCheckpointJSON []byte
 
 const (
 	maxMobileKnownCandidates = 8
@@ -345,20 +360,55 @@ func freshHeaderCache() (headerCache, error) {
 	}, nil
 }
 
+// reviewedCheckpointCache starts the light wallet from a pinned, locally
+// bundled release checkpoint. It does not require GitHub or a specific peer at
+// runtime. Earlier AQM64 headers are ASSUMED verified from the build's audited
+// checkpoint; only later headers are checked on the phone.
+func reviewedCheckpointCache() (headerCache, error) {
+    var c headerCache
+    if err := json.Unmarshal(reviewedCheckpointJSON,&c); err != nil {
+        return c,fmt.Errorf("embedded Mainnet checkpoint JSON invalid: %w",err)
+    }
+    if c.Version != headerCacheVersion || c.NetworkID != mainnetNetworkID ||
+       c.VerifiedHeight != verifiedCheckpointHeight || c.VerifiedTip != verifiedCheckpointTip ||
+       !strings.EqualFold(c.ChainWork,verifiedCheckpointWork) {
+        return headerCache{},errors.New("embedded checkpoint mismatches pinned Mainnet anchor")
+    }
+    if len(c.History)<62 || len(c.History)>headerCacheKeep {
+        return headerCache{},errors.New("embedded checkpoint lacks valid difficulty window")
+    }
+    for i,h:=range c.History {
+        if i>0 {
+            prev:=c.History[i-1]
+            if h.Height!=prev.Height+1 || h.PrevHash!=prev.Hash() {
+                return headerCache{},errors.New("embedded checkpoint header continuity mismatch")
+            }
+        }
+    }
+    last:=c.History[len(c.History)-1]
+    if last.Height!=c.VerifiedHeight || last.Hash().String()!=c.VerifiedTip {
+        return headerCache{},errors.New("embedded checkpoint header tip mismatch")
+    }
+    if work,ok:=new(big.Int).SetString(c.ChainWork,16);!ok || work.Sign()<=0 {
+        return headerCache{},errors.New("embedded checkpoint chainwork invalid")
+    }
+    return c,nil
+}
+
 func loadHeaderCache(path string) (headerCache, error) {
-	fresh, err := freshHeaderCache()
+	anchor,err := reviewedCheckpointCache()
 	if err != nil {
-		return headerCache{}, err
+		return headerCache{},err
 	}
 	if strings.TrimSpace(path) == "" {
-		return fresh, nil
+		return anchor,nil
 	}
-	b, err := os.ReadFile(path)
+	b,err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fresh, nil
+			return anchor,nil
 		}
-		return headerCache{}, err
+		return headerCache{},err
 	}
 	var h headerCache
 	if json.Unmarshal(b, &h) != nil ||
@@ -367,12 +417,18 @@ func loadHeaderCache(path string) (headerCache, error) {
 		len(h.History) == 0 ||
 		h.History[len(h.History)-1].Height != h.VerifiedHeight ||
 		h.History[len(h.History)-1].Hash().String() != h.VerifiedTip {
-		return fresh, nil
+		return anchor, nil
 	}
 	if _, ok := new(big.Int).SetString(h.ChainWork, 16); !ok {
-		return fresh, nil
+		return anchor, nil
 	}
-	return h, nil
+	// Existing fully verified state newer than the release checkpoint is
+	// preserved. A blank/stale app's genesis cache is upgraded to the
+	// bundled checkpoint on first start.
+	if h.VerifiedHeight < anchor.VerifiedHeight {
+		return anchor,nil
+	}
+	return h,nil
 }
 
 func saveHeaderCache(path string, h headerCache) error {
@@ -474,12 +530,10 @@ func verifyHeaderChain(node, cachePath string) (headerVerification, error) {
 	rebuilt := false
 
 	reset := func() error {
-		fresh, err := freshHeaderCache()
-		if err != nil {
-			return err
-		}
-		cache = fresh
-		rebuilt = true
+		fresh,err := reviewedCheckpointCache()
+		if err != nil {return err}
+		cache=fresh
+		rebuilt=true
 		return nil
 	}
 
@@ -495,11 +549,12 @@ func verifyHeaderChain(node, cachePath string) (headerVerification, error) {
 		return out, checkErr
 	}
 	if shouldReset {
-		// A successfully fetched header at the same height disagrees with our
-		// verified tip: this is a genuine chain-history mismatch/reorg signal.
-		if err := reset(); err != nil {
-			return out, err
+		// Never let a remote peer silently rewrite the pinned historical
+		// trust anchor. An incompatible deep fork needs a new reviewed release.
+		if cache.VerifiedHeight <= verifiedCheckpointHeight {
+			return out,errors.New("peer's history conflicts with pinned Mainnet checkpoint")
 		}
+		if err := reset(); err != nil {return out,err}
 	}
 
 	// A remote endpoint cannot replace the embedded genesis even if it lies in
@@ -639,6 +694,8 @@ func QuorumSnapshotVerified(knownNodesJSON, headerCachePath string, recent int) 
 	snapshot["agreement_nodes"] = agreeing
 	snapshot["observations"] = obs
 	snapshot["header_verified"] = true
+	snapshot["header_anchor_kind"] = "trusted-release-checkpoint"
+	snapshot["header_anchor_height"] = verifiedCheckpointHeight
 	snapshot["verified_height"] = verified.Height
 	snapshot["verified_tip"] = verified.Tip
 	snapshot["verified_chain_work"] = verified.ChainWork
