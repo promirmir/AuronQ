@@ -127,7 +127,7 @@ func matchingThreeNetgroups(obs []mobileNodeObservation) []mobileNodeObservation
  return nil
 }
 
-func quickReadOne(obs mobileNodeObservation,address string,limit int) (quickPeerView,error){
+func quickReadOne(obs mobileNodeObservation,address string,limit int,withHistory bool) (quickPeerView,error){
  var v quickPeerView
  v.Obs=obs
  v.Group=publicPeerNetgroup(obs.Node)
@@ -136,7 +136,9 @@ func quickReadOne(obs mobileNodeObservation,address string,limit int) (quickPeer
  var err error
  if v.Balance,err=client.Balance(address);err!=nil{return v,err}
  if v.UTXOs,err=client.UTXOs(address);err!=nil{return v,err}
- if v.History,err=client.History(address,limit);err!=nil{return v,err}
+ if withHistory {
+  if v.History,err=client.History(address,limit);err!=nil{return v,err}
+ }
  // Avoid constructing a cross-height state from replies spanning a reorg.
  end,err:=client.Status()
  if err!=nil || end.NetworkID.String()!=mainnetNetworkID ||
@@ -147,7 +149,7 @@ func quickReadOne(obs mobileNodeObservation,address string,limit int) (quickPeer
  return v,nil
 }
 
-func quickFetchAccount(knownJSON,address string,limit int)([]quickPeerView,error){
+func quickFetchAccount(knownJSON,address string,limit int,withHistory bool)([]quickPeerView,error){
  if n,_,_,e:=aq.DecodeAddress(strings.TrimSpace(address));e!=nil||n!=aq.MainnetNetworkByte{
   return nil,errors.New("invalid mainnet wallet address")
  }
@@ -162,7 +164,7 @@ func quickFetchAccount(knownJSON,address string,limit int)([]quickPeerView,error
   wg.Add(1)
   go func(){
    defer wg.Done()
-   view,e:=quickReadOne(o,address,limit)
+   view,e:=quickReadOne(o,address,limit,withHistory)
    ch<-struct{view quickPeerView;err error}{view,e}
   }()
  }
@@ -183,7 +185,7 @@ func quickFetchAccount(knownJSON,address string,limit int)([]quickPeerView,error
    !strings.EqualFold(v.Obs.ChainWork,ref.Obs.ChainWork)||
    v.Balance.Spendable!=ref.Balance.Spendable||v.Balance.Total!=ref.Balance.Total||
    utxoFingerprint(v.UTXOs)!=utxoFingerprint(ref.UTXOs)||
-   historyFingerprint(v.History)!=historyFingerprint(ref.History){
+   (withHistory && historyFingerprint(v.History)!=historyFingerprint(ref.History)){
    return nil,errors.New("three full nodes disagree about wallet state; no balance can be trusted")
   }
  }
@@ -215,27 +217,45 @@ func QuickNetworkSnapshot(knownJSON string)(string,error){
 // QuickAccountSnapshot is an explicitly PEER-TRUSTED light-client read, not an
 // independently proved historical chain or UTXO commitment.
 func QuickAccountSnapshot(knownJSON,address string,limit int)(string,error){
- views,err:=quickFetchAccount(knownJSON,address,limit)
+ views,err:=quickFetchAccount(knownJSON,address,limit,false)
  if err!=nil{return "",err}
  v:=views[0]
  nodes:=make([]string,0,len(views))
  ng:=make([]string,0,len(views))
  for _,x:=range views{nodes=append(nodes,x.Obs.Node);ng=append(ng,x.Group)}
- // Pending mempool entries may differ between honest full nodes.
- // Never portray pending observed at just ONE peer as confirmed by THREE.
- items:=make([]aq.WalletHistoryItem,0,len(v.History))
- for _,item:=range v.History{
-  if item.Status!="pending"{items=append(items,item)}
- }
- if len(items)>limit && limit>0{items=items[:limit]}
  out:=map[string]any{
   "address":strings.TrimSpace(address),"height":v.Obs.Height,"tip":v.Obs.Tip,
   "chain_work":v.Obs.ChainWork,"spendable":aq.FormatAmount(v.Balance.Spendable),
-  "total":aq.FormatAmount(v.Balance.Total),"items":items,
+  "total":aq.FormatAmount(v.Balance.Total),
   "peer_agreement":len(views),"peer_observed":len(views),
   "multi_peer_confirmed":true,"netgroups":ng,"agreement_nodes":nodes,
   "state_trust":"three-netgroups-peer-observed-not-independent-chain-proof",
   "header_verified":false,
+ }
+ raw,e:=json.Marshal(out);return string(raw),e
+}
+
+// QuickHistorySnapshot runs separately from the send-ready balance check.
+// Full nodes may need significant time to reconstruct address history if
+// their history endpoint has no index. Slow history MUST NOT delay spendable
+// balance or new transactions.
+func QuickHistorySnapshot(knownJSON,address string,limit int)(string,error){
+ views,err:=quickFetchAccount(knownJSON,address,limit,true)
+ if err!=nil{return "",err}
+ v:=views[0]
+ items:=make([]aq.WalletHistoryItem,0,len(v.History))
+ for _,x:=range v.History{
+  // Pending transactions propagate unevenly; only canonical history is
+  // guaranteed to agree among peer reports of the same current chain.
+  if x.Status!="pending"{items=append(items,x)}
+ }
+ if len(items)>limit&&limit>0{items=items[:limit]}
+ out:=map[string]any{
+  "address":strings.TrimSpace(address),"height":v.Obs.Height,
+  "tip":v.Obs.Tip,"items":items,
+  "peer_observed":len(views),"peer_agreement":len(views),
+  "state_trust":"three-netgroups-peer-observed-not-independent-chain-proof",
+  "pending_excluded":true,
  }
  raw,e:=json.Marshal(out);return string(raw),e
 }
@@ -251,7 +271,7 @@ func SendWithQuickQuorum(knownJSON,walletPath,password,to,amount string)(string,
  if w.File.NetworkByte!=aq.MainnetNetworkByte {return "",errors.New("not an AuronQ mainnet wallet")}
  amt,err:=aq.ParseAmount(strings.TrimSpace(amount))
  if err!=nil{return "",err}
- views,err:=quickFetchAccount(knownJSON,w.Address(),50)
+ views,err:=quickFetchAccount(knownJSON,w.Address(),50,false)
  if err!=nil{return "",err}
  tx,fee,err:=w.BuildTransaction(views[0].UTXOs,strings.TrimSpace(to),amt,aq.MainnetNetworkByte)
  if err!=nil{return "",err}
