@@ -51,26 +51,33 @@ func quickStateValid(height uint64,tip,work string)bool{
 // its output "peer-confirmed, not trustlessly locally verified".
 func quickMatchingPeers(knownJSON string) ([]mobileNodeObservation,error) {
  candidates:=mobileCandidates(knownJSON)
- // Always consider the optional public manifest too; unlike the legacy
- // fallback this helps find peers even if only 1-2 bundled nodes respond.
+ first:=quickMatchingFromCandidates(candidates)
+ if len(first)>=quickMinGroups{return first,nil}
+ // Optional peer manifest is a fallback, never mandatory for new users.
+ // This keeps the wallet usable even if GitHub or the bootstrap site goes down.
  if extra,err:=fetchManifest();err==nil{
   seen:=map[string]bool{}
   for _,p:=range candidates{seen[p]=true}
   for _,p:=range extra{addMobileCandidate(&candidates,seen,p)}
+  if len(candidates)>maxMobileProbeCandidates{candidates=candidates[:maxMobileProbeCandidates]}
+  if found:=quickMatchingFromCandidates(candidates);len(found)>=quickMinGroups{return found,nil}
  }
- if len(candidates)>maxMobileProbeCandidates{candidates=candidates[:maxMobileProbeCandidates]}
+ return nil,errors.New("fewer than three agreeing publicly routed network groups; balance and payments unavailable")
+}
+
+func quickMatchingFromCandidates(candidates []string) []mobileNodeObservation{
  ch:=make(chan mobileNodeObservation,len(candidates))
+ pending:=0
  for _,node:=range candidates {
   node:=node
   if publicPeerNetgroup(node)==""{continue}
+  pending++
   go func(){
    st,err:=statusFromNode(node)
    if err!=nil||!quickStateValid(st.Height,st.Tip.String(),st.ChainWork){ch<-mobileNodeObservation{};return}
    ch<-mobileNodeObservation{Node:node,Height:st.Height,Tip:st.Tip.String(),ChainWork:st.ChainWork,Peers:st.Peers}
   }()
  }
- pending:=0
- for _,node:=range candidates{if publicPeerNetgroup(node)!=""{pending++}}
  results:=make([]mobileNodeObservation,0,pending)
  timer:=time.NewTimer(7*time.Second);defer timer.Stop()
  for pending>0 {
@@ -79,12 +86,12 @@ func quickMatchingPeers(knownJSON string) ([]mobileNodeObservation,error) {
    pending--
    if obs.Node!="" {results=append(results,obs)}
    if selected:=matchingThreeNetgroups(results);len(selected)>=quickMinGroups{
-    return selected,nil
+    return selected
    }
   case <-timer.C:pending=0
   }
  }
- return nil,errors.New("fewer than three agreeing publicly routed network groups; balance and payments unavailable")
+ return nil
 }
 
 func matchingThreeNetgroups(obs []mobileNodeObservation) []mobileNodeObservation {
@@ -184,6 +191,27 @@ func quickFetchAccount(knownJSON,address string,limit int)([]quickPeerView,error
  return views,nil
 }
 
+// QuickNetworkSnapshot returns only peer-OBSERVED chain metadata. It is not a
+// proof that full nodes are honest, and is never used as verified AQM64 chainwork.
+func QuickNetworkSnapshot(knownJSON string)(string,error){
+ peers,err:=quickMatchingPeers(knownJSON)
+ if err!=nil{return "",err}
+ raw,err:=NetworkSnapshot(peers[0].Node,0) // no full-block network delay
+ if err!=nil{return "",err}
+ var out map[string]any
+ if err:=json.Unmarshal([]byte(raw),&out);err!=nil{return "",err}
+ groups:=make([]string,0,len(peers))
+ for _,p:=range peers{groups=append(groups,publicPeerNetgroup(p.Node))}
+ out["peer_observed"]=len(peers)
+ out["peer_agreement"]=len(peers)
+ out["network_groups"]=groups
+ out["multi_peer_confirmed"]=true
+ out["header_verified"]=false
+ out["state_trust"]="three-netgroups-peer-observed-not-independent-chain-proof"
+ b,e:=json.Marshal(out)
+ return string(b),e
+}
+
 // QuickAccountSnapshot is an explicitly PEER-TRUSTED light-client read, not an
 // independently proved historical chain or UTXO commitment.
 func QuickAccountSnapshot(knownJSON,address string,limit int)(string,error){
@@ -199,7 +227,8 @@ func QuickAccountSnapshot(knownJSON,address string,limit int)(string,error){
   "address":strings.TrimSpace(address),"height":v.Obs.Height,"tip":v.Obs.Tip,
   "chain_work":v.Obs.ChainWork,"spendable":aq.FormatAmount(v.Balance.Spendable),
   "total":aq.FormatAmount(v.Balance.Total),"items":items,
-  "peer_agreement":len(views),"netgroups":ng,"agreement_nodes":nodes,
+  "peer_agreement":len(views),"peer_observed":len(views),
+  "multi_peer_confirmed":true,"netgroups":ng,"agreement_nodes":nodes,
   "state_trust":"three-netgroups-peer-observed-not-independent-chain-proof",
   "header_verified":false,
  }
