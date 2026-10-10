@@ -512,12 +512,15 @@ func verifyHeaderChain(node, cachePath string) (headerVerification, error) {
 		if len(headers) == 0 {
 			return out, fmt.Errorf("node returned no headers at height %d", next)
 		}
+		// Fully validate the same ordered headers with the same consensus
+		// routine; on memory-capable phones two AQM64 hashes may overlap.
+		// None of the downloaded headers enter the cache until all pass.
+		if badIndex, validationErr := validateHeaderBatch053(cache.History, headers); validationErr != nil {
+			return out, fmt.Errorf("invalid AuronQ header %d: %w", headers[badIndex].Height, validationErr)
+		}
 		for _, h := range headers {
 			if h.Height != next {
 				return out, fmt.Errorf("unexpected header height %d, expected %d", h.Height, next)
-			}
-			if err := aq.ValidateHeaderEnvelope(h, cache.History, time.Now().Unix()); err != nil {
-				return out, fmt.Errorf("invalid AuronQ header %d: %w", h.Height, err)
 			}
 			work.Add(work, aq.WorkForTarget(h.Target))
 			cache.History = append(cache.History, h)
