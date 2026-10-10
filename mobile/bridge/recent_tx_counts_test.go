@@ -26,13 +26,18 @@ func TestParseRecentBlockTxCountsRejectsFabricatedMissingMalformedData(t *testin
     testcases:=[]string{
         `{"blocks":[{"height":3,"hash":"abc","transactions":4}]}`,
         fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":-1}]}`,goodHash),
+        fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s"}]}`,goodHash),
+        fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":null}]}`,goodHash),
+        fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":"0"}]}`,goodHash),
+        fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":0.5}]}`,goodHash),
         fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":1},{"height":3,"hash":"%s","transactions":1}]}`,goodHash,goodHash),
         fmt.Sprintf(`{"blocks":[{"height":3,"hash":"%s","transactions":0},{"height":2,"hash":"%s","transactions":1},{"height":1,"hash":"%s","transactions":2}]}`,goodHash,goodHash,goodHash),
         `{"blocks":[{}`, // invalid JSON
     }
     for i,input:=range testcases{
         limit:=1
-        if i==2{limit=6}
+        if strings.Contains(input,`"height":1`){limit=2}
+        if strings.Contains(input,`"height":3,"hash":"`+goodHash+`","transactions":1},{"height":3`){limit=6}
         if _,err:=parseRecentBlockTxCounts([]byte(input),limit);err==nil {
             t.Fatalf("bad explorer metadata accepted, case %d",i)
         }
