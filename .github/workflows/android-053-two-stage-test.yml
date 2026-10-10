@@ -1,4 +1,5 @@
 name: AuronQ Mobile 0.5.3 Two-Stage V2 Clean Install TEST
+# Isolated build trigger for quick-quorum conflict-handling fix e3a4614.
 
 on:
   push:
