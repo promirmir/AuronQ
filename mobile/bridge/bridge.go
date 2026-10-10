@@ -1391,35 +1391,28 @@ func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 		Transactions int    `json:"transactions"`
 	}
 	blocks := make([]recentBlock, 0, recent)
-	client := &http.Client{Timeout: 8 * time.Second}
-	for i := 0; i < recent; i++ {
-		if st.Height < uint64(i) {
-			break
+	// The network dashboard needs recent heights/hashes/timestamps, NOT full
+	// blocks with ML-DSA transactions. A single bounded header request replaces
+	// up to twelve sequential /p2p/getblock downloads and avoids heavy decoding.
+	count := recent
+	if uint64(count) > st.Height+1 { count = int(st.Height+1) }
+	if count>0 {
+		start := st.Height-uint64(count)+1
+		headers,err := fetchHeaderBatch(nodeURL,start,count)
+		if err==nil {
+			for i:=len(headers)-1;i>=0;i-- {
+				h:=headers[i]
+				if h.Height!=start+uint64(i) {continue}
+				blocks=append(blocks,recentBlock{
+					Height:h.Height,
+					Hash:h.Hash().String(),
+					Timestamp:h.Timestamp,
+					TimeISO:time.Unix(h.Timestamp,0).UTC().Format(time.RFC3339),
+					// A header contains no transaction count. Never invent one.
+					Transactions:-1,
+				})
+			}
 		}
-		h := st.Height - uint64(i)
-		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/p2p/getblock?height=%d", nodeURL, h), nil)
-		req.Header.Set("User-Agent", "AuronQ-Mobile/"+mobileVersion)
-		resp, err := client.Do(req)
-		if err != nil {
-			break
-		}
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			break
-		}
-		var b aq.Block
-		err = json.NewDecoder(io.LimitReader(resp.Body, int64(aq.MaxBlockBytes)+64*1024)).Decode(&b)
-		resp.Body.Close()
-		if err != nil {
-			break
-		}
-		blocks = append(blocks, recentBlock{
-			Height:       b.Header.Height,
-			Hash:         b.Hash().String(),
-			Timestamp:    b.Header.Timestamp,
-			TimeISO:      time.Unix(b.Header.Timestamp, 0).UTC().Format(time.RFC3339),
-			Transactions: len(b.Transactions),
-		})
 	}
 	out := map[string]any{
 		"network":      st.Network,
