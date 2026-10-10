@@ -146,7 +146,8 @@
           <h1>AuronQ. A network you can verify.</h1>
           <p class="lead">AuronQ (AURQ) is an open-source UTXO cryptocurrency built in Go. It combines independent full-node validation, AQM64 Proof-of-Work and ML-DSA-87 transaction signatures.</p>
           <div class="btns">
-            <a class="btn btn-primary" href="#downloads">Download software</a>
+            <a class="btn btn-primary" href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk">Download Android wallet (APK)</a>
+            <a class="btn" href="#downloads">Desktop, nodes and miners</a>
             <a class="btn" href="https://github.com/promirmir/AuronQ">View source code</a>
             <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/WHITEPAPER.md">Read whitepaper</a>
           </div>
@@ -167,7 +168,7 @@
 
     <section class="content wrap" id="downloads" aria-labelledby="downloads-title">
       <h2 id="downloads-title">Download AuronQ</h2>
-      <p class="intro">Choose the software that fits your role. Downloads are hosted on the project's GitHub Releases pages.</p>
+      <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk"><strong>Download the current AuronQ Mobile 0.5.5 Alpha P2P APK</strong></a>. This is an experimental wallet release; use small test balances, verify the file hash, and do not uninstall an existing wallet to force an update. Other packages are below.</p>
       <div class="grid">
         <article class="card">
           <span class="label">Run a full node</span>
@@ -203,7 +204,7 @@
           </div>
         </article>
       </div>
-      <p class="note">Verify file checksums on the corresponding release page. Windows builds may trigger SmartScreen because they are not currently Authenticode-signed. Versions shown are published packages, not a live network-health indicator.</p>
+      <p class="note">Mobile APK SHA-256: <code>32ea0db682b1a0d9efb30806f532490a26da888537f6bd1dfbddc0835030379e</code>. The Android APK is CI debug-signed, so an in-place upgrade of an older wallet may fail due to incompatible signing certificates. Never clear wallet data to overcome this. Consensus changes and new full-node rollouts are currently frozen: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
     </section>
 
     <section class="content wrap" id="start" aria-labelledby="start-title">

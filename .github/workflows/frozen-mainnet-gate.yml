@@ -1,0 +1,51 @@
+name: Frozen Mainnet source guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frozen-mainnet-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  frozen-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - name: Reject unreviewed changes to frozen Mainnet and wallet sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=c1001ee2950158781f216820cc5e4911aa0044a9
+          git cat-file -e "$BASE^{commit}"
+          changed="$(git diff --name-only "$BASE" HEAD -- \
+            internal/auronq/ \
+            mobile/bridge/ \
+            android/app/src/main/java/com/auronq/mobile/ \
+            android/app/build.gradle \
+            go.mod go.sum \
+            network.json genesis.json \
+            cmd/auronq/main.go cmd/auronq-desktop/main.go \
+            .github/workflows/ci.yml \
+            .github/workflows/release.yml)"
+          if [ -n "$changed" ]; then
+            echo "::error::Frozen AuronQ Mainnet or wallet path changed. Release freeze forbids feature modifications."
+            printf '%s\n' "$changed"
+            echo "Document a critical maintenance exception and use a separate approved process; never silently update Mainnet."
+            exit 1
+          fi
+          echo "Frozen Mainnet, wallet code, Go dependencies and release process are byte-for-byte unchanged from accepted baseline."
+      - name: Verify immutable public Mainnet identity
+        run: go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1 -timeout=4m
