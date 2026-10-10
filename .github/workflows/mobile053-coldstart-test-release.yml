@@ -118,12 +118,17 @@ jobs:
           sha256sum AuronQ-Mobile-0.5.3-Fresh-Install-Parallel-Test.apk > SHA256SUMS-Fresh-Install.txt
           TAG="android-v0.5.3-fresh-install-parallel-test-20261010"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Published test tag exists; refusing to overwrite."
-            exit 1
+            # Previous runner successfully published these immutable assets
+            # before a stray shell option caused its job to return exit 127.
+            # Keep that APK and checksum, do not overwrite a signed release.
+            gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fxq "AuronQ-Mobile-0.5.3-Fresh-Install-Parallel-Test.apk"
+            gh api "repos/promirmir/AuronQ/releases/tags/$TAG" --jq '.assets[] | select(.name=="AuronQ-Mobile-0.5.3-Fresh-Install-Parallel-Test.apk") | .digest' | grep -Fxq 'sha256:b5c7d22fcd2c41c9edb5554aa91be0e46192ba87ae3225e481b5b65bb7758d82'
+            echo "Existing release verified; preserving already-published test APK."
+            exit 0
           fi
           gh release create "$TAG" \
             AuronQ-Mobile-0.5.3-Fresh-Install-Parallel-Test.apk SHA256SUMS-Fresh-Install.txt \
             --target "$GITHUB_SHA" \
             --title "AuronQ 0.5.3 clean-install AQM64 parallel verifier TEST" \
-            --notes "SAFE ISOLATED TEST ONLY. Derived from original verified 0.5.3 alpha. No trusted checkpoints or automatic signing authority: every header from genesis must still pass the same shared AQM64, difficulty, timestamp and previous hash consensus routine. On devices with >=3 GiB physical and >=768 MiB available RAM, at most two independent 64 MiB AQM64 validators work concurrently; lower-memory phones use original single worker. Original wallet balance/history/transactions and on-chain rules are unchanged. Testing from app install with no existing header cache is intentional, but first sync is still O(block height) and has not been benchmarked on your phone. Separate Android app ID: com.auronq.mobile.fast053parallel, never overwrites existing wallet. DO NOT uninstall funded wallets or import valuable wallet files into experiments. Debug-signed CI package is not an update of funded Android wallets."
+            --notes "SAFE ISOLATED TEST ONLY. Derived from original verified 0.5.3 alpha. No trusted checkpoints or automatic signing authority: every header from genesis must still pass the same shared AQM64, difficulty, timestamp and previous hash consensus routine. On devices with >=3 GiB physical and >=768 MiB available RAM, at most two independent 64 MiB AQM64 validators work concurrently; lower-memory phones use original single worker. Original wallet balance/history/transactions and on-chain rules are unchanged. Testing from app install with no existing header cache is intentional, but first sync is still O(block height) and has not been benchmarked on your phone. Separate Android app ID: com.auronq.mobile.fast053parallel, never overwrites existing wallet. DO NOT uninstall funded wallets or import valuable wallet files into experiments. Debug-signed CI package is not an update of funded Android wallets." \
             --prerelease
