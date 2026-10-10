@@ -90,6 +90,10 @@ public class MainActivity extends Activity {
     private long verifiedHeight = -1;
     private String currentScreen = "home";
     private String lastHistoryKey = "";
+    // Changed only on the Android UI thread. Async callbacks carry the
+    // session they started with and cannot update a different wallet/tip.
+    private long accountEpoch = 0;
+    private boolean balanceVerifiedForCurrentTip = false;
     private boolean networkReachable = false;
 
     private FrameLayout content;
@@ -119,6 +123,8 @@ public class MainActivity extends Activity {
     private Button backupButton;
     private Button copyButton;
     private Button sendShortcutButton;
+    private Button sendButton;
+    private TextView walletBalanceStatus;
     private Button deleteButton;
     private TextView walletHistoryStatus;
     private LinearLayout walletHistory;
@@ -179,6 +185,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        // Never show a previously verified balance as current after returning
+        // from the background while new blocks might have been mined.
+        invalidateAccountPresentation(tr("Oczekiwanie na aktualną synchronizację…",
+                "Waiting for current synchronization…"), true);
         handler.removeCallbacks(liveLoop);
         handler.post(liveLoop);
     }
@@ -280,7 +290,7 @@ public class MainActivity extends Activity {
         root.addView(sub, mt(5));
 
         LinearLayout stats1 = row();
-        dashBalance = statCard(stats1, tr("SALDO", "BALANCE"), "0.00000000", "AURQ");
+        dashBalance = statCard(stats1, tr("SALDO", "BALANCE"), "—", "AURQ");
         dashHeight = statCard(stats1, tr("WYSOKOŚĆ", "HEIGHT"), "—", tr("łańcuch", "chain"));
         root.addView(stats1, mt(20));
 
@@ -331,6 +341,10 @@ public class MainActivity extends Activity {
         balanceCard.addView(section(tr("SALDO DOSTĘPNE", "SPENDABLE BALANCE")));
         walletBalance = text("— AURQ", 29, true);
         balanceCard.addView(walletBalance, mt(8));
+        walletBalanceStatus = text(tr("Saldo nieustalone — trwa weryfikacja synchronizacji",
+                "Balance unavailable — verifying synchronization"), 11, false);
+        walletBalanceStatus.setTextColor(BLUE);
+        balanceCard.addView(walletBalanceStatus, mt(6));
         root.addView(balanceCard, mt(18));
 
         LinearLayout addressCard = card();
@@ -365,6 +379,7 @@ public class MainActivity extends Activity {
 
         sendShortcutButton = primaryButton(tr("Wyślij AURQ", "Send AURQ"));
         sendShortcutButton.setOnClickListener(v -> showScreen("send"));
+        sendShortcutButton.setEnabled(false);
         root.addView(sendShortcutButton, mt(12));
 
         LinearLayout historyCard = card();
@@ -420,7 +435,8 @@ public class MainActivity extends Activity {
         card.addView(label(tr("HASŁO PORTFELA", "WALLET PASSWORD")), mt(14));
         card.addView(sendPassword, mt(6));
 
-        Button sendButton = primaryButton(tr("Wyślij transakcję", "Send transaction"));
+        sendButton = primaryButton(tr("Wyślij transakcję", "Send transaction"));
+        sendButton.setEnabled(false);
         sendButton.setOnClickListener(v -> sendTransaction());
         card.addView(sendButton, mt(16));
         root.addView(card, mt(18));
@@ -679,6 +695,7 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     nodeUrl = node;
                     applySnapshot(snapshot);
+                    if (verifiedHeight >= 0) refreshVerifiedWallet(state);
                 });
 
                 // Peer discovery is not part of the critical wallet/verify path.
@@ -704,51 +721,71 @@ public class MainActivity extends Activity {
         });
     }
 
-    // Wallet storage, keys, signatures, verified balance and transaction
-    // broadcast code are unchanged; only the scheduling is isolated.
+    // Wallet keys and transaction signing remain untouched. Every response
+    // is tied to a particular active wallet, validated header tip and epoch.
     private void refreshVerifiedWallet(JSONObject state) {
-        if (!walletFile.exists()) return;
+        if (!walletFile.exists() || walletAddress.isEmpty() || verifiedHeight < 0) return;
+        final long requestEpoch = accountEpoch;
+        final String address = walletAddress;
+        final String tip = verifiedTip;
+        final String work = verifiedWork;
+        final long height = verifiedHeight;
+        final String historyKey = address + ":" + height + ":" + tip + ":" + state.optInt("mempool");
+        final boolean loadHistory = "wallet".equals(currentScreen) && !historyKey.equals(lastHistoryKey);
+
         executor.execute(() -> {
             String balance = null;
             String history = null;
+            String error = null;
             String historyError = null;
             try {
-                String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
+                String currentFileAddress = Bridge.walletAddress(walletFile.getAbsolutePath());
+                if (!address.equals(currentFileAddress)) {
+                    throw new Exception("wallet changed during request");
+                }
                 balance = Bridge.quorumBalanceVerified(
-                        prefs.getString("known_nodes", "[]"),
-                        addr,
-                        state.optString("verified_tip"),
-                        state.optString("verified_chain_work"),
-                        state.optLong("verified_height"));
-                if ("wallet".equals(currentScreen)) {
-                    String historyKey = addr + ":" + state.optLong("height") + ":" + state.optInt("mempool");
-                    if (!historyKey.equals(lastHistoryKey)) {
-                        try {
-                            history = Bridge.quorumHistoryVerified(
-                                    prefs.getString("known_nodes", "[]"),
-                                    addr,
-                                    state.optString("verified_tip"),
-                                    state.optString("verified_chain_work"),
-                                    state.optLong("verified_height"),
-                                    50);
-                            lastHistoryKey = historyKey;
-                        } catch (Exception e) {
-                            historyError = e.getMessage();
-                        }
+                        prefs.getString("known_nodes", "[]"), address, tip, work, height);
+                if (loadHistory) {
+                    try {
+                        history = Bridge.quorumHistoryVerified(
+                                prefs.getString("known_nodes", "[]"),
+                                address, tip, work, height, 50);
+                    } catch (Exception e) {
+                        historyError = e.getMessage();
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                error = e.getMessage();
             }
             final String finalBalance = balance;
             final String finalHistory = history;
+            final String finalError = error;
             final String finalHistoryError = historyError;
             runOnUiThread(() -> {
-                if (finalBalance != null) applyBalance(finalBalance);
-                if (finalHistory != null) {
-                    applyHistory(finalHistory);
-                } else if (finalHistoryError != null && "wallet".equals(currentScreen)) {
-                    walletHistoryStatus.setText(tr("Historia niedostępna: ", "History unavailable: ") + finalHistoryError);
-                    walletHistoryStatus.setTextColor(DANGER);
+                if (!AccountSyncGuard.sameSession(
+                        requestEpoch, accountEpoch, address, walletAddress,
+                        height, verifiedHeight, tip, verifiedTip, work, verifiedWork)) {
+                    return; // stale network reply or imported/replaced wallet
+                }
+                if (finalBalance != null) {
+                    if (!applyBalance(finalBalance, address)) {
+                        invalidateAccountPresentation(tr(
+                                "Saldo niepotwierdzone — czekam na zgodność min. 2 węzłów",
+                                "Unconfirmed balance — waiting for at least 2 agreeing peers"), false);
+                        return;
+                    }
+                } else if (!balanceVerifiedForCurrentTip && walletBalanceStatus != null) {
+                    walletBalanceStatus.setText(tr("Weryfikacja salda trwa — ",
+                            "Balance verification pending — ") +
+                            (finalError == null ? "—" : finalError));
+                    walletBalanceStatus.setTextColor(BLUE);
+                }
+                if (loadHistory && finalHistory != null && applyHistory(finalHistory, address)) {
+                    lastHistoryKey = historyKey;
+                } else if (loadHistory && finalHistoryError != null && "wallet".equals(currentScreen)) {
+                    walletHistoryStatus.setText(tr("Historia niezweryfikowana: ",
+                            "History unverified: ") + finalHistoryError);
+                    walletHistoryStatus.setTextColor(BLUE);
                 }
             });
         });
@@ -780,9 +817,24 @@ public class MainActivity extends Activity {
         try {
             JSONObject j = new JSONObject(raw);
             networkReachable = true;
-            verifiedTip = j.optString("verified_tip", "");
-            verifiedWork = j.optString("verified_chain_work", "");
-            verifiedHeight = j.has("verified_height") ? j.optLong("verified_height", -1) : -1;
+            String nextTip = j.optString("verified_tip", "");
+            String nextWork = j.optString("verified_chain_work", "");
+            long nextHeight = j.has("verified_height") ? j.optLong("verified_height", -1) : -1;
+            if (!j.optBoolean("header_verified", false) || nextHeight < 0
+                    || nextTip.isEmpty() || nextWork.isEmpty()) {
+                invalidateAccountPresentation(tr("Nagłówki jeszcze niezweryfikowane",
+                        "Headers not yet verified"), true);
+                return;
+            }
+            if (verifiedHeight != nextHeight
+                    || !nextTip.equalsIgnoreCase(verifiedTip)
+                    || !nextWork.equalsIgnoreCase(verifiedWork)) {
+                invalidateAccountPresentation(tr("Synchronizuję saldo z aktualnym blokiem…",
+                        "Synchronizing balance against current block…"), false);
+            }
+            verifiedTip = nextTip;
+            verifiedWork = nextWork;
+            verifiedHeight = nextHeight;
             long height = j.optLong("height");
             int peers = j.optInt("peers");
             int mempool = j.optInt("mempool");
@@ -851,7 +903,6 @@ public class MainActivity extends Activity {
         try {
             JSONObject j = new JSONObject(raw);
             networkReachable = true;
-            nodeUrl = j.optString("node", nodeUrl);
             long height = j.optLong("height");
             int peers = j.optInt("peers");
             int mempool = j.optInt("mempool");
@@ -859,14 +910,20 @@ public class MainActivity extends Activity {
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
-            // Never turn a currently verified state into a generic "unverified"
-            // state just because a background status poll completed later.
-            if (verifiedHeight >= 0
-                    && verifiedHeight == height
+            // A delayed preview from behind our verified tip is obsolete.
+            if (verifiedHeight >= 0 && height < verifiedHeight) return;
+            if (verifiedHeight >= 0 && height == verifiedHeight
                     && verifiedTip.equalsIgnoreCase(j.optString("tip", ""))
                     && verifiedWork.equalsIgnoreCase(j.optString("chain_work", ""))) {
                 return;
             }
+            if (AccountSyncGuard.previewSupersedes(
+                    verifiedHeight, verifiedTip, verifiedWork, height,
+                    j.optString("tip", ""), j.optString("chain_work", ""))) {
+                invalidateAccountPresentation(tr("Nowy blok — sprawdzam saldo i historię…",
+                        "New block — verifying balance and history…"), true);
+            }
+            nodeUrl = j.optString("node", nodeUrl);
             dashNode.setText(headerCacheFile != null && headerCacheFile.exists()
                     ? tr("● Połączono • trwa weryfikacja AQM64…", "● Connected • verifying AQM64…")
                     : tr("● Połączono • sprawdzam nagłówki od punktu 1284…", "● Connected • checking headers after checkpoint 1284…"));
@@ -913,9 +970,8 @@ public class MainActivity extends Activity {
         netStatus.setTextColor(DANGER);
         netObserved.setText(error == null ? "—" : error);
         nodeUrl = "";
-        verifiedTip = "";
-        verifiedWork = "";
-        verifiedHeight = -1;
+        invalidateAccountPresentation(tr("Brak połączenia — saldo nieustalone",
+                "Offline — balance unavailable"), true);
     }
 
     private void applyRecentBlockTxCounts(String source, String raw) {
@@ -973,42 +1029,100 @@ public class MainActivity extends Activity {
         return row;
     }
 
-    private void applyBalance(String raw) {
+    // Failure is represented by an UNKNOWN balance, not 0. This guard also
+    // rejects a response for a different wallet or an unconfirmed single peer.
+    private boolean applyBalance(String raw, String expectedAddress) {
         try {
             JSONObject j = new JSONObject(raw);
-            String spendable = j.optString("spendable", "0.00000000");
+            if (!AccountSyncGuard.acceptedPeerReport(
+                    j.optString("address", ""), expectedAddress,
+                    j.optInt("peer_observed", 0), j.optInt("peer_agreement", 0),
+                    j.optBoolean("multi_peer_confirmed", false))) return false;
+            String spendable = j.optString("spendable", "");
+            if (!AccountSyncGuard.isFormattedAmount(spendable)) return false;
             dashBalance.setText(spendable);
             walletBalance.setText(spendable + " AURQ");
+            walletBalanceStatus.setText(tr("Saldo zgodne na bloku #", "Balance agreed at block #")
+                    + verifiedHeight + " • " + j.optInt("peer_agreement") + "/"
+                    + j.optInt("peer_observed") + tr(" węzłów", " peers"));
+            walletBalanceStatus.setTextColor(ACCENT);
+            balanceVerifiedForCurrentTip = true;
+            updateSendAvailability();
+            return true;
         } catch (Exception ignored) {
+            return false;
         }
     }
 
-    private void applyHistory(String raw) {
+    private boolean applyHistory(String raw, String expectedAddress) {
         try {
             JSONObject j = new JSONObject(raw);
+            if (!AccountSyncGuard.acceptedPeerReport(
+                    j.optString("address", ""), expectedAddress,
+                    j.optInt("peer_observed", 0), j.optInt("peer_agreement", 0),
+                    j.optBoolean("multi_peer_confirmed", false))) return false;
             JSONArray items = j.optJSONArray("items");
+            if (items == null) return false;
             walletHistory.removeAllViews();
-            int count = items == null ? 0 : items.length();
-            int observed = j.optInt("peer_observed", 1);
-            int agreeing = j.optInt("peer_agreement", 1);
-            boolean multi = j.optBoolean("multi_peer_confirmed", false);
+            int count = items.length();
+            int observed = j.optInt("peer_observed");
+            int agreeing = j.optInt("peer_agreement");
             walletHistoryStatus.setText(count + " " + tr("transakcji", "transactions")
-                    + " • " + tr("zgodność ", "agreement ") + agreeing + "/" + observed);
-            walletHistoryStatus.setTextColor(multi ? ACCENT : MUTED);
+                    + " • " + tr("zgodność ", "agreement ") + agreeing + "/" + observed
+                    + " • #" + verifiedHeight);
+            walletHistoryStatus.setTextColor(ACCENT);
             if (count == 0) {
-                TextView empty = text(tr("Brak transakcji dla tego portfela.", "No transactions for this wallet."), 12, false);
+                TextView empty = text(tr("Nie znaleziono transakcji dla tego portfela.",
+                        "No transactions found for this wallet."), 12, false);
                 empty.setTextColor(MUTED);
                 walletHistory.addView(empty);
-                return;
+                return true;
             }
             for (int i = 0; i < count; i++) {
                 JSONObject item = items.optJSONObject(i);
                 if (item != null) walletHistory.addView(historyRow(item));
             }
+            return true;
         } catch (Exception e) {
-            walletHistoryStatus.setText(tr("Nie udało się odczytać historii.", "Could not read transaction history."));
-            walletHistoryStatus.setTextColor(DANGER);
+            walletHistoryStatus.setText(tr("Nie udało się potwierdzić historii.",
+                    "Could not confirm transaction history."));
+            walletHistoryStatus.setTextColor(BLUE);
+            return false;
         }
+    }
+
+    private void updateSendAvailability() {
+        boolean ready = balanceVerifiedForCurrentTip && verifiedHeight >= 0
+                && !verifiedTip.isEmpty() && !verifiedWork.isEmpty()
+                && !walletAddress.isEmpty() && walletFile.exists();
+        if (sendShortcutButton != null) sendShortcutButton.setEnabled(ready);
+        if (sendButton != null) sendButton.setEnabled(ready);
+    }
+
+    // Called only on the main UI thread. Invalidate ANY previous account
+    // responses, clear stale history/balance, and disable sending before sync.
+    private void invalidateAccountPresentation(String reason, boolean resetHeaders) {
+        accountEpoch++;
+        balanceVerifiedForCurrentTip = false;
+        lastHistoryKey = "";
+        if (dashBalance != null) dashBalance.setText("—");
+        if (walletBalance != null) walletBalance.setText("— AURQ");
+        if (walletBalanceStatus != null) {
+            walletBalanceStatus.setText(reason);
+            walletBalanceStatus.setTextColor(BLUE);
+        }
+        if (walletHistory != null) walletHistory.removeAllViews();
+        if (walletHistoryStatus != null) {
+            walletHistoryStatus.setText(tr("Historia nieustalona — synchronizacja…",
+                    "History unavailable — synchronizing…"));
+            walletHistoryStatus.setTextColor(BLUE);
+        }
+        if (resetHeaders) {
+            verifiedTip = "";
+            verifiedWork = "";
+            verifiedHeight = -1;
+        }
+        updateSendAvailability();
     }
 
     private View historyRow(JSONObject item) {
@@ -1114,8 +1228,10 @@ public class MainActivity extends Activity {
             toast(tr("Najpierw utwórz albo zaimportuj portfel", "Create or import a wallet first"));
             return;
         }
-        if (nodeUrl.isEmpty() || verifiedHeight < 0 || verifiedTip.isEmpty() || verifiedWork.isEmpty()) {
-            toast(tr("Brak niezależnie zweryfikowanego stanu AuronQ Mainnet", "No independently verified AuronQ Mainnet state"));
+        if (!balanceVerifiedForCurrentTip || nodeUrl.isEmpty() || verifiedHeight < 0
+                || verifiedTip.isEmpty() || verifiedWork.isEmpty()) {
+            toast(tr("Poczekaj na potwierdzenie salda i synchronizacji z co najmniej dwoma węzłami",
+                    "Wait for balance and chain synchronization confirmed by at least two peers"));
             return;
         }
         String password = sendPassword.getText().toString();
@@ -1186,35 +1302,41 @@ public class MainActivity extends Activity {
     }
 
     private void loadWalletState() {
+        // Do this synchronously before starting file IO. Previous wallet
+        // balance/history can never survive a Create/Import/Delete transition.
+        invalidateAccountPresentation(tr("Trwa weryfikacja aktualnego salda…",
+                "Verifying current wallet balance…"), true);
+        walletAddress = "";
+        updateSendAvailability();
         if (!walletFile.exists()) {
-            walletAddress = "";
             walletAddressText.setText(tr("Brak lokalnego portfela", "No local wallet"));
-            walletBalance.setText("0.00000000 AURQ");
-            dashBalance.setText("0.00000000");
             backupButton.setEnabled(false);
             copyButton.setEnabled(false);
-            sendShortcutButton.setEnabled(false);
             deleteButton.setEnabled(false);
-            if (walletHistory != null) walletHistory.removeAllViews();
-            if (walletHistoryStatus != null) {
-                walletHistoryStatus.setText(tr("Brak lokalnego portfela", "No local wallet"));
-                walletHistoryStatus.setTextColor(MUTED);
-            }
+            walletBalanceStatus.setText(tr("Brak portfela", "No wallet"));
+            walletHistoryStatus.setText(tr("Brak lokalnego portfela", "No local wallet"));
+            walletHistoryStatus.setTextColor(MUTED);
             return;
         }
+        final long requestEpoch = accountEpoch;
         executor.execute(() -> {
             try {
                 String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
                 runOnUiThread(() -> {
+                    if (requestEpoch != accountEpoch || !walletFile.exists()) return;
                     walletAddress = addr;
                     walletAddressText.setText(addr);
                     backupButton.setEnabled(true);
                     copyButton.setEnabled(true);
-                    sendShortcutButton.setEnabled(true);
                     deleteButton.setEnabled(true);
+                    updateSendAvailability();
+                    refreshAll();
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> toast(tr("Błąd portfela: ", "Wallet error: ") + e.getMessage()));
+                runOnUiThread(() -> {
+                    if (requestEpoch != accountEpoch) return;
+                    toast(tr("Błąd portfela: ", "Wallet error: ") + e.getMessage());
+                });
             }
         });
     }
