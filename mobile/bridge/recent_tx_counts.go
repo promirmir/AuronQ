@@ -24,12 +24,30 @@ func parseRecentBlockTxCounts(body []byte, limit int) (string,error) {
     if limit<1 || limit>12 {return "",errors.New("invalid recent-block limit")}
     if len(body)==0 || len(body)>48<<10 {return "",errors.New("explorer response exceeds maximum size")}
     var parsed struct {
-        Blocks []recentBlockTxCount `json:"blocks"`
+        Blocks []json.RawMessage `json:"blocks"`
     }
     if err:=json.Unmarshal(body,&parsed);err!=nil{return "",err}
     if len(parsed.Blocks)>limit {return "",errors.New("explorer returned too many blocks")}
     seen:=map[string]bool{}
-    for _,item:=range parsed.Blocks {
+    valid:=make([]recentBlockTxCount,0,len(parsed.Blocks))
+    for _,raw:=range parsed.Blocks {
+        // A missing or null count MUST NOT become a fabricated "0 tx".
+        // Accept only an explicit nonnegative integer in each JSON record.
+        var fields map[string]json.RawMessage
+        if err:=json.Unmarshal(raw,&fields);err!=nil || fields==nil {
+            return "",errors.New("invalid explorer block record")
+        }
+        required:=[]string{"height","hash","transactions"}
+        for _,name:=range required {
+            data,ok:=fields[name]
+            if !ok || len(data)==0 || string(data)=="null" {
+                return "",fmt.Errorf("explorer block missing %s",name)
+            }
+        }
+        var item recentBlockTxCount
+        if err:=json.Unmarshal(raw,&item);err!=nil {
+            return "",fmt.Errorf("invalid explorer block types: %w",err)
+        }
         if len(item.Hash)!=128 || item.Transactions<0 {
             return "",errors.New("invalid explorer block metadata")
         }
@@ -37,8 +55,11 @@ func parseRecentBlockTxCounts(body []byte, limit int) (string,error) {
         key:=fmt.Sprintf("%d:%s",item.Height,strings.ToLower(item.Hash))
         if seen[key] {return "",errors.New("duplicate explorer block")}
         seen[key]=true
+        valid=append(valid,item)
     }
-    canonical,err:=json.Marshal(parsed)
+    canonical,err:=json.Marshal(struct {
+        Blocks []recentBlockTxCount `json:"blocks"`
+    }{Blocks:valid})
     if err!=nil{return "",err}
     return string(canonical),nil
 }
