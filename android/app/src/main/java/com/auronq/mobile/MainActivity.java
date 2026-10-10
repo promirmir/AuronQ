@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     // Network reachability is independent of potentially long AQM64 verification.
     private final ExecutorService previewExecutor = Executors.newSingleThreadExecutor();
+    private volatile boolean lightBalanceBusy = false;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private SharedPreferences prefs;
@@ -131,6 +132,7 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             refreshNetworkPreview();
+            refreshLightBalance();
             refreshAll();
             handler.postDelayed(this, 5000);
         }
@@ -158,6 +160,7 @@ public class MainActivity extends Activity {
         loadWalletState();
         showScreen("home");
         refreshNetworkPreview();
+        refreshLightBalance();
         refreshAll();
     }
 
@@ -584,6 +587,25 @@ public class MainActivity extends Activity {
         });
     }
 
+    private void refreshLightBalance() {
+        if (lightBalanceBusy || !walletFile.exists()) return;
+        lightBalanceBusy = true;
+        previewExecutor.execute(() -> {
+            try {
+                String address = Bridge.walletAddress(walletFile.getAbsolutePath());
+                String raw = Bridge.quorumBalanceLight(prefs.getString("known_nodes", "[]"), address);
+                runOnUiThread(() -> {
+                    if (verifiedHeight < 0) {
+                        applyBalance(raw);
+                        walletHistoryStatus.setText(tr("Saldo: zgodność węzłów, bez pełnej weryfikacji PoW",
+                            "Balance: peer agreement, full PoW verification pending"));
+                    }
+                });
+            } catch (Exception ignored) {
+            } finally { lightBalanceBusy = false; }
+        });
+    }
+
     private void refreshAll() {
         if (liveBusy) return;
         liveBusy = true;
@@ -967,10 +989,11 @@ public class MainActivity extends Activity {
             toast(tr("Najpierw utwórz albo zaimportuj portfel", "Create or import a wallet first"));
             return;
         }
-        if (nodeUrl.isEmpty() || verifiedHeight < 0 || verifiedTip.isEmpty() || verifiedWork.isEmpty()) {
-            toast(tr("Brak niezależnie zweryfikowanego stanu AuronQ Mainnet", "No independently verified AuronQ Mainnet state"));
+        if (nodeUrl.isEmpty()) {
+            toast(tr("Brak połączenia z siecią AuronQ", "No AuronQ network connection"));
             return;
         }
+        final boolean useLightMode = verifiedHeight < 0 || verifiedTip.isEmpty() || verifiedWork.isEmpty();
         String password = sendPassword.getText().toString();
         String to = recipientInput.getText().toString().trim();
         String amount = amountInput.getText().toString().trim();
@@ -980,10 +1003,17 @@ public class MainActivity extends Activity {
                 .setMessage(tr(
                         "Wyślij " + amount + " AURQ na:\n\n" + to + "\n\nTransakcja po zatwierdzeniu w blockchainie jest nieodwracalna.",
                         "Send " + amount + " AURQ to:\n\n" + to + "\n\nA confirmed blockchain transaction is irreversible."))
+                .setMessage(tr(
+                        "Wyślij " + amount + " AURQ na:\\n\\n" + to + "\\n\\n" +
+                        (useLightMode ? "TRYB LEKKI: dane UTXO potwierdzają co najmniej dwa węzły, ale telefon NIE zweryfikował całego PoW. Złośliwe lub skoordynowane węzły mogą podać fałszywe dane.\\n\\n" : "") +
+                        "Transakcja jest nieodwracalna po potwierdzeniu.",
+                        "Send " + amount + " AURQ to:\\n\\n" + to + "\\n\\n" +
+                        (useLightMode ? "LIGHT MODE: at least two peers agree on UTXOs, but full PoW is NOT verified. Malicious or colluding peers can supply false data.\\n\\n" : "") +
+                        "Confirmed transactions are irreversible."))
                 .setNegativeButton(tr("Anuluj", "Cancel"), null)
                 .setPositiveButton(tr("Wyślij", "Send"), (d, w) ->
                         run(tr("Podpisywanie i wysyłanie…", "Signing and sending…"),
-                                () -> Bridge.sendMultiVerified(
+                                () -> useLightMode ? Bridge.sendMultiLight(\n                                        prefs.getString("known_nodes", "[]"),\n                                        walletFile.getAbsolutePath(), password, to, amount)\n                                        : Bridge.sendMultiVerified(
                                         prefs.getString("known_nodes", "[]"),
                                         walletFile.getAbsolutePath(),
                                         password,
