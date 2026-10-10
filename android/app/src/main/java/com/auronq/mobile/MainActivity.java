@@ -444,8 +444,8 @@ public class MainActivity extends Activity {
         root.addView(netStatus, mt(16));
 
         TextView firstSyncNote = text(tr(
-                "Pierwsze uruchomienie może potrwać dłużej, ponieważ telefon lokalnie weryfikuje łańcuch nagłówków AQM64 od genesis. Kolejne uruchomienia korzystają z zapisanego, zweryfikowanego stanu i powinny być wyraźnie szybsze.",
-                "The first launch can take longer because the phone locally verifies the AQM64 header chain from genesis. Later launches reuse the saved verified state and should be noticeably faster."), 11, false);
+                "Aplikacja korzysta z wbudowanego, wcześniej zweryfikowanego punktu kontrolnego (blok 1284) i sprawdza AQM64 od tego punktu. Starsza historia jest zaufanym punktem startu wydania, a nie sprawdzana na telefonie od genesis.",
+                "The app starts from a previously verified, bundled release checkpoint (block 1284), checking AQM64 for subsequent headers. Earlier history is trusted as a release anchor; it is not revalidated from genesis on the phone."), 11, false);
         firstSyncNote.setTextColor(MUTED);
         root.addView(firstSyncNote, mt(8));
 
@@ -483,8 +483,8 @@ public class MainActivity extends Activity {
         root.addView(refresh, mt(14));
 
         TextView model = text(tr(
-                "AuronQ Mobile jest klientem weryfikującym nagłówki, nie pełnym nodem. Klucze pozostają lokalnie. Telefon utrzymuje własny cache zweryfikowanych nagłówków od genesis, sam sprawdza AQM64 PoW, difficulty, ciągłość hashy i reguły czasu, porównuje wiele peerów oraz rozgłasza podpisaną transakcję do wielu nodów. Pełna walidacja transakcji i UTXO nadal należy do full nodów.",
-                "AuronQ Mobile is a header-verifying light client, not a full node. Keys remain local. The phone keeps its own verified header cache from genesis and independently checks AQM64 PoW, difficulty, hash continuity and timestamp rules, compares multiple peers, and broadcasts signed transactions to multiple nodes. Full transaction and UTXO validation still belongs to full nodes."), 12, false);
+                "AuronQ Mobile jest klientem weryfikującym nagłówki, nie pełnym nodem. Klucze pozostają lokalnie. Telefon zaczyna od zaufanego punktu kontrolnego z wydania (blok 1284) i sam sprawdza następne nagłówki AQM64, difficulty, ciągłość hashy i reguły czasu; porównuje peery i rozgłasza lokalnie podpisane transakcje. Pełna walidacja transakcji i UTXO nadal należy do full nodów.",
+                "AuronQ Mobile is a header-verifying light client, not a full node. Keys remain local. The phone starts from the release-trusted checkpoint (block 1284), independently checks subsequent headers for AQM64 PoW, difficulty, hash continuity and timestamps, compares peers, and broadcasts locally signed transactions to multiple nodes. Full transaction and UTXO validation still belongs to full nodes."), 12, false);
         model.setTextColor(MUTED);
         root.addView(model, mt(18));
 
@@ -730,7 +730,7 @@ public class MainActivity extends Activity {
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
             dashNode.setText(headerVerified
-                    ? tr("● AQM64 zweryfikowane • peery " + agreementText, "● AQM64 verified • peers " + agreementText)
+                    ? tr("● AQM64 od checkpointu 1284 • peery " + agreementText, "● AQM64 since checkpoint 1284 • peers " + agreementText)
                     : tr("● Nagłówki niezweryfikowane", "● Headers unverified"));
             dashNode.setTextColor(headerVerified ? ACCENT : DANGER);
             dashTip.setText("Tip: " + shortHash(j.optString("tip")));
@@ -739,7 +739,7 @@ public class MainActivity extends Activity {
                     ? tr(" • nowych nagłówków: ", " • new headers: ") + headersCheckedNow
                     : "";
             netStatus.setText(headerVerified
-                    ? tr("● Lokalnie zweryfikowano PoW/difficulty • zgodność peerów ", "● PoW/difficulty verified locally • peer agreement ")
+                    ? tr("● PoW/difficulty od punktu kontrolnego 1284 • peery ", "● PoW/difficulty since checkpoint 1284 • peers ")
                         + agreementText + verifyDetail
                     : tr("● Brak niezależnej weryfikacji nagłówków", "● No independent header verification"));
             netStatus.setTextColor(headerVerified ? ACCENT : DANGER);
@@ -799,7 +799,7 @@ public class MainActivity extends Activity {
             }
             dashNode.setText(headerCacheFile != null && headerCacheFile.exists()
                     ? tr("● Połączono • trwa weryfikacja AQM64…", "● Connected • verifying AQM64…")
-                    : tr("● Połączono • pierwsza weryfikacja AQM64 może potrwać dłużej…", "● Connected • first AQM64 verification may take longer…"));
+                    : tr("● Połączono • sprawdzam nagłówki od punktu 1284…", "● Connected • checking headers after checkpoint 1284…"));
             dashNode.setTextColor(BLUE);
             dashTip.setText("Tip: " + shortHash(j.optString("tip")));
 
