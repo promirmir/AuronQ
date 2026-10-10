@@ -1,0 +1,95 @@
+name: AuronQ Mobile 0.5.3 Two-Stage Clean Install TEST
+
+on:
+  push:
+    branches:
+      - fix/mobile053-three-netgroups-quick-wallet-20261010
+    paths:
+      - '.github/workflows/android-053-two-stage-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Assert unchanged mainnet and original 0.5.3 signing/consensus
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e bfdc46bd91115ce8dc072b839845a135f3782f09^{commit}
+          git diff --exit-code bfdc46bd91115ce8dc072b839845a135f3782f09 HEAD -- \
+            internal/auronq/ cmd/ go.mod go.sum network.json genesis.json
+          grep -Fq 'private final ExecutorService deepVerifier = Executors.newSingleThreadExecutor()' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'Bridge.quickAccountSnapshot(known, address, 50)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'Bridge.quorumSnapshotVerified(known, headerCacheFile.getAbsolutePath(), 0)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'private void invalidateQuickAccount(String reason)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'walletBalance = text("— AURQ", 29, true)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'sendWithQuickQuorum(' mobile/bridge/quick_quorum.go
+          echo "Two-stage flow present, default balance is unknown and protected consensus unchanged"
+      - name: Test three-network-group fail-closed quorum
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test ./mobile/bridge -run '^TestQuick' -v -count=1
+          go test -race ./mobile/bridge -run '^TestQuick' -count=1 -timeout=10m
+          go test ./...
+          go vet ./...
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK/NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Build original v0.5.3 Go binding plus two-stage bridge
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build isolated two-stage test APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleQuick2stage
+      - name: Publish immutable prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/quick2stage/app-quick2stage.apk"
+          test -s "$APK"
+          cp "$APK" AuronQ-Mobile-0.5.3-Two-Stage-TEST.apk
+          sha256sum AuronQ-Mobile-0.5.3-Two-Stage-TEST.apk > SHA256SUMS-2-STAGE.txt
+          TAG="android-v0.5.3-two-stage-test-20261010"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Already published; refusing to overwrite signed artifact"
+            exit 1
+          fi
+          gh release create "$TAG" \
+            AuronQ-Mobile-0.5.3-Two-Stage-TEST.apk SHA256SUMS-2-STAGE.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile 0.5.3 two-stage fast wallet (TEST ONLY)" \
+            --notes "EXPERIMENTAL, NOT FOR FUNDED MAINNET WALLETS. Based on 0.5.3, first checks 3 separate publicly routed IPv4 /16 or IPv6 /32 network groups, chain tip, balances, confirmed history and UTXOs. Different IP networks DO NOT prove separate ownership; all 3 may be Sybil or compromised. AQM64 replay from genesis independently runs in a separate background worker and does not block the first screen. Wallet balance is shown as PEER-OBSERVED, not cryptographically self-verified. Reorg/mismatched state disables sending and displays UNKNOWN, private keys stay locally and transaction signing stays original 0.5.3. Some public nodes connect over unencrypted HTTP and no independent adversarial network review has been performed. Do not import valuable secrets or rely on this build with funds. Separate app com.auronq.mobile.quick2stage avoids touching existing wallets. Need physical-phone fresh-install benchmark and adversarial/end-to-end payment audit prior to public promotion. Stable official mainnet and its wallet binaries are not modified." \
+            --prerelease
