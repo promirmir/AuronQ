@@ -13,11 +13,13 @@ import (
     aq "auronq/internal/auronq"
 )
 
-// Manual release-engineering task. Disabled for regular Go tests.
-// This verifies AQM64/difficulty from genesis once on a CI runner,
-// then requires another public node to serve the identical anchor.
-// Generated data is reviewed and baked into the application. Runtime
-// does not download or silently trust a mutable bootstrap checkpoint.
+// Release-engineering checkpoint update. Disabled for regular Go tests.
+// This verifies new AQM64/difficulty headers FROM THE EXISTING PINNED
+// RELEASE CHECKPOINT and cross-checks the proposed anchor against multiple
+// public peers. Earlier history is inherited from a previously reviewed
+// release anchor; it is NOT reverified from genesis on every scheduled run.
+// Changes are submitted for review before becoming trusted in a new APK.
+// The mobile wallet does not blindly accept mutable remote checkpoints.
 func TestGenerateReviewedMobileCheckpoint(t *testing.T) {
     if os.Getenv("AURONQ_GENERATE_CHECKPOINT") != "1" {
         t.Skip("manual checkpoint generation only")
@@ -41,8 +43,8 @@ func TestGenerateReviewedMobileCheckpoint(t *testing.T) {
     sort.Slice(online, func(i,j int) bool { return online[i].Height > online[j].Height })
     anchorHeight := online[1].Height
     if anchorHeight > 12 {anchorHeight -= 12}
-    if anchorHeight < 64 {
-        t.Fatal("not enough chain history for meaningful checkpoint")
+    if anchorHeight < verifiedCheckpointHeight+500 {
+        t.Skipf("only %d blocks beyond released anchor; wait for >=500 confirmed new blocks",anchorHeight-verifiedCheckpointHeight)
     }
     // The checkpoint is intentionally conservative and not at an
     // unconfirmed current chain tip.
@@ -63,7 +65,7 @@ func TestGenerateReviewedMobileCheckpoint(t *testing.T) {
         chosen = o.Node
         break
     }
-    if chosen == "" {t.Fatal("no reachable peer provided fully AQM64-validated headers from genesis")}
+    if chosen == "" {t.Fatal("no reachable peer provided AQM64-validated headers extending the pinned anchor")}
     if validated.VerifiedHeight < anchorHeight {t.Fatal("validated peer is behind checkpoint")}
     var at *aq.BlockHeader
     for i := range validated.History {
