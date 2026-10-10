@@ -152,7 +152,7 @@ func fetchSignedCheckpoint() ([]byte,error) {
     if response.StatusCode!=http.StatusOK {
         return nil,fmt.Errorf("signed checkpoint HTTP status: %d",response.StatusCode)
     }
-    return io.ReadAll(io.LimitReader(response.Body,256<<10+1))
+    return io.ReadAll(io.LimitReader(response.Body,(256<<10)+1))
 }
 
 func checkpointNetworkGroup(node string) string {
