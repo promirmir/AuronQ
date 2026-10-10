@@ -1,0 +1,47 @@
+name: Publish Linux Miner 0.4.8 Alpha (additive)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-linux-miner-048.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  linux-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download validated Linux artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p linux-release
+          gh run download 38089531174 --name AuronQ-Miner-0.4.8-Linux-x64-TEST --dir linux-release
+          test -s linux-release/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz
+          test -s linux-release/SHA256SUMS-LINUX-0.4.8.txt
+          ( cd linux-release && sha256sum -c SHA256SUMS-LINUX-0.4.8.txt )
+          tar -tzf linux-release/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz | grep -q auronq-miner
+      - name: Attach Linux only to existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=miner-v0.4.8-alpha
+          gh release view "$TAG" >/dev/null
+          gh release view "$TAG" --json assets --jq '.assets[].name' > /tmp/assets-before.txt
+          grep -Fxq 'AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip' /tmp/assets-before.txt
+          if grep -Fxq 'AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz' /tmp/assets-before.txt; then
+            echo 'Linux asset already exists; refusing overwrite'
+            exit 1
+          fi
+          gh release upload "$TAG" linux-release/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz linux-release/SHA256SUMS-LINUX-0.4.8.txt
+          gh release view "$TAG" --json assets --jq '.assets[].name' > /tmp/assets-after.txt
+          grep -Fxq 'AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip' /tmp/assets-after.txt
+          grep -Fxq 'AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz' /tmp/assets-after.txt
+          echo 'Linux asset published; Windows asset preserved'
