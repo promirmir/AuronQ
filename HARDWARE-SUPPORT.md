@@ -26,7 +26,7 @@ AUTO order on accelerated Windows/Linux packages:
 Every GPU backend must pass the canonical byte-for-byte AQM64 self-test before
 it is allowed to mine.
 
-**Published platform status:** Windows 0.4.8 Alpha GUI/GPU release remains unchanged. Linux 0.4.8 Alpha is available as a [temporary CI test artifact](https://github.com/promirmir/AuronQ/actions/runs/38089531174), with CPU self-test and OpenCL packaging verified; real-device CUDA mining is not yet certified. Historical Linux/portable CPU releases remain archived under [v0.4.6 Alpha](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha).
+**Published platform status:** Windows 0.4.8 Alpha GUI/GPU release remains unchanged. Linux 0.4.8 Alpha is [published in GitHub Releases](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha), with CPU self-test and OpenCL packaging verified; real-device CUDA mining is not yet certified. Historical Linux/portable CPU releases remain archived under [v0.4.6 Alpha](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha).
 
 ## Hardware matrix
 
