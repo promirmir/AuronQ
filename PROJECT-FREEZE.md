@@ -1,14 +1,15 @@
 # AuronQ — Mainnet feature freeze and Android public download
 **Decision: 10 October 2026. Status: maintenance / verification, not a claim of a completed security audit.**
 
-## One canonical public Android build
+## Currently published Android release (verified against GitHub Releases)
 
-- **Android wallet for new installations:** [AuronQ Mobile 0.5.5 Alpha P2P — APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk)
-- APK SHA-256: `32ea0db682b1a0d9efb30806f532490a26da888537f6bd1dfbddc0835030379e`
-- Release page and original checksum file: [android-v0.5.5-alpha-p2p](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p)
-- The wallet is a **light client** with locally checked AQM64 headers after a previously verified, release-pinned historical checkpoint. Node-signed P2P checkpoint observations are **advisory** and cannot substitute for verified history or authorize transaction spending.
-- Do not create another APK for cosmetic changes. The Android build has not received independent security review or a full documented device-based end-to-end payment test. Do not claim it is audited, guaranteed safe or permanently final for substantial funds.
-- **Existing-wallet upgrade hazard:** published Android builds use ephemeral CI debug signing certificates. They may fail an in-place upgrade with an Android signature mismatch. Do **not** uninstall an existing wallet or clear its app data to update; that may permanently lose recovery secrets. Users should confirm secure recovery backups and avoid importing wallets holding significant funds into new test installations. Future release-grade wallet updates require a carefully managed, persistent Android app signing identity; publishing an arbitrary new debug APK is not a secure upgrade mechanism.
+- **Current Android APK:** [AuronQ Mobile 0.5.6 Alpha — Fast Sync](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)
+- **APK SHA-256 (GitHub Release asset):** `e6613f0989a25b3d4d1d191b815d64388f9bac91f69c2336a1bf23c5af043ffa`
+- [Release and checksum file](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync).
+- Previous 0.5.5 and earlier experimental release entries have been retired; do not send users to their deleted GitHub Release URLs.
+- The Android wallet is a light client, not a full validating node. Fast peer-assisted account state and any optional checkpoint diagnostics are **not** proof of independent historical consensus verification.
+- This version has not received an independent security audit. Do not assert guaranteed secure balances or instant fully validated payments.
+- **Existing-wallet upgrade hazard:** published Android builds can use different CI debug signing certificates, preventing in-place upgrades. Do **not** uninstall an existing funded wallet or clear its application data to force an update. Verify recovery backups first.
 
 ## Full-node Mainnet and release freeze
 
@@ -35,6 +36,6 @@ The `main` branch is marked protected on GitHub, but exact required checks/rules
 - Give users one small written installation guide and a clearly marked *alpha/no-large-funds* warning.
 - Preserve full-node v1.7.13 binary/archive and at least two independent physical operator backups of complete validated history.
 - Keep collecting reproducible bug reports, especially missing peers, transaction broadcast failures, signature migration errors and multi-node chain divergence.
-- Stop expanding features and checkpoint trust models until independently reviewed. Do not remove public source/release history under the pretext of a freeze.
+- Avoid expanding unreviewed checkpoint trust models. Retired GitHub Release entries are not current distribution channels; preserve source code, Git tags and protocol history.
 
 This is a **code and release change freeze**, not shutdown of the blockchain. The chain is expected to be operated independently by its participants, with the above real-world constraints.
