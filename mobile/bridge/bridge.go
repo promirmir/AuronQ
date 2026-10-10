@@ -1296,8 +1296,10 @@ func SendMulti(knownNodesJSON, nodeURL, walletPath, password, to, amount string)
 
 func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 	nodeURL = strings.TrimRight(strings.TrimSpace(nodeURL), "/")
-	if recent < 1 {
-		recent = 1
+	// A three-peer network preview must not fetch a full block.
+	// Wallet history and transaction amounts remain separate guarded reads.
+	if recent < 0 {
+		recent = 0
 	}
 	if recent > 12 {
 		recent = 12
