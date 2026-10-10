@@ -40,7 +40,7 @@ func TestGenerateReviewedMobileCheckpoint(t *testing.T) {
     }
     sort.Slice(online, func(i,j int) bool { return online[i].Height > online[j].Height })
     anchorHeight := online[1].Height
-    if anchorHeight > 3 {anchorHeight -= 3}
+    if anchorHeight > 12 {anchorHeight -= 12}
     if anchorHeight < 64 {
         t.Fatal("not enough chain history for meaningful checkpoint")
     }
