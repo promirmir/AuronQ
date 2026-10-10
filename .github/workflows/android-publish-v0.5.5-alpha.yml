@@ -86,6 +86,6 @@ jobs:
             AuronQ-Mobile-0.5.5-alpha-Keyless-Isolated-Test.apk \
             SHA256SUMS-Mobile-0.5.5.txt \
             --target "$GITHUB_SHA" \
-            --title "AuronQ Mobile v0.5.4 Alpha - signed checkpoint updater" \
-            --notes "Android v0.5.5 Alpha: autonomous GitHub Actions OIDC / Sigstore keyless checkpoint verification, auto-published on each 256 independently verified new AQM64 headers. NO signing secret or user key required. Historical checkpoints are still trusted light-wallet anchors, not full validation from genesis on each phone. Mainnet consensus and transaction signing unchanged. Existing Android applications may have incompatible debug signing keys; NEVER uninstall a wallet containing funds. Use the Keyless-Isolated-Test APK to evaluate safely alongside the existing app. Preserve backup before any wallet migration." \\
+            --title "AuronQ Mobile v0.5.5 Alpha - automatic keyless checkpoints" \
+            --notes "Android v0.5.5 Alpha: autonomous GitHub Actions OIDC / Sigstore keyless checkpoint verification, auto-published on each 256 independently verified new AQM64 headers. NO signing secret or user key required. Historical checkpoints are still trusted light-wallet anchors, not full validation from genesis on each phone. Mainnet consensus and transaction signing unchanged. Existing Android applications may have incompatible debug signing keys; NEVER uninstall a wallet containing funds. Use the Keyless-Isolated-Test APK to evaluate safely alongside the existing app. Preserve backup before any wallet migration." \
             --prerelease
