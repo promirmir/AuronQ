@@ -1,26 +1,16 @@
-# AuronQ Mobile — decentralized P2P checkpoint diagnostics
+# AuronQ Mobile
 
-## Download / installation
+## Download
 
-## User-tested fast-sync APK (separate experimental installation)
+**Current recommended test build: AuronQ Mobile 0.5.6 Alpha — Fast Sync**
 
-**AuronQ Mobile 0.5.3 Two-Stage V2 Mempool TEST** — [Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-two-stage-v2-mempool-test-20261010/AuronQ-Mobile-0.5.3-Two-Stage-V2-Mempool-TEST.apk) · [Release with SHA-256 file](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-two-stage-v2-mempool-test-20261010).
+- [Download Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)
+- [Release notes and SHA-256 checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync)
+- [Previous 0.5.5 Alpha release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p)
 
-The project operator reports faster startup and working wallet functions. This build restores display of unconfirmed mempool transactions in the history feed. It is **not independently audited** and does not prove correctness of remote UTXO data; 3 distinct IP network groups do not prove 3 independent owners. Use this **isolated test package** only with nonvaluable test wallets. Do not uninstall the existing wallet or clear application data.
+Faster wallet synchronization while preserving wallet creation, receiving, sending, and transaction history, including pending transactions. This is an **experimental Android alpha**, not an independently audited financial application. The Fast Sync build uses a separate app identity and does not upgrade or migrate existing wallet files. Never uninstall an existing funded wallet or erase its data to install a different APK. Keep secure offline recovery material; do not test with valuable funds.
 
-
-**Current experimental release: v0.5.5 Alpha P2P.**
-
-- [Download standard Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk)
-- [Download isolated Android test APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p-Isolated-Test.apk)
-- [Release information and SHA-256 checksums](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p)
-- [Previous v0.5.4 Alpha release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.4-alpha)
-
-SHA-256:
-- Standard: `32ea0db682b1a0d9efb30806f532490a26da888537f6bd1dfbddc0835030379e`
-- Isolated: `758dada75ce369b46efb76fb950c5542f50f3741bf56be4ec63a7def27b7bd78`
-
-**Protect existing wallet data:** Builds are CI debug-signed and may have an Android certificate incompatible with prior installations. **Never uninstall an existing wallet containing funds or clear its application data just to update**. The isolated `com.auronq.mobile.p2pcheck` package is independent; it does not migrate, overwrite or read the installed wallet. Do not import private keys holding funds into experimental builds.
+## Technical notes and limitations
 
 ## No private checkpoint keys to configure
 
