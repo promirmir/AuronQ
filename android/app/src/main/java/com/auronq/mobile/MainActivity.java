@@ -867,12 +867,11 @@ public class MainActivity extends Activity {
             String tip = state.optString("tip", "");
             long height = state.optLong("height", -1);
             String value = state.optString("spendable", "");
-            JSONArray items = state.optJSONArray("items");
             if (!walletAddress.equals(address) || !quickTip.equalsIgnoreCase(tip)
                     || quickHeight != height || (deepVerifiedHeight == height
                         && !deepVerifiedTip.isEmpty() && !deepVerifiedTip.equalsIgnoreCase(tip))
                     || state.optInt("peer_agreement", 0) != 3
-                    || !value.matches("[0-9]+\\.[0-9]{8}") || items == null) {
+                    || !value.matches("[0-9]+\\.[0-9]{8}")) {
                 invalidateQuickAccount(tr("Brak spójnych danych konta z 3 węzłów",
                         "Missing consistent account data from 3 peers"));
                 return;
