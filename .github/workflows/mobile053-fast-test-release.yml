@@ -1,0 +1,96 @@
+name: Test AuronQ Mobile 0.5.3 Fast Loading (original stable baseline)
+
+on:
+  push:
+    branches:
+      - fix/mobile-053-fast-loading-only-20261010
+    paths:
+      - '.github/workflows/mobile053-fast-test-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-build-test-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Enforce original v0.5.3 wallet and Mainnet code unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git cat-file -e bfdc46bd91115ce8dc072b839845a135f3782f09^{commit}
+          git diff --exit-code bfdc46bd91115ce8dc072b839845a135f3782f09 HEAD -- \
+            internal/auronq/ network.json genesis.json go.mod go.sum \
+            cmd/ android/app/src/main/java/com/auronq/mobile/README.md
+          # Original Java wallet UI must only change the one preview fetch:
+          git diff --unified=0 bfdc46bd91115ce8dc072b839845a135f3782f09 HEAD -- \
+            android/app/src/main/java/com/auronq/mobile/MainActivity.java > /tmp/auronq-ui.diff
+          test "$(grep -c '^+[^+]' /tmp/auronq-ui.diff)" -eq 1
+          test "$(grep -c '^-[^-]' /tmp/auronq-ui.diff)" -eq 1
+          grep -Fq '+                String preview = Bridge.quorumSnapshot(knownNodes, 0);' /tmp/auronq-ui.diff
+          grep -Fq -- '-                String preview = Bridge.quorumSnapshot(knownNodes, 1);' /tmp/auronq-ui.diff
+          echo "Original wallet behavior, balance, history, send/receive and header verification are byte-identical to 0.5.3."
+      - name: Test bounded recent full-block loading and preserve consensus
+        shell: bash
+        run: |
+          go test ./mobile/bridge -run '^TestFast053' -count=1 -v
+          go test ./...
+          go vet ./...
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK/NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Build original 0.5.3 Go binding
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build side-by-side v0.5.3 fast test APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleFast053
+      - name: Publish isolated signed Android test binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/fast053/app-fast053.apk"
+          test -s "$APK"
+          cp "$APK" AuronQ-Mobile-0.5.3-Fast-Isolated-Test.apk
+          sha256sum AuronQ-Mobile-0.5.3-Fast-Isolated-Test.apk > SHA256SUMS-Mobile-0.5.3-Fast.txt
+          TAG="android-v0.5.3-fast-loading-test-20261010"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Test tag exists; never replace a released artifact."
+            exit 1
+          fi
+          gh release create "$TAG" \
+            AuronQ-Mobile-0.5.3-Fast-Isolated-Test.apk \
+            SHA256SUMS-Mobile-0.5.3-Fast.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile 0.5.3 Fast - isolated original-baseline test" \
+            --notes "BASED ON ORIGINAL android-v0.5.3-alpha COMMIT bfdc46bd... Exactly the original wallet balance, history, sending, UTXO selection, header-from-genesis verification, consensus, UI, formats and keys. ONLY faster I/O: status preview omits unnecessary full-block download; recent six exact full blocks and TX counts are fetched with at most two concurrent requests in original order. No trusted checkpoint shortcut, no new wallet logic. APK uses com.auronq.mobile.fast053 and installs alongside the existing wallet; it does not migrate/copy your old wallet. Never uninstall a wallet with funds, never clear wallet data to force an upgrade, and do not import valuable wallet keys into experimental test APK. The first full AQM64 replay from genesis can still take time; this does not bypass validation. Debug-signed by ephemeral GitHub CI; NOT a production signed update. Need real-device acceptance before making it the main public download." \
+            --prerelease
