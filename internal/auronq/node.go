@@ -45,6 +45,8 @@ type Node struct {
 	blockSem   chan struct{}
 	rateMu     sync.Mutex
 	rate       map[string]requestRateWindow
+	checkpointMu sync.Mutex
+	checkpointPrivateKey []byte // node-local identity, never a consensus or signing authority
 }
 
 const (
@@ -1167,6 +1169,24 @@ func (n *Node) handler() http.Handler {
 		go n.broadcast("/p2p/block", b, "")
 	})
 
+	// Advisory P2P checkpoints: each full node signs its OWN independently
+	// validated canonical chain state every 256 heights. Signatures only
+	// authenticate node identity, not historical consensus or peer majority.
+	// Never use these attestations as automatic consensus trust anchors.
+	mux.HandleFunc("/p2p/checkpoint",func(w http.ResponseWriter,r *http.Request){
+		if r.Method!=http.MethodGet {w.WriteHeader(http.StatusMethodNotAllowed);return}
+		if !n.allowBlockRequest(r) {
+			writeJSON(w,http.StatusTooManyRequests,map[string]string{"error":"checkpoint request rate limit exceeded"})
+			return
+		}
+		att,err:=n.SignedCheckpoint()
+		if err!=nil {
+			writeJSON(w,http.StatusServiceUnavailable,map[string]string{"error":err.Error()})
+			return
+		}
+		writeJSON(w,http.StatusOK,att)
+	})
+
 	mux.HandleFunc("/p2p/headers", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -1358,6 +1378,7 @@ func parseHeight(s string) (uint64, error) {
 func (n *Node) Run(ctx context.Context) error {
 	n.server = &http.Server{Addr: n.cfg.Listen, Handler: n.handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 20 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
 	go n.syncLoop(ctx)
+	go n.checkpointLoop(ctx) // advisory checkpoints never gate block validation
 	errc := make(chan error, 1)
 	go func() {
 		log.Printf("AuronQ node listening on %s network=%s id=%s", n.cfg.Listen, n.Chain.network.Name, n.Chain.NetworkID().String()[:16])
