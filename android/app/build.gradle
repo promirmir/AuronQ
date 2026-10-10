@@ -10,8 +10,8 @@ android {
         applicationId 'com.auronq.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 9
-        versionName '0.5.3-three-netgroup-test'
+        versionCode 12
+        versionName '0.5.6-alpha'
         manifestPlaceholders = [appLabel:'AuronQ Mobile']
     }
 
@@ -23,9 +23,9 @@ android {
         quick2stagev2 {
             initWith debug
             applicationIdSuffix '.quick2stagev2'
-            versionNameSuffix '-two-stage-v2-test'
+            versionNameSuffix '-fast-sync'
             signingConfig signingConfigs.debug
-            manifestPlaceholders = [appLabel:'AuronQ Mobile 2-Stage V2 TEST']
+            manifestPlaceholders = [appLabel:'AuronQ Mobile']
         }
         quick2stage {
             initWith debug
