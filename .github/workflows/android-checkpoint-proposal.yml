@@ -1,0 +1,76 @@
+name: Android checkpoint proposal (review required)
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: android-checkpoint-proposal
+  cancel-in-progress: false
+
+jobs:
+  propose-reviewed-checkpoint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: true
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Generate only after 500 new verified AQM64 blocks
+        shell: bash
+        run: |
+          cd mobile/bridge
+          AURONQ_GENERATE_CHECKPOINT=1 go test -run '^TestGenerateReviewedMobileCheckpoint$' -timeout 48m -count=1 -v
+      - name: Validate proposed anchor and open review PR
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --quiet -- mobile/bridge/verified-checkpoint.json && {
+            echo "No new checkpoint proposed."
+            exit 0
+          }
+          python3 - <<'PY'
+          import json, pathlib, re
+          path=pathlib.Path("mobile/bridge/verified-checkpoint.json")
+          c=json.loads(path.read_text())
+          go=pathlib.Path("mobile/bridge/bridge.go")
+          s=go.read_text()
+          h=int(c["verified_height"])
+          assert h>=1284+500
+          assert len(c["history"])>=62
+          assert c["history"][-1]["height"]==h
+          assert re.fullmatch(r"[0-9a-f]{128}",c["verified_tip"])
+          assert re.fullmatch(r"[0-9a-f]+",c["chain_work"])
+          for pattern,value in [
+            (r'(verifiedCheckpointHeight uint64 = )\d+',str(h)),
+            (r'(verifiedCheckpointTip = ")[0-9a-f]+(")',c["verified_tip"]),
+            (r'(verifiedCheckpointWork = ")[0-9a-f]+(")',c["chain_work"])]:
+            new,n=re.subn(pattern,lambda m: m.group(1)+value+(m.group(2) if m.lastindex==2 else ""),s)
+            if n!=1:raise SystemExit("checkpoint pin replacement failed")
+            s=new
+          go.write_text(s)
+          PY
+          go test ./mobile/bridge ./internal/auronq
+          branch="automation/android-checkpoint-proposal"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$branch"
+          git add mobile/bridge/verified-checkpoint.json mobile/bridge/bridge.go
+          git commit -m "chore(android): propose reviewed next checkpoint"
+          git push --force-with-lease origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "chore(android): review updated checkpoint" \
+            --body "Automation candidate only. Verify full CI, checkpoint hash/height, confirmation by independent peer operators and trust boundary BEFORE merging and shipping an APK. This does NOT alter mainnet consensus, and is NOT automatically accepted by installed wallets." \
+            || echo "PR may already exist or repository settings prevent automated PR creation; review branch manually."
