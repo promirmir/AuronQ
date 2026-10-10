@@ -6,7 +6,6 @@
 
 - [Download Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)
 - [Release notes and SHA-256 checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync)
-- [Previous 0.5.5 Alpha release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.5-alpha-p2p)
 
 Faster wallet synchronization while preserving wallet creation, receiving, sending, and transaction history, including pending transactions. This is an **experimental Android alpha**, not an independently audited financial application. The Fast Sync build uses a separate app identity and does not upgrade or migrate existing wallet files. Never uninstall an existing funded wallet or erase its data to install a different APK. Keep secure offline recovery material; do not test with valuable funds.
 
