@@ -1,4 +1,4 @@
-name: AuronQ Mobile Fast Checkpoint APK
+name: AuronQ Mobile Fast Sync Headers APK
 
 on:
   push:
@@ -74,7 +74,7 @@ jobs:
       - name: Publish direct-download testing APK
         shell: bash
         env:
-          RELEASE_TAG: android-fast-sync-checkpoint-20261010
+          RELEASE_TAG: android-fast-sync-headers-20261010
         run: |
           APK="android/app/build/outputs/apk/syncprobe/app-syncprobe.apk"
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
@@ -82,9 +82,9 @@ jobs:
             exit 0
           fi
           gh release create "$RELEASE_TAG" \
-            "$APK#AuronQ-Mobile-Fast-Checkpoint-Test-20261010.apk" \
-            "/tmp/SHA256SUMS.txt#SHA256SUMS-Fast-Checkpoint.txt" \
+            "$APK#AuronQ-Mobile-Fast-Sync-Test-20261010.apk" \
+            "/tmp/SHA256SUMS.txt#SHA256SUMS-Fast-Sync.txt" \
             --target "$GITHUB_SHA" \
-            --title "AuronQ Mobile - fast checkpoint sync (isolated test)" \
-            --notes "Experimental Android FAST-SYNC checkpoint test. Installs side by side under a separate application ID: does NOT replace or access your original wallet. Starts from a CI-verified, release-pinned AuronQ header checkpoint at height 1284 instead of re-verifying the genesis-to-checkpoint AQM64 history on each phone. Checks subsequent headers, difficulty and PoW. HISTORICAL HEADERS PRIOR TO CHECKPOINT ARE TRUSTED TO THE RELEASE. This is not equivalent to independent genesis-to-tip validation. Do not import wallets holding funds into this test app." \
+            --title "AuronQ Mobile - checkpoint plus header-only network (isolated)" \
+            --notes "Experimental Android FAST-SYNC checkpoint test. Installs side by side under a separate application ID: does NOT replace or access your original wallet. Starts from a CI-verified, release-pinned AuronQ header checkpoint at height 1284 instead of re-verifying the genesis-to-checkpoint AQM64 history on each phone. Recent network activity now fetches a small header batch instead of downloading entire blocks, cutting connection traffic. Checks subsequent headers, difficulty and PoW. HISTORICAL HEADERS PRIOR TO CHECKPOINT ARE TRUSTED TO THE RELEASE. This is not equivalent to independent genesis-to-tip validation. Do not import wallets holding funds into this test app." \
             --prerelease
