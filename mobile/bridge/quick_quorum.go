@@ -245,19 +245,20 @@ func QuickHistorySnapshot(knownJSON,address string,limit int)(string,error){
  views,err:=quickFetchAccount(knownJSON,address,limit,true)
  if err!=nil{return "",err}
  v:=views[0]
- items:=make([]aq.WalletHistoryItem,0,len(v.History))
- for _,x:=range v.History{
-  // Pending transactions propagate unevenly; only canonical history is
-  // guaranteed to agree among peer reports of the same current chain.
-  if x.Status!="pending"{items=append(items,x)}
+ // Reuse the original wallet history merger: confirmed history must agree,
+ // but pending mempool entries are displayed even if propagation differs.
+ observations:=make([]historyObservation,0,len(views))
+ for _,peer:=range views{
+  observations=append(observations,historyObservation{Node:peer.Obs.Node,Items:peer.History})
  }
+ items:=mergeHistoryPending(observations)
  if len(items)>limit&&limit>0{items=items[:limit]}
  out:=map[string]any{
   "address":strings.TrimSpace(address),"height":v.Obs.Height,
   "tip":v.Obs.Tip,"items":items,
   "peer_observed":len(views),"peer_agreement":len(views),
   "state_trust":"three-netgroups-peer-observed-not-independent-chain-proof",
-  "pending_excluded":true,
+  "pending_excluded":false,
  }
  raw,e:=json.Marshal(out);return string(raw),e
 }
