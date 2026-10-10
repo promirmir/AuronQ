@@ -14,6 +14,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -42,6 +43,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MainActivity extends Activity {
     private static final int IMPORT_WALLET = 1001;
@@ -59,6 +61,16 @@ public class MainActivity extends Activity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
+    // AQM64 header verification can be memory-hard and must never queue wallet
+    // operations or block the quick (unverified) network status preview.
+    private final ExecutorService networkPreviewExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService headerVerificationExecutor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean previewBusy = new AtomicBoolean(false);
+    private final AtomicBoolean verificationBusy = new AtomicBoolean(false);
+    private static final long PREVIEW_INTERVAL_MS = 12_000L;
+    private static final long VERIFY_RETRY_INTERVAL_MS = 15_000L;
+    private long lastPreviewStartMs = -PREVIEW_INTERVAL_MS;
+    private long lastVerifyStartMs = -VERIFY_RETRY_INTERVAL_MS;
 
     private SharedPreferences prefs;
     private boolean english;
@@ -73,7 +85,6 @@ public class MainActivity extends Activity {
     private long verifiedHeight = -1;
     private String currentScreen = "home";
     private String lastHistoryKey = "";
-    private boolean liveBusy = false;
     private boolean networkReachable = false;
 
     private FrameLayout content;
@@ -309,7 +320,7 @@ public class MainActivity extends Activity {
 
         LinearLayout balanceCard = card();
         balanceCard.addView(section(tr("SALDO DOSTĘPNE", "SPENDABLE BALANCE")));
-        walletBalance = text("0.00000000 AURQ", 29, true);
+        walletBalance = text("— AURQ", 29, true);
         balanceCard.addView(walletBalance, mt(8));
         root.addView(balanceCard, mt(18));
 
@@ -557,91 +568,143 @@ public class MainActivity extends Activity {
         }
     }
 
+    // UI callbacks invoke this on the main thread. Do not share the wallet
+    // executor with network polling or PoW verification.
     private void refreshAll() {
-        if (liveBusy) return;
-        liveBusy = true;
-        executor.execute(() -> {
+        refreshPreview();
+        refreshVerification();
+    }
+
+    private void refreshPreview() {
+        long now = SystemClock.elapsedRealtime();
+        if (previewBusy.get() || now - lastPreviewStartMs < PREVIEW_INTERVAL_MS) return;
+        if (!previewBusy.compareAndSet(false, true)) return;
+        lastPreviewStartMs = now;
+        networkPreviewExecutor.execute(() -> {
             try {
-                String knownNodes = prefs.getString("known_nodes", "[]");
-
-                // First establish reachability and show it immediately. Fresh
-                // installs may need to verify hundreds of memory-hard AQM64
-                // headers; that work must not look like "no connection".
+                String known = prefs.getString("known_nodes", "[]");
+                String raw = Bridge.quorumSnapshot(known, 1);
+                String progress = null;
                 try {
-                    String preview = Bridge.quorumSnapshot(knownNodes, 1);
-                    final String finalPreview = preview;
-                    runOnUiThread(() -> applyNetworkPreview(finalPreview));
+                    progress = Bridge.headerSyncProgress(headerCacheFile.getAbsolutePath());
                 } catch (Exception ignored) {
+                    // Progress is informational; network preview still works.
                 }
-
-                String snapshot = Bridge.quorumSnapshotVerified(knownNodes, headerCacheFile.getAbsolutePath(), 6);
-                JSONObject snapshotState = new JSONObject(snapshot);
-                String node = snapshotState.optString("node", "").trim();
-                if (node.isEmpty()) throw new Exception("AuronQ quorum did not select a node");
-
-                // Show a successfully verified network snapshot immediately. Wallet
-                // quorum/history refreshes can be slower and must not leave the UI stuck
-                // on "Connecting…" after the chain itself is already verified.
-                final String connectedNode = node;
-                final String connectedSnapshot = snapshot;
+                final String verifiedProgress = progress;
                 runOnUiThread(() -> {
-                    nodeUrl = connectedNode;
-                    applySnapshot(connectedSnapshot);
-                });
-
-                rememberNetwork(node);
-
-                String balance = null;
-                String history = null;
-                String historyError = null;
-                if (walletFile.exists()) {
-                    try {
-                        String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
-                        balance = Bridge.quorumBalanceVerified(
-                                prefs.getString("known_nodes", "[]"),
-                                addr,
-                                snapshotState.optString("verified_tip"),
-                                snapshotState.optString("verified_chain_work"),
-                                snapshotState.optLong("verified_height"));
-                        if ("wallet".equals(currentScreen)) {
-                            String historyKey = addr + ":" + snapshotState.optLong("height") + ":" + snapshotState.optInt("mempool");
-                            if (!historyKey.equals(lastHistoryKey)) {
-                                try {
-                                    history = Bridge.quorumHistoryVerified(
-                                            prefs.getString("known_nodes", "[]"),
-                                            addr,
-                                            snapshotState.optString("verified_tip"),
-                                            snapshotState.optString("verified_chain_work"),
-                                            snapshotState.optLong("verified_height"),
-                                            50);
-                                    lastHistoryKey = historyKey;
-                                } catch (Exception e) {
-                                    historyError = e.getMessage();
-                                }
-                            }
-                        }
-                    } catch (Exception ignored) {
-                    }
-                }
-
-                final String finalBalance = balance;
-                final String finalHistory = history;
-                final String finalHistoryError = historyError;
-                runOnUiThread(() -> {
-                    if (finalBalance != null) applyBalance(finalBalance);
-                    if (finalHistory != null) {
-                        applyHistory(finalHistory);
-                    } else if (finalHistoryError != null && "wallet".equals(currentScreen)) {
-                        walletHistoryStatus.setText(tr("Historia niedostępna: ", "History unavailable: ") + finalHistoryError);
-                        walletHistoryStatus.setTextColor(DANGER);
-                    }
+                    applyNetworkPreview(raw);
+                    applySyncProgress(verifiedProgress);
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> handleNetworkRefreshFailure(e.getMessage()));
             } finally {
-                liveBusy = false;
+                previewBusy.set(false);
             }
         });
+    }
+
+    private void refreshVerification() {
+        long now = SystemClock.elapsedRealtime();
+        if (verificationBusy.get() || now - lastVerifyStartMs < VERIFY_RETRY_INTERVAL_MS) return;
+        if (!verificationBusy.compareAndSet(false, true)) return;
+        lastVerifyStartMs = now;
+        headerVerificationExecutor.execute(() -> {
+            try {
+                String snapshot = Bridge.quorumSnapshotVerified(
+                        prefs.getString("known_nodes", "[]"),
+                        headerCacheFile.getAbsolutePath(), 6);
+                JSONObject state = new JSONObject(snapshot);
+                String node = state.optString("node", "").trim();
+                if (node.isEmpty()) throw new Exception("AuronQ quorum did not select a node");
+
+                runOnUiThread(() -> {
+                    nodeUrl = node;
+                    applySnapshot(snapshot);
+                });
+
+                // Peer discovery is not part of the critical wallet/verify path.
+                if (!node.equals(prefs.getString("last_node", ""))) {
+                    networkPreviewExecutor.execute(() -> rememberNetwork(node));
+                }
+                refreshVerifiedWallet(state);
+            } catch (Exception e) {
+                runOnUiThread(() -> handleNetworkRefreshFailure(e.getMessage()));
+            } finally {
+                verificationBusy.set(false);
+            }
+        });
+    }
+
+    // Wallet storage, keys, signatures, verified balance and transaction
+    // broadcast code are unchanged; only the scheduling is isolated.
+    private void refreshVerifiedWallet(JSONObject state) {
+        if (!walletFile.exists()) return;
+        executor.execute(() -> {
+            String balance = null;
+            String history = null;
+            String historyError = null;
+            try {
+                String addr = Bridge.walletAddress(walletFile.getAbsolutePath());
+                balance = Bridge.quorumBalanceVerified(
+                        prefs.getString("known_nodes", "[]"),
+                        addr,
+                        state.optString("verified_tip"),
+                        state.optString("verified_chain_work"),
+                        state.optLong("verified_height"));
+                if ("wallet".equals(currentScreen)) {
+                    String historyKey = addr + ":" + state.optLong("height") + ":" + state.optInt("mempool");
+                    if (!historyKey.equals(lastHistoryKey)) {
+                        try {
+                            history = Bridge.quorumHistoryVerified(
+                                    prefs.getString("known_nodes", "[]"),
+                                    addr,
+                                    state.optString("verified_tip"),
+                                    state.optString("verified_chain_work"),
+                                    state.optLong("verified_height"),
+                                    50);
+                            lastHistoryKey = historyKey;
+                        } catch (Exception e) {
+                            historyError = e.getMessage();
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+            final String finalBalance = balance;
+            final String finalHistory = history;
+            final String finalHistoryError = historyError;
+            runOnUiThread(() -> {
+                if (finalBalance != null) applyBalance(finalBalance);
+                if (finalHistory != null) {
+                    applyHistory(finalHistory);
+                } else if (finalHistoryError != null && "wallet".equals(currentScreen)) {
+                    walletHistoryStatus.setText(tr("Historia niedostępna: ", "History unavailable: ") + finalHistoryError);
+                    walletHistoryStatus.setTextColor(DANGER);
+                }
+            });
+        });
+    }
+
+    private void applySyncProgress(String raw) {
+        if (raw == null || verifiedHeight >= 0) return;
+        try {
+            JSONObject state = new JSONObject(raw);
+            long progress = state.optLong("verified_height", 0);
+            long head = 0;
+            try {
+                head = Long.parseLong(netHeight.getText().toString());
+            } catch (NumberFormatException ignored) {
+            }
+            if (head > progress) {
+                String detail = tr("Weryfikacja AQM64: ", "AQM64 verification: ")
+                        + progress + "/" + head;
+                netStatus.setText("● " + detail);
+                netStatus.setTextColor(BLUE);
+                dashNode.setText("● " + detail);
+                dashNode.setTextColor(BLUE);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private void applySnapshot(String raw) {
@@ -726,6 +789,14 @@ public class MainActivity extends Activity {
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
+            // Never turn a currently verified state into a generic "unverified"
+            // state just because a background status poll completed later.
+            if (verifiedHeight >= 0
+                    && verifiedHeight == height
+                    && verifiedTip.equalsIgnoreCase(j.optString("tip", ""))
+                    && verifiedWork.equalsIgnoreCase(j.optString("chain_work", ""))) {
+                return;
+            }
             dashNode.setText(headerCacheFile != null && headerCacheFile.exists()
                     ? tr("● Połączono • trwa weryfikacja AQM64…", "● Connected • verifying AQM64…")
                     : tr("● Połączono • pierwsza weryfikacja AQM64 może potrwać dłużej…", "● Connected • first AQM64 verification may take longer…"));
@@ -1326,6 +1397,8 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         handler.removeCallbacks(liveLoop);
         executor.shutdownNow();
+        networkPreviewExecutor.shutdownNow();
+        headerVerificationExecutor.shutdownNow();
         super.onDestroy();
     }
 }

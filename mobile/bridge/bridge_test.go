@@ -1,6 +1,8 @@
 package bridge
 
 import (
+    "encoding/json"
+    "os"
 	"errors"
 	"path/filepath"
 	"strings"
@@ -253,4 +255,43 @@ func TestBundledMobilePeersIncludeIndependentPublicIPv4Fallbacks(t *testing.T) {
 	if publicHTTP < 3 {
 		t.Fatalf("expected at least three public IPv4 fallback peers, got %d: %v", publicHTTP, bundledBootstrapPeers)
 	}
+}
+
+func TestHeaderSyncProgressFreshCacheAndPersistedHeight(t *testing.T) {
+    path := filepath.Join(t.TempDir(), "mainnet.json")
+    raw, err := HeaderSyncProgress(path)
+    if err != nil {
+        t.Fatal(err)
+    }
+    var progress struct {
+        Height uint64 `json:"verified_height"`
+        Tip string `json:"verified_tip"`
+        Network string `json:"network_id"`
+    }
+    if err := json.Unmarshal([]byte(raw), &progress); err != nil {
+        t.Fatal(err)
+    }
+    if progress.Height != 0 || progress.Tip != mainnetGenesisHash || progress.Network != mainnetNetworkID {
+        t.Fatalf("unexpected fresh progress %+v", progress)
+    }
+    cache, err := freshHeaderCache()
+    if err != nil {
+        t.Fatal(err)
+    }
+    if err := saveHeaderCache(path, cache); err != nil {
+        t.Fatal(err)
+    }
+    raw, err = HeaderSyncProgress(path)
+    if err != nil {
+        t.Fatal(err)
+    }
+    if err := json.Unmarshal([]byte(raw), &progress); err != nil {
+        t.Fatal(err)
+    }
+    if progress.Height != 0 || progress.Tip != mainnetGenesisHash {
+        t.Fatalf("unexpected persisted progress %+v", progress)
+    }
+    if _, err := os.Stat(path); err != nil {
+        t.Fatalf("progress read unexpectedly removed the cache: %v", err)
+    }
 }
