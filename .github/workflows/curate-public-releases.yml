@@ -1,0 +1,63 @@
+name: Curate public releases (retain current downloads only)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/curate-public-releases.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  curate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate current release allowlist and archive historical metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/releases?per_page=100" > /tmp/releases.json
+          # This repository currently has 55 public releases, of which only
+          # these three are promoted in the top-level README.
+          jq -e 'length == 55' /tmp/releases.json >/dev/null
+          for tag in v1.7.13 android-v0.5.6-alpha-fast-sync miner-v0.4.8-alpha; do
+            jq -e --arg tag "$tag" 'map(select(.tag_name == $tag)) | length == 1' /tmp/releases.json >/dev/null
+          done
+          jq -e '[.[] | select(.tag_name == "v1.7.13")][0].assets | map(.name) | index("AuronQ-1.7.13-Windows-x64.zip") != null' /tmp/releases.json >/dev/null
+          jq -e '[.[] | select(.tag_name == "android-v0.5.6-alpha-fast-sync")][0].assets | map(.name) | index("AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk") != null' /tmp/releases.json >/dev/null
+          jq -e '[.[] | select(.tag_name == "miner-v0.4.8-alpha")][0].assets | map(.name) | index("AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip") != null' /tmp/releases.json >/dev/null
+          jq '[.[] | {tag_name, name, target_commitish, published_at, assets: [.assets[] | {name, size, digest, browser_download_url}]}]' /tmp/releases.json > release-inventory-before-cleanup.json
+          jq -r '.[] | select(.tag_name != "v1.7.13" and .tag_name != "android-v0.5.6-alpha-fast-sync" and .tag_name != "miner-v0.4.8-alpha") | .tag_name' /tmp/releases.json > /tmp/obsolete-tags.txt
+          test "$(wc -l </tmp/obsolete-tags.txt)" -eq 52
+      - name: Save public release history inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: auronq-release-inventory-before-cleanup
+          path: release-inventory-before-cleanup.json
+          retention-days: 90
+      - name: Remove obsolete GitHub Releases but retain all git tags and source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            echo "Archiving out of Releases: $tag"
+            gh release delete "$tag" --yes
+          done < /tmp/obsolete-tags.txt
+      - name: Verify exactly three approved release entries remain
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/releases?per_page=100" > /tmp/remaining.json
+          jq -e 'length == 3 and ([.[].tag_name] | sort == (["v1.7.13", "android-v0.5.6-alpha-fast-sync", "miner-v0.4.8-alpha"] | sort))' /tmp/remaining.json >/dev/null
+          echo "Current Desktop, Android and Windows/Linux Miner release entries preserved."
