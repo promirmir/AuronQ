@@ -1294,10 +1294,78 @@ func SendMulti(knownNodesJSON, nodeURL, walletPath, password, to, amount string)
 	return string(b), nil
 }
 
+// Recent explorer data are presentation-only; this code does not feed wallet
+// history, chain verification, UTXO state or transaction signing.
+type recentSnapshotBlock struct {
+	Height       uint64 `json:"height"`
+	Hash         string `json:"hash"`
+	Timestamp    int64  `json:"timestamp"`
+	TimeISO      string `json:"time_iso"`
+	Transactions int    `json:"transactions"`
+}
+
+func fetchRecentSnapshotBlocks(nodeURL string, tip uint64, recent int) []recentSnapshotBlock {
+	if recent <= 0 { return []recentSnapshotBlock{} }
+	if recent > 12 { recent = 12 }
+	count := recent
+	if tip+1 < uint64(count) { count = int(tip+1) }
+	type result struct {
+		index int
+		block recentSnapshotBlock
+		ok bool
+	}
+	results := make(chan result,count)
+	sem := make(chan struct{},2) // at most two decoded blocks in flight
+	client := mobileHTTP(8*time.Second)
+	for i:=0;i<count;i++ {
+		i:=i
+		go func(){
+			sem<-struct{}{}
+			defer func(){<-sem}()
+			h:=tip-uint64(i)
+			req,err:=http.NewRequest(http.MethodGet,fmt.Sprintf("%s/p2p/getblock?height=%d",nodeURL,h),nil)
+			if err!=nil {results<-result{index:i};return}
+			req.Header.Set("User-Agent","AuronQ-Mobile/"+mobileVersion)
+			resp,err:=client.Do(req)
+			if err!=nil {results<-result{index:i};return}
+			defer resp.Body.Close()
+			if resp.StatusCode!=http.StatusOK {results<-result{index:i};return}
+			var b aq.Block
+			if err:=json.NewDecoder(io.LimitReader(resp.Body,int64(aq.MaxBlockBytes)+64*1024)).Decode(&b);err!=nil {
+				results<-result{index:i};return
+			}
+			// Reject a response with the wrong requested height; the old
+			// sequential path simply stopped at an unavailable block.
+			if b.Header.Height!=h {results<-result{index:i};return}
+			results<-result{index:i,ok:true,block:recentSnapshotBlock{
+				Height:b.Header.Height,
+				Hash:b.Hash().String(),
+				Timestamp:b.Header.Timestamp,
+				TimeISO:time.Unix(b.Header.Timestamp,0).UTC().Format(time.RFC3339),
+				Transactions:len(b.Transactions),
+			}}
+		}()
+	}
+	byIndex:=make([]result,count)
+	for i:=0;i<count;i++ {
+		r:=<-results
+		byIndex[r.index]=r
+	}
+	out:=make([]recentSnapshotBlock,0,count)
+	for i:=0;i<count;i++ {
+		if !byIndex[i].ok {break}
+		out=append(out,byIndex[i].block)
+	}
+	return out
+}
+
 func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 	nodeURL = strings.TrimRight(strings.TrimSpace(nodeURL), "/")
-	if recent < 1 {
-		recent = 1
+	// A network-status preview does not need to download even one full
+	// ML-DSA/AQM64 block. The verified six-block view still fetches all
+	// original block data, including exact transaction counts.
+	if recent < 0 {
+		recent = 0
 	}
 	if recent > 12 {
 		recent = 12
@@ -1306,44 +1374,11 @@ func NetworkSnapshot(nodeURL string, recent int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	type recentBlock struct {
-		Height       uint64 `json:"height"`
-		Hash         string `json:"hash"`
-		Timestamp    int64  `json:"timestamp"`
-		TimeISO      string `json:"time_iso"`
-		Transactions int    `json:"transactions"`
-	}
-	blocks := make([]recentBlock, 0, recent)
-	client := &http.Client{Timeout: 8 * time.Second}
-	for i := 0; i < recent; i++ {
-		if st.Height < uint64(i) {
-			break
-		}
-		h := st.Height - uint64(i)
-		req, _ := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/p2p/getblock?height=%d", nodeURL, h), nil)
-		req.Header.Set("User-Agent", "AuronQ-Mobile/"+mobileVersion)
-		resp, err := client.Do(req)
-		if err != nil {
-			break
-		}
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			break
-		}
-		var b aq.Block
-		err = json.NewDecoder(io.LimitReader(resp.Body, int64(aq.MaxBlockBytes)+64*1024)).Decode(&b)
-		resp.Body.Close()
-		if err != nil {
-			break
-		}
-		blocks = append(blocks, recentBlock{
-			Height:       b.Header.Height,
-			Hash:         b.Hash().String(),
-			Timestamp:    b.Header.Timestamp,
-			TimeISO:      time.Unix(b.Header.Timestamp, 0).UTC().Format(time.RFC3339),
-			Transactions: len(b.Transactions),
-		})
-	}
+	// Keep original ordering and first-failed-block prefix semantics.
+	// Exactly two concurrent full-block requests reduce latency without
+	// exhausting low-memory Android phones. Unlike a header-only snapshot,
+	// these are the SAME full blocks and transaction counts as in 0.5.3.
+	blocks := fetchRecentSnapshotBlocks(nodeURL, st.Height, recent)
 	out := map[string]any{
 		"network":      st.Network,
 		"network_id":   st.NetworkID.String(),
