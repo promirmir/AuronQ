@@ -1,0 +1,31 @@
+name: Mark isolated Android 0.5.3 clean-install APK as test prerelease
+
+on:
+  push:
+    branches:
+      - fix/mobile053-coldstart-parallel-verify-20261010
+    paths:
+      - '.github/workflows/mobile053-mark-beta.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mark-test-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Verify immutable APK then mark test release
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG=android-v0.5.3-fresh-install-parallel-test-20261010
+          GH_REPO=promirmir/AuronQ
+          DIGEST="$(gh api "repos/$GH_REPO/releases/tags/$TAG" --jq '.assets[] | select(.name=="AuronQ-Mobile-0.5.3-Fresh-Install-Parallel-Test.apk") | .digest')"
+          test "$DIGEST" = 'sha256:b5c7d22fcd2c41c9edb5554aa91be0e46192ba87ae3225e481b5b65bb7758d82'
+          gh release edit "$TAG" --repo "$GH_REPO" --prerelease
+          test "$(gh api "repos/$GH_REPO/releases/tags/$TAG" --jq '.prerelease')" = true
+          echo "Test-only APK flagged prerelease; assets and running Mainnet untouched."
