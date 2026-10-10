@@ -1,0 +1,91 @@
+name: Publish AuronQ Mobile 0.5.4 Alpha APK
+
+on:
+  push:
+    branches:
+      - feat/android-signed-checkpoints-20261010
+    paths:
+      - '.github/workflows/android-publish-v0.5.4-alpha.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+
+      - name: Go tests and vet (includes forged checkpoint rejection)
+        run: |
+          go test ./...
+          go vet ./...
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK and NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+
+      - name: Install gomobile
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+
+      - name: Compile Android Go bridge
+        run: |
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build wallet and isolated test variants
+        working-directory: android
+        run: gradle --no-daemon :app:assembleDebug :app:assembleAutocp
+
+      - name: Write checksums and publish immutable release assets
+        shell: bash
+        env:
+          TAG: android-v0.5.4-alpha
+        run: |
+          set -euo pipefail
+          REGULAR="android/app/build/outputs/apk/debug/app-debug.apk"
+          ISOLATED="android/app/build/outputs/apk/autocp/app-autocp.apk"
+          test -s "$REGULAR" && test -s "$ISOLATED"
+          cp "$REGULAR" AuronQ-Mobile-0.5.4-alpha.apk
+          cp "$ISOLATED" AuronQ-Mobile-0.5.4-alpha-Isolated-Test.apk
+          sha256sum AuronQ-Mobile-0.5.4-alpha.apk AuronQ-Mobile-0.5.4-alpha-Isolated-Test.apk > SHA256SUMS-Mobile-0.5.4.txt
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release already exists: do not replace or retag binaries."
+            exit 1
+          fi
+          gh release create "$TAG" \
+            AuronQ-Mobile-0.5.4-alpha.apk \
+            AuronQ-Mobile-0.5.4-alpha-Isolated-Test.apk \
+            SHA256SUMS-Mobile-0.5.4.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile v0.5.4 Alpha - signed checkpoint updater" \
+            --notes "Experimental Android AuronQ Mainnet wallet. Uses the release-pinned 1284 AQM64 header trust checkpoint. Adds optional automatic Ed25519 signature-verified checkpoint downloads from the project publisher, with expiry, network-identity and anti-rollback protection and two peer-netgroup corroboration. The remote publisher will stay dormant until a private signing seed is added securely as the Actions secret AURONQ_CP_ED25519_PRIVATE_KEY. Existing app data/keys/signing format/consensus unchanged. The ordinary APK is debug-signed by CI, so Android may REFUSE an in-place update over v0.5.3 due to signing certificate mismatch. NEVER uninstall a wallet holding funds as an installation workaround. The Isolated-Test APK uses a distinct package ID and can safely be tested alongside an existing wallet; never import a wallet holding funds into it. Not independently audited. Source PR and SHA-256 checksums in this release." \
+            --prerelease
