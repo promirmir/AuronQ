@@ -6,7 +6,7 @@
 
 **Open-source Proof-of-Work cryptocurrency · Public Mainnet · MIT License**
 
-[Project website](https://promirmir.github.io/AuronQ/) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
+[Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Roadmap](ROADMAP.md) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
 **Android wallet — fast synchronization:** **[AuronQ Mobile 0.5.6 Alpha — Fast Sync (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)** · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync) · [Installation guide](android/README.md). This Android alpha loads account information faster and preserves transaction history. It is experimental and has not undergone an independent security audit. Do not uninstall an existing funded wallet to upgrade.
 
@@ -27,11 +27,11 @@ These are **published builds**, not claims of defect-free or production-ready op
 | **Universal Miner** | v0.4.8 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
 | **Universal Miner — Linux x64** | v0.4.8 Alpha · CPU/OpenCL | **[Download Linux tar.gz](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz)** · [Release and checksums](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
 
-**Older miner packages:** [Linux and portable CPU v0.4.6 Alpha](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) remain archived for compatibility. The Linux 0.4.8 package is published in GitHub Releases; GPU performance and CUDA compatibility on physical Linux devices are not yet independently validated.
+**The Linux 0.4.8 package** is published in GitHub Releases; GPU performance and CUDA compatibility on physical Linux devices are not yet independently validated.
 
-**Optional P2P checkpoint code:** newer full-node source builds can produce Ed25519 self-signed advisory hints every **256 fully validated blocks** through `/p2p/checkpoint`, entirely **without GitHub, a central private signer, or an operator-provided key**. These hints are not deployed to all full nodes and the existing desktop binary v1.7.13 remains the recommended download. The mobile app can check peer signatures as status hints; it does **not** trust them as proof of historical consensus or use them to authorize payments. [Design and security limitations](docs/DECENTRALIZED-CHECKPOINTS.md). The regular Android APK may not upgrade over a different debug signing certificate. **Never uninstall an existing wallet or clear its private data to force an update.** Use the separate test APK first. [Earlier v0.5.4 release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.4-alpha) remains available.
+**Optional P2P checkpoint code:** newer full-node source builds can produce Ed25519 self-signed advisory hints every **256 fully validated blocks** through `/p2p/checkpoint`, entirely **without GitHub, a central private signer, or an operator-provided key**. These hints are not deployed to all full nodes and the existing desktop binary v1.7.13 remains the recommended download. The mobile app can check peer signatures as status hints; it does **not** trust them as proof of historical consensus or use them to authorize payments. [Design and security limitations](docs/DECENTRALIZED-CHECKPOINTS.md). The regular Android APK may not upgrade over a different debug signing certificate. **Never uninstall an existing wallet or clear its private data to force an update.** Use the separate test APK first.
 
-**Legacy Android APK identity (published v0.5.3 Alpha):** `AuronQ-Mobile-0.5.3-alpha.apk` · **9,574,566 bytes** · SHA-256:
+**Historical Android APK identity (v0.5.3 Alpha; release retired):** `AuronQ-Mobile-0.5.3-alpha.apk` · **9,574,566 bytes** · SHA-256:
 `913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c`
 
 This fingerprint identifies the **published GitHub APK**, not necessarily a different build already installed on someone's phone. A matching version name is not sufficient evidence of binary identity. **Do not uninstall an existing working wallet or clear its data to investigate a download difference. Back up recovery material first.**
@@ -87,6 +87,8 @@ Permissionless independent integrations are welcome: [Pool integration](POOL-INT
 
 ## Participate
 
-Read the source, operate a full node, test interoperability and report reproducible defects through [GitHub Issues](https://github.com/promirmir/AuronQ/issues), [Pull Requests](https://github.com/promirmir/AuronQ/pulls) or [Bitcointalk](https://bitcointalk.org/index.php?topic=5595868.0).
+AuronQ is being built as an independent cryptocurrency with a public Mainnet, not as a fundraising campaign or a promise of financial returns. Anyone can review the [roadmap](ROADMAP.md), operate a node or participate in mining voluntarily. Exchange listings, future market value and commercial success cannot be guaranteed.
+
+Read the source, operate a full node, test interoperability and report reproducible defects through [GitHub Issues](https://github.com/promirmir/AuronQ/issues), [Pull Requests](https://github.com/promirmir/AuronQ/pulls) [Bitcointalk](https://bitcointalk.org/index.php?topic=5595868.0) or the [AuronQ Discord community](https://discord.gg/rmmNY9RhA).
 
 Distributed under the [MIT License](LICENSE). ML-DSA-87 is standardized, but that alone does not establish end-to-end post-quantum security.

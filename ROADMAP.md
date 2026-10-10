@@ -1,6 +1,8 @@
 # AuronQ Roadmap
 
-This roadmap lists engineering priorities, not promises or investment claims. Security and decentralization take priority over feature count.
+AuronQ is a live, open-source Proof-of-Work cryptocurrency with its own Mainnet. The goal is a secure, independently operated network that can outlive its original developer. This public roadmap distinguishes completed work from work still under review. Mining is voluntary; exchange listings, market value and project success are not guaranteed. Security and decentralization take priority over feature count.
+
+[Join the community on Discord](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Mainnet documentation](MAINNET.md)
 
 ## Delivered
 
@@ -8,7 +10,7 @@ This roadmap lists engineering priorities, not promises or investment claims. Se
 - Windows/Linux full node and Desktop wallet.
 - ML-DSA-87 transaction signing.
 - AQM64 Proof-of-Work mining.
-- Official NVIDIA CUDA GPU Miner for Windows x64 and Linux amd64, including multi-GPU, Auto Tune, live H/s and thermal control.
+- Published universal miner v0.4.8 Alpha: Windows GUI/GPU build and Linux amd64 CPU/OpenCL package. Hardware compatibility varies, and not every backend is independently validated.
 - UTXO validation and cumulative-work reorganization.
 - Persistent P2P peer storage and gossip.
 - Replaceable/prunable bootstrap peers.
@@ -22,13 +24,13 @@ This roadmap lists engineering priorities, not promises or investment claims. Se
 - Founder-bootstrap-removal regression testing.
 - Android light wallet with local header/AQM64 verification and verified-chain wallet-state quorum.
 
-## Stabilization / finalization gate
+## Current focus: stabilization / finalization gate
 
 The live Mainnet should now prioritize observation, independent operation and compatibility over feature velocity. The concrete exit criteria for final hardening are tracked in [STABILIZATION.md](STABILIZATION.md).
 
 Until those criteria are satisfied, avoid discretionary consensus changes. Security, compatibility, monitoring, packaging and decentralization work that preserves consensus remains appropriate.
 
-## Near-term priorities
+## Next priorities (not completed)
 
 ### Network decentralization
 - Bring additional independently operated public full nodes online.
@@ -63,7 +65,7 @@ Before presenting AuronQ as mature financial infrastructure:
 - operate for an extended period under independent nodes/miners;
 - demonstrate recovery from failures and hostile peer behavior.
 
-## Longer-term
+## Long-term direction (not guaranteed)
 
 Potential future work should be evaluated only if it preserves the project's decentralization invariants:
 
