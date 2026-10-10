@@ -2,6 +2,13 @@
 
 ## Download / installation
 
+## User-tested fast-sync APK (separate experimental installation)
+
+**AuronQ Mobile 0.5.3 Two-Stage V2 Mempool TEST** — [Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-two-stage-v2-mempool-test-20261010/AuronQ-Mobile-0.5.3-Two-Stage-V2-Mempool-TEST.apk) · [Release with SHA-256 file](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-two-stage-v2-mempool-test-20261010).
+
+The project operator reports faster startup and working wallet functions. This build restores display of unconfirmed mempool transactions in the history feed. It is **not independently audited** and does not prove correctness of remote UTXO data; 3 distinct IP network groups do not prove 3 independent owners. Use this **isolated test package** only with nonvaluable test wallets. Do not uninstall the existing wallet or clear application data.
+
+
 **Current experimental release: v0.5.5 Alpha P2P.**
 
 - [Download standard Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.5-alpha-p2p/AuronQ-Mobile-0.5.5-alpha-p2p.apk)
