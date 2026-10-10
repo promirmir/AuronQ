@@ -88,21 +88,35 @@ func TestFreshHeaderCacheAnchorsExactMainnetGenesis(t *testing.T) {
 }
 
 func TestHeaderCacheRoundTripPreservesVerifiedAnchor(t *testing.T) {
-	cache, err := freshHeaderCache()
-	if err != nil {
-		t.Fatal(err)
-	}
-	path := filepath.Join(t.TempDir(), "headers", "mainnet.json")
-	if err := saveHeaderCache(path, cache); err != nil {
-		t.Fatal(err)
-	}
-	got, err := loadHeaderCache(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.VerifiedTip != cache.VerifiedTip || got.ChainWork != cache.ChainWork || got.NetworkID != mainnetNetworkID {
-		t.Fatalf("cache mismatch: got=%+v want=%+v", got, cache)
-	}
+    cache,err:=reviewedCheckpointCache()
+    if err!=nil {t.Fatal(err)}
+    path:=filepath.Join(t.TempDir(),"headers","mainnet.json")
+    if err:=saveHeaderCache(path,cache);err!=nil {t.Fatal(err)}
+    got,err:=loadHeaderCache(path)
+    if err!=nil {t.Fatal(err)}
+    if got.VerifiedHeight!=cache.VerifiedHeight ||
+       got.VerifiedTip!=cache.VerifiedTip ||
+       got.ChainWork!=cache.ChainWork || got.NetworkID!=mainnetNetworkID {
+        t.Fatalf("checkpoint not preserved got=%+v want=%+v",got,cache)
+    }
+}
+func TestMissingOrOldCacheUsesPinnedCheckpointWithoutFullReplay(t *testing.T) {
+    path:=filepath.Join(t.TempDir(),"header-cache.json")
+    got,err:=loadHeaderCache(path)
+    if err!=nil {t.Fatal(err)}
+    if got.VerifiedHeight!=verifiedCheckpointHeight ||
+      got.VerifiedTip!=verifiedCheckpointTip ||
+      len(got.History)<62 {
+        t.Fatalf("cold start must use immutable release checkpoint: %+v",got)
+    }
+    genesis,err:=freshHeaderCache()
+    if err!=nil {t.Fatal(err)}
+    if err:=saveHeaderCache(path,genesis);err!=nil {t.Fatal(err)}
+    got,err=loadHeaderCache(path)
+    if err!=nil {t.Fatal(err)}
+    if got.VerifiedHeight!=verifiedCheckpointHeight {
+       t.Fatalf("stale genesis cache should be upgraded to checkpoint: %d",got.VerifiedHeight)
+    }
 }
 
 
@@ -271,7 +285,7 @@ func TestHeaderSyncProgressFreshCacheAndPersistedHeight(t *testing.T) {
     if err := json.Unmarshal([]byte(raw), &progress); err != nil {
         t.Fatal(err)
     }
-    if progress.Height != 0 || progress.Tip != mainnetGenesisHash || progress.Network != mainnetNetworkID {
+    if progress.Height != verifiedCheckpointHeight || progress.Tip != verifiedCheckpointTip || progress.Network != mainnetNetworkID {
         t.Fatalf("unexpected fresh progress %+v", progress)
     }
     cache, err := freshHeaderCache()
@@ -288,7 +302,7 @@ func TestHeaderSyncProgressFreshCacheAndPersistedHeight(t *testing.T) {
     if err := json.Unmarshal([]byte(raw), &progress); err != nil {
         t.Fatal(err)
     }
-    if progress.Height != 0 || progress.Tip != mainnetGenesisHash {
+    if progress.Height != verifiedCheckpointHeight || progress.Tip != verifiedCheckpointTip {
         t.Fatalf("unexpected persisted progress %+v", progress)
     }
     if _, err := os.Stat(path); err != nil {
