@@ -58,6 +58,8 @@ public class MainActivity extends Activity {
     private static final int DANGER = Color.rgb(255, 111, 130);
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    // Network reachability is independent of potentially long AQM64 verification.
+    private final ExecutorService previewExecutor = Executors.newSingleThreadExecutor();
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private SharedPreferences prefs;
@@ -73,7 +75,8 @@ public class MainActivity extends Activity {
     private long verifiedHeight = -1;
     private String currentScreen = "home";
     private String lastHistoryKey = "";
-    private boolean liveBusy = false;
+    private volatile boolean liveBusy = false;
+    private volatile boolean previewBusy = false;
     private boolean networkReachable = false;
 
     private FrameLayout content;
@@ -127,6 +130,7 @@ public class MainActivity extends Activity {
     private final Runnable liveLoop = new Runnable() {
         @Override
         public void run() {
+            refreshNetworkPreview();
             refreshAll();
             handler.postDelayed(this, 5000);
         }
@@ -153,6 +157,7 @@ public class MainActivity extends Activity {
         setContentView(buildUi());
         loadWalletState();
         showScreen("home");
+        refreshNetworkPreview();
         refreshAll();
     }
 
@@ -557,22 +562,34 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Show a fast, explicitly unverified network status while the secure
+    // header chain is checked in the background. Never use this preview for
+    // spendable balances, transactions, or authorization decisions.
+    private void refreshNetworkPreview() {
+        if (previewBusy) return;
+        previewBusy = true;
+        previewExecutor.execute(() -> {
+            try {
+                String raw = Bridge.quorumSnapshot(prefs.getString("known_nodes", "[]"), 1);
+                runOnUiThread(() -> {
+                    // A preview must never replace a completed verified snapshot.
+                    if (verifiedHeight < 0 || liveBusy) {
+                        if (verifiedHeight < 0) applyNetworkPreview(raw);
+                    }
+                });
+            } catch (Exception ignored) {
+            } finally {
+                previewBusy = false;
+            }
+        });
+    }
+
     private void refreshAll() {
         if (liveBusy) return;
         liveBusy = true;
         executor.execute(() -> {
             try {
                 String knownNodes = prefs.getString("known_nodes", "[]");
-
-                // First establish reachability and show it immediately. Fresh
-                // installs may need to verify hundreds of memory-hard AQM64
-                // headers; that work must not look like "no connection".
-                try {
-                    String preview = Bridge.quorumSnapshot(knownNodes, 1);
-                    final String finalPreview = preview;
-                    runOnUiThread(() -> applyNetworkPreview(finalPreview));
-                } catch (Exception ignored) {
-                }
 
                 String snapshot = Bridge.quorumSnapshotVerified(knownNodes, headerCacheFile.getAbsolutePath(), 6);
                 JSONObject snapshotState = new JSONObject(snapshot);
