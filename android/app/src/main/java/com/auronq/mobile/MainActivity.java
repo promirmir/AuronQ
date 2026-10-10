@@ -1013,7 +1013,10 @@ public class MainActivity extends Activity {
                 .setNegativeButton(tr("Anuluj", "Cancel"), null)
                 .setPositiveButton(tr("Wyślij", "Send"), (d, w) ->
                         run(tr("Podpisywanie i wysyłanie…", "Signing and sending…"),
-                                () -> useLightMode ? Bridge.sendMultiLight(\n                                        prefs.getString("known_nodes", "[]"),\n                                        walletFile.getAbsolutePath(), password, to, amount)\n                                        : Bridge.sendMultiVerified(
+                                () -> useLightMode ? Bridge.sendMultiLight(
+                                        prefs.getString("known_nodes", "[]"),
+                                        walletFile.getAbsolutePath(), password, to, amount)
+                                        : Bridge.sendMultiVerified(
                                         prefs.getString("known_nodes", "[]"),
                                         walletFile.getAbsolutePath(),
                                         password,
