@@ -1,0 +1,90 @@
+name: AuronQ Mobile Fast Checkpoint APK
+
+on:
+  push:
+    branches:
+      - fix/android-checkpoint-fast-sync-20261010
+    paths:
+      - '.github/workflows/android-network-sync-test-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release-isolated-apk:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+
+      - name: Test Go code (including mobile synchronization)
+        run: |
+          go test ./...
+          go vet ./...
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK and NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+
+      - name: Install gomobile
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+
+      - name: Compile mobile Go bridge
+        run: |
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Build isolated test APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleSyncprobe
+
+      - name: Verify package and publish test APK checksum
+        shell: bash
+        run: |
+          APK="android/app/build/outputs/apk/syncprobe/app-syncprobe.apk"
+          test -s "$APK"
+          sha256sum "$APK" | tee /tmp/SHA256SUMS.txt
+
+      - name: Publish direct-download testing APK
+        shell: bash
+        env:
+          RELEASE_TAG: android-fast-sync-checkpoint-20261010
+        run: |
+          APK="android/app/build/outputs/apk/syncprobe/app-syncprobe.apk"
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "A test release already exists; refusing to overwrite its APK."
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" \
+            "$APK#AuronQ-Mobile-Fast-Checkpoint-Test-20261010.apk" \
+            "/tmp/SHA256SUMS.txt#SHA256SUMS-Fast-Checkpoint.txt" \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile - fast checkpoint sync (isolated test)" \
+            --notes "Experimental Android FAST-SYNC checkpoint test. Installs side by side under a separate application ID: does NOT replace or access your original wallet. Starts from a CI-verified, release-pinned AuronQ header checkpoint at height 1284 instead of re-verifying the genesis-to-checkpoint AQM64 history on each phone. Checks subsequent headers, difficulty and PoW. HISTORICAL HEADERS PRIOR TO CHECKPOINT ARE TRUSTED TO THE RELEASE. This is not equivalent to independent genesis-to-tip validation. Do not import wallets holding funds into this test app." \
+            --prerelease
