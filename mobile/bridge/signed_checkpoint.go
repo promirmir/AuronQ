@@ -17,7 +17,6 @@ import (
     "strings"
     "time"
 
-    aq "auronq/internal/auronq"
 )
 
 // The release-pinned key is independent of both GitHub TLS and the Mainnet's
@@ -122,7 +121,7 @@ func SignReviewedCheckpoint(cacheJSON []byte, base64PrivateSeed string, now time
     key:=ed25519.NewKeyFromSeed(seed)
     expected,err:=hex.DecodeString(checkpointSignerPublicHex)
     if err!=nil {return nil,err}
-    if !ed25519.PublicKey(key.Public().(ed25519.PublicKey)).Equal(expected) {
+    if hex.EncodeToString(key.Public().(ed25519.PublicKey)) != hex.EncodeToString(expected) {
         return nil,errors.New("signing seed does not match the public key pinned into AuronQ Mobile")
     }
     var cache headerCache
