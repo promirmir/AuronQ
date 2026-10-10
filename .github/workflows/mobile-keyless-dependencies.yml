@@ -1,0 +1,34 @@
+name: Prepare Sigstore Go dependency lockfile
+on:
+  push:
+    branches:
+      - feat/mobile-keyless-checkpoint-v055-20261010
+    paths:
+      - '.github/workflows/mobile-keyless-dependencies.yml'
+permissions:
+  contents: write
+jobs:
+  tidy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Freeze minimum reviewed Sigstore Go verifier dependencies
+        run: |
+          go get github.com/sigstore/sigstore-go@v1.1.4
+          go mod tidy
+          go test ./mobile/bridge -run 'TestSignedCheckpointRejectsTamperWrongKeyAndExpiredManifest' -count=1
+      - name: Commit resolved mod and sum to feature branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add go.mod go.sum
+          if ! git diff --cached --quiet; then
+            git commit -m 'deps: pin Sigstore Go verification dependencies'
+            git push
+          fi
