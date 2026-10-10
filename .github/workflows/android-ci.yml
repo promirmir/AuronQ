@@ -67,3 +67,11 @@ jobs:
       - name: Build Android APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug
+
+      - name: Upload fast-connect test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuronQ-Mobile-fast-connect-test-APK
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
