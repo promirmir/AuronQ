@@ -1,0 +1,77 @@
+name: Android 0.5.4 Alpha APK build and prerelease
+
+on:
+  push:
+    branches: [feat/android-checkpoint-maintenance-20261010]
+    paths:
+      - '.github/workflows/android-054-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Test code and verify build
+        run: |
+          go test ./...
+          go vet ./...
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install SDK/NDK
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Build native AuronQ bridge
+        run: |
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build regular and side-by-side APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleDebug :app:assembleSyncprobe
+      - name: Generate SHA-256 and pre-release (no overwrite)
+        shell: bash
+        run: |
+          set -euo pipefail
+          regular=android/app/build/outputs/apk/debug/app-debug.apk
+          isolated=android/app/build/outputs/apk/syncprobe/app-syncprobe.apk
+          test -s "$regular"
+          test -s "$isolated"
+          mkdir -p dist
+          cp "$regular" dist/AuronQ-Mobile-0.5.4-alpha.apk
+          cp "$isolated" dist/AuronQ-Mobile-0.5.4-alpha-Standalone-Test.apk
+          cd dist
+          sha256sum *.apk > SHA256SUMS.txt
+          if gh release view android-v0.5.4-alpha >/dev/null 2>&1; then
+            echo 'A 0.5.4 release already exists; refusing to overwrite immutable APKs.'
+            exit 1
+          fi
+          gh release create android-v0.5.4-alpha *.apk SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile 0.5.4 Alpha — checkpoint maintenance" \
+            --notes "Experimental Alpha. The wallet automatically persists new AQM64-verified headers and starts at a release-pinned checkpoint (height 1284). The GitHub repository also proposes updated release checkpoints for manual safety review at regular intervals; INSTALLED APKs DO NOT automatically accept new unsigned checkpoints from a URL. The original wallet's keys, encrypted storage format, address algorithm and transactions are unchanged. Standalone-Test uses a different Android application ID and does not touch the existing wallet. APKs are Android debug-signed: upgrading an existing differently signed APK may fail. BACK UP YOUR WALLET BEFORE ANY UPDATE; never uninstall your working app to force an update. This is not independently security audited." \
+            --prerelease
