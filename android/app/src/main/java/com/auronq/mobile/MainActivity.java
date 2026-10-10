@@ -295,8 +295,8 @@ public class MainActivity extends Activity {
         LinearLayout walletCard = card();
         walletCard.addView(section(tr("TWÓJ PORTFEL", "YOUR WALLET")));
         TextView note = text(tr(
-                "Adres i saldo są odczytywane z tej samej sieci AuronQ Mainnet, z której korzystają inni użytkownicy.",
-                "Your address and balance are read from the same AuronQ Mainnet used by other users."), 13, false);
+                "Saldo jest pokazywane dopiero po potwierdzeniu zgodności przez trzy grupy sieci. Nie jest to pełna lokalna weryfikacja blockchaina.",
+                "Your balance is shown only after three public network groups agree; this is not full local blockchain verification."), 13, false);
         note.setTextColor(MUTED);
         walletCard.addView(note, mt(8));
         Button openWallet = secondaryButton(tr("Otwórz portfel", "Open wallet"));
@@ -487,8 +487,8 @@ public class MainActivity extends Activity {
         root.addView(refresh, mt(14));
 
         TextView model = text(tr(
-                "AuronQ Mobile jest klientem weryfikującym nagłówki, nie pełnym nodem. Klucze pozostają lokalnie. Telefon utrzymuje własny cache zweryfikowanych nagłówków od genesis, sam sprawdza AQM64 PoW, difficulty, ciągłość hashy i reguły czasu, porównuje wiele peerów oraz rozgłasza podpisaną transakcję do wielu nodów. Pełna walidacja transakcji i UTXO nadal należy do full nodów.",
-                "AuronQ Mobile is a header-verifying light client, not a full node. Keys remain local. The phone keeps its own verified header cache from genesis and independently checks AQM64 PoW, difficulty, hash continuity and timestamp rules, compares multiple peers, and broadcasts signed transactions to multiple nodes. Full transaction and UTXO validation still belongs to full nodes."), 12, false);
+                "AuronQ Mobile w tym trybie nie weryfikuje całego AQM64 od genesis. Wymaga zgodnych danych z 3 publicznych grup sieci IP, co nie gwarantuje niezależności ich operatorów. Klucze pozostają lokalnie, podpisy są wykonywane na telefonie. Pełną walidację transakcji i UTXO wykonują pełne węzły. Nie traktuj tego modelu jak samodzielnej weryfikacji blockchaina.",
+                "This AuronQ Mobile mode does not independently verify the entire AQM64 chain from genesis. It requires agreement from 3 public IP network groups, which does not prove different node ownership. Keys and signing stay local. Full nodes validate transactions and UTXOs. Peer agreement is not independent cryptographic blockchain verification."), 12, false);
         model.setTextColor(MUTED);
         root.addView(model, mt(18));
 
