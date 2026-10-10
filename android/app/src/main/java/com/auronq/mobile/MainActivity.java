@@ -1,6 +1,7 @@
 package com.auronq.mobile;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -150,10 +151,32 @@ public class MainActivity extends Activity {
         if (!headerDir.exists()) headerDir.mkdirs();
         headerCacheFile = new File(headerDir, "mainnet-v1.json");
 
+        configureFirstInstallVerification();
         setContentView(buildUi());
         loadWalletState();
         showScreen("home");
         refreshAll();
+    }
+
+    // A brand-new installation still verifies every AQM64 header from the
+    // embedded Mainnet genesis. On memory-capable phones we use two independent
+    // 64 MiB AQM64 workers; low-memory phones retain the original one-worker
+    // behavior. No checkpoint signer, central key or trusted peer is added.
+    private void configureFirstInstallVerification() {
+        int workers = 1;
+        try {
+            ActivityManager manager =
+                    (ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            if (manager != null) {
+                ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
+                manager.getMemoryInfo(info);
+                workers = HeaderConcurrencyPolicy.workers(
+                        info.totalMem, info.availMem, info.lowMemory);
+            }
+        } catch (Exception ignored) {
+            // Fail closed to the original single-worker verifier.
+        }
+        Bridge.setHeaderValidationWorkers(workers);
     }
 
     @Override
