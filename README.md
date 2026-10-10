@@ -19,11 +19,13 @@ These are **published builds**, not claims of defect-free or production-ready op
 | Software | Published release | Download and details |
 | --- | --- | --- |
 | **Desktop / Full Node** | v1.7.13 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/v1.7.13) |
-| **AuronQ Mobile** | v0.5.3 Alpha · Android | [APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.3-alpha/AuronQ-Mobile-0.5.3-alpha.apk) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.3-alpha) · [Android guide](android/README.md) |
+| **AuronQ Mobile** | v0.5.4 Alpha · Android | [Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.4-alpha/AuronQ-Mobile-0.5.4-alpha.apk) · [Safe separate test APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.4-alpha/AuronQ-Mobile-0.5.4-alpha-Isolated-Test.apk) · [Release notes / checksums](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.4-alpha) · [Android guide](android/README.md) |
 | **Universal Miner** | v0.4.8 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) |
 | **Universal Miner, other platforms** | v0.4.6 Alpha · older builds | [Linux and portable CPU packages](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.6-alpha) |
 
-**Android APK identity (published v0.5.3 Alpha):** `AuronQ-Mobile-0.5.3-alpha.apk` · **9,574,566 bytes** · SHA-256:
+**Android upgrade caution:** v0.5.4 Alpha adds optional Ed25519-authenticated automatic checkpoint updates. Its automatic remote checkpoint publisher must first be activated with a private GitHub Actions signing secret; until then, the phone continues safely from its bundled checkpoint 1284. The APK is CI debug-signed and may **not** install as an in-place update of older builds. **Do not uninstall a working wallet or clear its private data to force an upgrade.** The isolated test APK uses a different application ID and is safer to evaluate first. See [Android setup and signing status](android/README.md). Previous v0.5.3 Alpha remains available as the known earlier release.
+
+**Legacy Android APK identity (published v0.5.3 Alpha):** `AuronQ-Mobile-0.5.3-alpha.apk` · **9,574,566 bytes** · SHA-256:
 `913e723a5b918ecf76bc923b599f5196b2a3340ec554897aa084b7193f1b520c`
 
 This fingerprint identifies the **published GitHub APK**, not necessarily a different build already installed on someone's phone. A matching version name is not sufficient evidence of binary identity. **Do not uninstall an existing working wallet or clear its data to investigate a download difference. Back up recovery material first.**
