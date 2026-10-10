@@ -20,6 +20,15 @@ android {
             minifyEnabled false
         }
 
+        // New fresh-install test; never touches old 0.5.3/0.5.5 wallets.
+        fast053parallel {
+            initWith debug
+            applicationIdSuffix '.fast053parallel'
+            versionNameSuffix '-parallel-verification-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ 0.5.3 Fast Verify TEST']
+        }
+
         // Test package is independent of any existing AuronQ wallet.
         // Never require users to uninstall a funded app to try this version.
         fast053 {
