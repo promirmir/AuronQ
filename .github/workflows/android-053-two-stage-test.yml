@@ -37,6 +37,9 @@ jobs:
             internal/auronq/ cmd/ go.mod go.sum network.json genesis.json
           grep -Fq 'private final ExecutorService deepVerifier = Executors.newSingleThreadExecutor()' android/app/src/main/java/com/auronq/mobile/MainActivity.java
           grep -Fq 'Bridge.quickAccountSnapshot(known, address, 50)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'Bridge.quickHistorySnapshot(known, address, 50)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'quickFetchAccount(knownJSON,address,limit,false)' mobile/bridge/quick_quorum.go
+          grep -Fq 'private final ExecutorService historyExecutor = Executors.newSingleThreadExecutor()' android/app/src/main/java/com/auronq/mobile/MainActivity.java
           grep -Fq 'Bridge.quorumSnapshotVerified(known, headerCacheFile.getAbsolutePath(), 0)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
           grep -Fq 'private void invalidateQuickAccount(String reason)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
           grep -Fq 'walletBalance = text("— AURQ", 29, true)' android/app/src/main/java/com/auronq/mobile/MainActivity.java
