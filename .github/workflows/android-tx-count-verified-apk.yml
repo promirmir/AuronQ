@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           test -s android/app/build/outputs/apk/txfix2/app-txfix2.apk
-          cp android/app/build/outputs/apk/txfix/app-txfix.apk AuronQ-Mobile-TX-Counts-Verified-Isolated-Test.apk
+          cp android/app/build/outputs/apk/txfix2/app-txfix2.apk AuronQ-Mobile-TX-Counts-Verified-Isolated-Test.apk
           sha256sum AuronQ-Mobile-TX-Counts-Verified-Isolated-Test.apk > SHA256SUMS-TX-VERIFIED.txt
           if gh release view android-ui-tx-counts-verified-test-20261010 >/dev/null 2>&1; then
             echo "Immutable test release exists; refusing to replace it."
