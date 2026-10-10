@@ -6,7 +6,7 @@
 
 **Open-source Proof-of-Work cryptocurrency · Public Mainnet · MIT License**
 
-[Project website](https://promirmir.github.io/AuronQ/) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
+[Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
 **Android wallet — fast synchronization:** **[AuronQ Mobile 0.5.6 Alpha — Fast Sync (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)** · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync) · [Installation guide](android/README.md). This Android alpha loads account information faster and preserves transaction history. It is experimental and has not undergone an independent security audit. Do not uninstall an existing funded wallet to upgrade.
 
@@ -87,6 +87,6 @@ Permissionless independent integrations are welcome: [Pool integration](POOL-INT
 
 ## Participate
 
-Read the source, operate a full node, test interoperability and report reproducible defects through [GitHub Issues](https://github.com/promirmir/AuronQ/issues), [Pull Requests](https://github.com/promirmir/AuronQ/pulls) or [Bitcointalk](https://bitcointalk.org/index.php?topic=5595868.0).
+Read the source, operate a full node, test interoperability and report reproducible defects through [GitHub Issues](https://github.com/promirmir/AuronQ/issues), [Pull Requests](https://github.com/promirmir/AuronQ/pulls) [Bitcointalk](https://bitcointalk.org/index.php?topic=5595868.0) or the [AuronQ Discord community](https://discord.gg/rmmNY9RhA).
 
 Distributed under the [MIT License](LICENSE). ML-DSA-87 is standardized, but that alone does not establish end-to-end post-quantum security.
