@@ -116,6 +116,7 @@ public class MainActivity extends Activity {
     private TextView walletAddressText;
     private TextView walletBalance;
     private EditText passwordInput;
+    private EditText passwordConfirmationInput;
     private Button backupButton;
     private Button copyButton;
     private Button sendShortcutButton;
@@ -341,6 +342,12 @@ public class MainActivity extends Activity {
         passwordInput = input(tr("Hasło portfela (min. 12 znaków)", "Wallet password (min. 12 characters)"));
         passwordInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         root.addView(passwordInput, mt(14));
+
+        // A second, independently entered value guards against a typo at wallet creation.
+        // Compare the exact values; never trim, normalize, or alter the encryption password.
+        passwordConfirmationInput = input(tr("Powtórz hasło portfela", "Repeat wallet password"));
+        passwordConfirmationInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        root.addView(passwordConfirmationInput, mt(8));
 
         LinearLayout r1 = row();
         Button createButton = primaryButton(tr("Utwórz", "Create"));
@@ -1033,11 +1040,24 @@ public class MainActivity extends Activity {
             return;
         }
         String password = passwordInput.getText().toString();
+        String confirmation = passwordConfirmationInput.getText().toString();
+        if (password.codePointCount(0, password.length()) < 12) {
+            passwordInput.setError(tr("Hasło musi mieć co najmniej 12 znaków", "Password must have at least 12 characters"));
+            passwordInput.requestFocus();
+            return;
+        }
+        if (!password.equals(confirmation)) {
+            passwordConfirmationInput.setError(tr("Hasła nie są identyczne", "Passwords do not match"));
+            passwordConfirmationInput.requestFocus();
+            return;
+        }
         run(tr("Tworzenie portfela…", "Creating wallet…"),
                 () -> Bridge.createWallet(walletFile.getAbsolutePath(), password),
                 value -> {
                     walletAddress = value;
                     lastHistoryKey = "";
+                    passwordInput.setText("");
+                    passwordConfirmationInput.setText("");
                     loadWalletState();
                     refreshAll();
                     toast(tr("Portfel utworzony", "Wallet created"));
@@ -1138,6 +1158,7 @@ public class MainActivity extends Activity {
                         walletAddress = "";
                         lastHistoryKey = "";
                         passwordInput.setText("");
+                        passwordConfirmationInput.setText("");
                         loadWalletState();
                         refreshAll();
                         toast(tr("Lokalny portfel usunięty", "Local wallet deleted"));
