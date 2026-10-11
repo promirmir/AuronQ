@@ -66,4 +66,17 @@ jobs:
 
       - name: Build Android APK
         working-directory: android
-        run: gradle --no-daemon :app:assembleDebug
+        run: gradle --no-daemon :app:assembleDebug :app:assemblePasswordcheck
+
+      - name: Verify isolated password-test APK
+        run: |
+          test -s android/app/build/outputs/apk/passwordcheck/app-passwordcheck.apk
+          sha256sum android/app/build/outputs/apk/passwordcheck/app-passwordcheck.apk
+
+      - name: Upload isolated password-test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuronQ-Password-Test-Android-APK
+          path: android/app/build/outputs/apk/passwordcheck/app-passwordcheck.apk
+          if-no-files-found: error
+          retention-days: 14
