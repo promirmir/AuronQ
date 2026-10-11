@@ -27,6 +27,14 @@ android {
             signingConfig signingConfigs.debug
             manifestPlaceholders = [appLabel:'AuronQ Mobile']
         }
+        // Safety: a separate package from the published 0.5.6 fast-sync APK.
+        passwordcheck {
+            initWith quick2stagev2
+            applicationIdSuffix '.quick2stagev2.passwordcheck'
+            versionNameSuffix '-password-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel:'AuronQ 0.5.6 (Password Test)']
+        }
         quick2stage {
             initWith debug
             applicationIdSuffix '.quick2stage'
