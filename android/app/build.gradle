@@ -49,6 +49,16 @@ android {
             signingConfig signingConfigs.debug
             manifestPlaceholders = [appLabel: 'AuronQ Mobile (Network Test)']
         }
+
+        // Temporary, isolated password-confirmation test APK. Never shares the
+        // installed production wallet's private Android application data.
+        passwordcheck {
+            initWith debug
+            applicationIdSuffix '.passwordcheck'
+            versionNameSuffix '-password-test'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ (Password Test)']
+        }
     }
 
     compileOptions {
