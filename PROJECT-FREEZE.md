@@ -1,7 +1,15 @@
 # AuronQ — Mainnet feature freeze and Android public download
 **Decision: 10 October 2026. Status: maintenance / verification, not a claim of a completed security audit.**
 
-## Currently published Android release (verified against GitHub Releases)
+## Current official Android release — correction as of 12 October 2026
+
+- **Canonical Android APK:** [AuronQ Mobile 0.5.6 Alpha — Password Confirmed](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk).
+- **Published APK SHA-256:** `09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5`.
+- [Official release metadata](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed). The Android package identifier is `com.auronq.mobile.quick2stagev2.passwordcheck`, different from the prior Fast Sync APK; it uses CI debug signing, so it **does not install as an in-place update**. Do not uninstall a funded wallet without verified recovery.
+- **Current project/release navigation:** [PROJECT-STATUS.md](PROJECT-STATUS.md). The 10 October record below is kept unchanged as historical evidence, **not current download advice**.
+- Neither a version number nor a published checksum proves the light wallet has been professionally audited; the scaling and wallet-safety issues remain open.
+
+## Historical 10 October 2026 Android release snapshot (superseded)
 
 - **Current Android APK:** [AuronQ Mobile 0.5.6 Alpha — Fast Sync](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)
 - **APK SHA-256 (GitHub Release asset):** `e6613f0989a25b3d4d1d191b815d64388f9bac91f69c2336a1bf23c5af043ffa`
