@@ -15,6 +15,8 @@
 | Restrictions on consensus changes | [MAINNET-CHANGE-POLICY.md](MAINNET-CHANGE-POLICY.md) |
 | Current maintenance and acceptance gates | [PROJECT-FREEZE.md](PROJECT-FREEZE.md); [STABILIZATION.md](STABILIZATION.md) |
 | Independently operated nodes and survival testing | [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md) |
+| Operator handoff and founder-free acceptance | [Independent operation checklist](docs/INDEPENDENT-OPERATION.md) |
+| Browse all project documentation | [Categorized documentation index](docs/README.md) |
 | Security limitations and private reports | [SECURITY.md](SECURITY.md) |
 | Current software / installation guidance | [README.md](README.md); [GitHub Releases](https://github.com/promirmir/AuronQ/releases) |
 | Independent exchange technical integration | [EXCHANGE-INTEGRATION.md](EXCHANGE-INTEGRATION.md); [EXCHANGE-OPERATOR-RUNBOOK.md](EXCHANGE-OPERATOR-RUNBOOK.md) |

@@ -77,3 +77,5 @@ Potential future work should be evaluated only if it preserves the project's dec
 - protocol improvements only through explicit versioning and public review.
 
 See [DECENTRALIZATION.md](DECENTRALIZATION.md), [THREAT-MODEL.md](THREAT-MODEL.md) and [SECURITY.md](SECURITY.md).
+
+**Criteria for independent operation:** [Operator handoff and witnessed independence drill](docs/INDEPENDENT-OPERATION.md). A development freeze is not proof that these checks have passed.

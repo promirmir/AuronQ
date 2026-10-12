@@ -113,7 +113,7 @@ Mainnet genesis is created only after the consensus rules are frozen and this ma
 
 Completed in the internal pre-release audit: Go unit/integration suite, `go vet`, race-enabled suite during hardening, Windows/Linux cross-builds, production-parameter AQM64 vector, ML-DSA-87 cross-backend interoperability against OpenSSL 3.5.5, bounded-sync/fork hardening review and basic per-IP rate limiting.
 
-Still external/open: independent security review, extended fuzzing, multi-provider hostile public-network soak, distributed request-flood/eclipsing/Sybil tests, independent AQM64 implementation/economic study, and independently reproduced byte-identical release builds. See `AUDIT-2026-10-02.md`.
+Still external/open: independent security review, extended fuzzing, multi-provider hostile public-network soak, distributed request-flood/eclipsing/Sybil tests, independent AQM64 implementation/economic study, and independently reproduced byte-identical release builds. See the [historical internal audit](docs/archive/mainnet-launch/AUDIT-2026-10-02.md).
 
 ## 2026-10-02 rc3 zero-touch bootstrap verification
 
