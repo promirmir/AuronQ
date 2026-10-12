@@ -1,0 +1,52 @@
+name: Monitor official AuronQ release integrity
+
+on:
+  pull_request:
+    paths:
+      - '.github/release-integrity-baseline.json'
+      - '.github/workflows/release-integrity-watch.yml'
+      - 'scripts/verify_release_integrity.py'
+      - 'scripts/test_verify_release_integrity.py'
+  push:
+    branches: [main]
+    paths:
+      - '.github/release-integrity-baseline.json'
+      - '.github/workflows/release-integrity-watch.yml'
+      - 'scripts/verify_release_integrity.py'
+      - 'scripts/test_verify_release_integrity.py'
+  schedule:
+    - cron: '37 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-integrity-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify-official-release-integrity:
+    name: Pinned official release assets and tags
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test integrity monitor against tampering and tag changes
+        run: python3 -m unittest discover -s scripts -p 'test_verify_release_integrity.py' -v
+
+      - name: Compare immutable source pins against published release metadata
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/verify_release_integrity.py --metadata-only
+
+      - name: Independently SHA-256 hash published downloads
+        if: github.event_name != 'pull_request'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/verify_release_integrity.py

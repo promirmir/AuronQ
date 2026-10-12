@@ -62,6 +62,10 @@ Canonical block files are replayed to reconstruct consensus state on node startu
 
 Current Windows binaries are not Authenticode-signed. Users should download only from the official GitHub Releases page and verify the published SHA-256 checksum before execution.
 
+## Published release integrity
+
+The [read-only release integrity workflow](.github/workflows/release-integrity-watch.yml) checks the officially linked Desktop, Android and Miner asset SHA-256 hashes and source tag references against a [separate Git history baseline](.github/release-integrity-baseline.json). It detects unexpected asset/tag changes after publication; it cannot stop administrator tampering, and it does not authenticate an independently trusted signing key. GitHub **immutable releases for future publications** and release tag protection still require repository settings updates. Do not treat checksum-monitor success as an independent binary security audit.
+
 ## Responsible claims
 
 Do not advertise AuronQ as "unhackable", "quantum proof forever", independently audited, formally verified or ASIC-proof.
