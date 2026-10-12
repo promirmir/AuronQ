@@ -9,6 +9,7 @@ They are **not recommended downloads** and are intentionally kept out of the rep
 - `releases/` — detailed historical `CHANGES-*` files.
 - `checksums/` — historical checksum files that predate the current release pages.
 - `rc/` — release-candidate notes, old startup documents and early build verification.
+- [`mainnet-launch/`](mainnet-launch/README.md) — original 2 October 2026 internal audit, genesis ceremony and launch record; **historical only, do not rerun genesis**.
 
 For supported/current downloads use:
 
