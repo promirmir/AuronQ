@@ -20,7 +20,10 @@
     "wallets_allowed": true,
     "mining_pools_allowed": true,
     "independent_review_encouraged": true,
-    "third_party_integrations_are_independent": true
+    "third_party_integrations_are_independent": true,
+    "project_initiated_listing_outreach": "on_hold",
+    "outreach_status_as_of": "2026-10-12",
+    "outreach_status_notice": "https://github.com/promirmir/AuronQ/blob/main/LISTING-STATUS.md"
   },
   "consensus": {
     "ledger": "UTXO",
