@@ -31,6 +31,7 @@ AuronQ is intended to be integrated from verifiable public information rather th
 - Protocol specification: [PROTOCOL.md](PROTOCOL.md)
 - AQM64 Proof-of-Work: [AQM64.md](AQM64.md)
 - Pool integration: [POOL-INTEGRATION.md](POOL-INTEGRATION.md)
+- Independent exchange operator runbook (node, deposit/reorg checklist): [EXCHANGE-OPERATOR-RUNBOOK.md](EXCHANGE-OPERATOR-RUNBOOK.md)
 - Releases: https://github.com/promirmir/AuronQ/releases
 - Public project site: https://promirmir.github.io/AuronQ/
 - Public explorer example: https://mir.taild63f46.ts.net/explorer

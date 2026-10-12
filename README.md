@@ -69,7 +69,7 @@ These links refer to **third-party services**; they are not operated by AuronQ a
 
 **Use AURQ-specific pages, not data for similarly named coins.** External statistics may be stale, incomplete or mistaken (including mining rewards and network hashrate). The source of consensus truth is a locally validating full node, not a pool, aggregator or Explorer.
 
-Permissionless independent integrations are welcome: [Pool integration](POOL-INTEGRATION.md) · [Exchange integration](EXCHANGE-INTEGRATION.md) · [Machine-readable metadata](auronq-project.json).
+Permissionless independent integrations are welcome: [Pool integration](POOL-INTEGRATION.md) · [Exchange integration policy](EXCHANGE-INTEGRATION.md) · [Self-service exchange operator runbook](EXCHANGE-OPERATOR-RUNBOOK.md) · [Machine-readable metadata](auronq-project.json).
 
 **Independent exchange support:** Third-party trading platforms may independently evaluate and integrate AURQ without requesting project approval, subject to their own legal, security and operational review. The project contact has paused only its own exchange-listing applications and commercial negotiations pending regulatory review. [Dated outreach record](LISTING-STATUS.md).
 

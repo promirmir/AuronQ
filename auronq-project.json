@@ -49,7 +49,8 @@
     "pow_spec": "https://github.com/promirmir/AuronQ/blob/main/AQM64.md",
     "exchange_integration_policy": "https://github.com/promirmir/AuronQ/blob/main/EXCHANGE-INTEGRATION.md",
     "releases": "https://github.com/promirmir/AuronQ/releases",
-    "explorer_example": "https://mir.taild63f46.ts.net/explorer"
+    "explorer_example": "https://mir.taild63f46.ts.net/explorer",
+    "exchange_operator_runbook": "https://github.com/promirmir/AuronQ/blob/main/EXCHANGE-OPERATOR-RUNBOOK.md"
   },
   "risk_notice": "AuronQ is a young public network and has not yet received an independent professional security or cryptographic audit. Third-party integrations must perform their own technical, legal, security and operational review."
 }
