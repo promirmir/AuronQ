@@ -23,7 +23,9 @@
     "third_party_integrations_are_independent": true,
     "project_initiated_listing_outreach": "on_hold",
     "outreach_status_as_of": "2026-10-12",
-    "outreach_status_notice": "https://github.com/promirmir/AuronQ/blob/main/LISTING-STATUS.md"
+    "outreach_status_notice": "https://github.com/promirmir/AuronQ/blob/main/LISTING-STATUS.md",
+    "third_party_listing_decision": "independent_operator_discretion_subject_to_applicable_law",
+    "project_outreach_pause_does_not_restrict_third_parties": true
   },
   "consensus": {
     "ledger": "UTXO",
