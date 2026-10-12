@@ -10,8 +10,6 @@
 
 **Official current Android wallet — password confirmation:** **[AuronQ Mobile 0.5.6 Alpha — Password Confirmed (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk)** · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed) · [Installation guide](android/README.md). This Android alpha retains the released 0.5.6 Fast Sync code and requires two matching password entries before creating a wallet. This is the **current official AuronQ Android release** (still experimental Alpha), replacing the older 0.5.6 Fast Sync build as the recommended download. Because the published APK has a different Android application ID, Android installs it as a **separate app**, not as an in-place update. It cannot access the older app's wallet files; users must securely back up and verify recovery before migrating. Experimental and not independently audited; do not uninstall an existing funded wallet to switch versions.
 
-**Exchange outreach status (12 October 2026):** Project-initiated exchange listing inquiries and negotiations are **on hold** pending legal/regulatory review. No new listing fee, AURQ transfer/allocation, market-making or liquidity commitment is authorized. Independent third-party technical integration remains permissionless and subject to each operator's own compliance and due diligence. [Read the current listing/outreach status](LISTING-STATUS.md).
-
 **Project state — maintenance/freeze:** the Mainnet consensus and existing desktop v1.7.13 are held unchanged; no new features or node rollouts are scheduled. Security/availability fixes still require review and testing. [Release/freeze decision](PROJECT-FREEZE.md).
 
 AuronQ is a public UTXO Layer-1 network written in Go. Full nodes independently validate transactions and blocks using AQM64 Proof of Work and ML-DSA-87 transaction signatures. **Mainnet is live, but the project remains experimental and in stabilization.**
@@ -72,6 +70,8 @@ These links refer to **third-party services**; they are not operated by AuronQ a
 **Use AURQ-specific pages, not data for similarly named coins.** External statistics may be stale, incomplete or mistaken (including mining rewards and network hashrate). The source of consensus truth is a locally validating full node, not a pool, aggregator or Explorer.
 
 Permissionless independent integrations are welcome: [Pool integration](POOL-INTEGRATION.md) · [Exchange integration](EXCHANGE-INTEGRATION.md) · [Machine-readable metadata](auronq-project.json).
+
+**Independent exchange support:** Third-party trading platforms may independently evaluate and integrate AURQ without requesting project approval, subject to their own legal, security and operational review. The project contact has paused only its own exchange-listing applications and commercial negotiations pending regulatory review. [Dated outreach record](LISTING-STATUS.md).
 
 ## Documentation
 

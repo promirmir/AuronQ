@@ -2,12 +2,6 @@
 
 AuronQ is a public, open-source Proof-of-Work cryptocurrency network.
 
-## Project-initiated exchange outreach — on hold (12 October 2026)
-
-Project-initiated listing inquiries and commercial listing negotiations are currently **paused** pending legal and regulatory assessment. Requests to suspend existing discussions have been sent to previously contacted exchanges; their confirmation is pending. This pause is not an assertion that no third party may independently assess or integrate the public network. No third party is authorized to promise listing fees, transfers of AURQ, liquidity or market-making commitments on the project's behalf.
-
-See [current exchange outreach status](LISTING-STATUS.md). This operational statement is **not** a determination of issuer status or regulatory exemptions under MiCA.
-
 ## Permissionless integration
 
 Independent third parties may, without prior project approval:
@@ -22,6 +16,10 @@ Independent third parties may, without prior project approval:
 No exclusive integration partner exists, and no third party receives authority over AuronQ consensus by integrating the network.
 
 Any exchange, service or developer remains independently responsible for legal/regulatory compliance, security review, custody design, operational risk, user disclosures and its own listing standards. Inclusion here is **not** an endorsement of any third-party service and does not guarantee a listing.
+
+**Scope of this policy:** It removes any project-side permission requirement for compatible technical integration; it does not waive laws, authorize an unlawful offer, certify compliance with MiCA, or establish that AURQ has no identifiable issuer. Independent decisions to list AURQ require the exchange's own technical, compliance and risk assessment.
+
+**Project contact:** Project-initiated exchange listing applications and commercial negotiations have been paused pending legal/regulatory review. This does not suspend or prohibit independently initiated third-party integrations. See the [dated outreach record](LISTING-STATUS.md).
 
 ## Public verification
 
