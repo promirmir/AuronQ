@@ -6,7 +6,7 @@
 
 **Open-source Proof-of-Work cryptocurrency · Public Mainnet · MIT License**
 
-[Project status & canonical documentation](PROJECT-STATUS.md) · [Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Roadmap](ROADMAP.md) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
+[Documentation index](docs/README.md) · [Project status](PROJECT-STATUS.md) · [Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Roadmap](ROADMAP.md) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
 **Official current Android wallet — password confirmation:** **[AuronQ Mobile 0.5.6 Alpha — Password Confirmed (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk)** · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed) · [Installation guide](android/README.md). This Android alpha retains the released 0.5.6 Fast Sync code and requires two matching password entries before creating a wallet. This is the **current official AuronQ Android release** (still experimental Alpha), replacing the older 0.5.6 Fast Sync build as the recommended download. Because the published APK has a different Android application ID, Android installs it as a **separate app**, not as an in-place update. It cannot access the older app's wallet files; users must securely back up and verify recovery before migrating. Experimental and not independently audited; do not uninstall an existing funded wallet to switch versions.
 
@@ -80,6 +80,7 @@ Permissionless independent integrations are welcome: [Pool integration](POOL-INT
 | Overview | [Whitepaper](WHITEPAPER.md) · [FAQ](FAQ.md) · [Roadmap](ROADMAP.md) |
 | Installation | [Start here](START-HERE.md) · [Windows](README-WINDOWS.md) · [Android](android/README.md) · [Miner](UNIVERSAL-MINER-GUIDE.md) · [GPU guide](GPU-MINER-GUIDE.md) |
 | Network | [Mainnet](MAINNET.md) · [Protocol](PROTOCOL.md) · [Network independence](NETWORK-INDEPENDENCE.md) |
+| Independent operation | [Operator handoff & acceptance tests](docs/INDEPENDENT-OPERATION.md) · [Documentation directory](docs/README.md) |
 | Safety and maintenance | [Security](SECURITY.md) · [Threat model](THREAT-MODEL.md) · [Test matrix](TEST-MATRIX.md) · [Stabilization](STABILIZATION.md) |
 
 ## Participate
