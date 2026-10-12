@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "repository": "promirmir/AuronQ",
+  "recorded_at_utc": "2026-10-12",
+  "purpose": "Detect changes to three publicly advertised release tags, GitHub Release identities, assets and downloaded bytes; read-only, not immutable-release enforcement.",
+  "releases": [
+    {
+      "tag": "v1.7.13",
+      "commit": "11f082dc5cf53102b0104db2b9a38f3b51521301",
+      "release_id": 403148314,
+      "assets": {
+        "AuronQ-1.7.13-Linux-amd64.tar.gz": {
+          "size": 2769997,
+          "sha256": "2bdd1ffa72ca99c7395a146d21943e4aedcabe24cde123b5af8ff3c6c640ecb6"
+        },
+        "AuronQ-1.7.13-Windows-x64.zip": {
+          "size": 5871692,
+          "sha256": "7a7ce3d0b31b290bb6a3e43ab357ec6977ee4e7098a7d950594eda6cb64b2ba1"
+        },
+        "SHA256SUMS.txt": {
+          "size": 195,
+          "sha256": "355ac4ed7ec010bc19812113738713af7bd2c8edb3b19a9eb1c84392ab07956e"
+        }
+      }
+    },
+    {
+      "tag": "android-v0.5.6-alpha-password-confirmed",
+      "commit": "2b63ae026c3ab56823946497ddc5a5c94340948b",
+      "release_id": 409345537,
+      "assets": {
+        "AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk": {
+          "size": 9626478,
+          "sha256": "09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5"
+        },
+        "SHA256SUMS.txt": {
+          "size": 120,
+          "sha256": "6f9278fce46749a67300faa6736a41a713020a40f25b9825f7b893d6395a8a14"
+        }
+      }
+    },
+    {
+      "tag": "miner-v0.4.8-alpha",
+      "commit": "ffd8facf8f7d684e3881503827bada48891aa6bb",
+      "release_id": 407314443,
+      "assets": {
+        "AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz": {
+          "size": 10196477,
+          "sha256": "ccea8334c6705f8350a267a1b6f84a24284f3fb9db51e7c1794b96e7bb86cd48"
+        },
+        "AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip": {
+          "size": 16884290,
+          "sha256": "ad8a9aa75d734b5bf7ecbe5f3595896f2db4b17c8196395940c3a0dcfea711ee"
+        },
+        "SHA256SUMS-AURONQ-MINER-v0.4.8.txt": {
+          "size": 116,
+          "sha256": "9632e9f15c01c403b0a0a6a2104e477d53cb57a162ebeb8d68b99b14be593e2f"
+        },
+        "SHA256SUMS-LINUX-0.4.8.txt": {
+          "size": 111,
+          "sha256": "ab4ed1f5f8ff058cbef589fff8f5eae6af949163806f99b47ed564f644cc8099"
+        }
+      }
+    }
+  ]
+}
