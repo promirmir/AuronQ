@@ -16,6 +16,18 @@ AuronQ is a public UTXO Layer-1 network written in Go. Full nodes independently 
 
 > **Security notice:** The complete consensus, wallet, peer-to-peer and cryptographic implementations have not received an independent professional security audit. Do not store substantial value or treat this software as mature financial infrastructure.
 
+## Independent AuronQ ecosystem — pools and tracking
+
+Community-operated resources are listed here for visibility, not as endorsements or independently verified measurements.
+
+| Type | Independent resources |
+| --- | --- |
+| **Public mining pools** | [MeshPool — AuronQ](https://meshpool.net/pool/auronq-main) · [RPlant — AuronQ](https://pool.rplant.xyz/#auronq#connect) |
+| **Independent network tracking** | [MiningChamp — AuronQ](https://miningchamp.com/coin/auronq) · [CPU-Mining.info — AURQ](https://cpu-mining.info/coins/AURQ) |
+| **Third-party miner** | [MeshMiner 0.8.35](https://github.com/totom9000/meshminer/releases/tag/v.0.8.35) |
+
+Third-party hashrate, worker counts and pool-share estimates may be stale or inconsistent. They are not proof of actual network-wide mining distribution. More context: [Independent ecosystem](#independent-ecosystem).
+
 ## Downloads
 
 These are **published builds**, not claims of defect-free or production-ready operation. Each download points to a specific GitHub Release.
