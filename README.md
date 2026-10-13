@@ -41,7 +41,7 @@ Third-party hashrate, worker counts and pool-share estimates may be stale or inc
 
 ## Downloads
 
-These are **published builds**, not claims of defect-free or production-ready operation. Each download points to a specific GitHub Release.
+These are **published builds**, not claims of defect-free or production-ready operation. Each download points to a specific GitHub Release. **Release references verified 14 October 2026.** Historical ANN posts and third-party aggregators may cite older versions; use this table and [GitHub Releases](https://github.com/promirmir/AuronQ/releases) for current downloads, and [Mainnet identifiers](MAINNET.md) to verify network identity.
 
 | Software | Published release | Download and details |
 | --- | --- | --- |
