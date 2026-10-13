@@ -74,7 +74,7 @@ Before enabling deposits or withdrawals, demonstrate:
 
 **Release hold point:** Do not switch on customer deposits/withdrawals just because an RPC works or a listing contact agrees. First resolve or accept with documented mitigations any release-blocking wallet/security issues, test custody recovery and record sign-off for the exact node/release version.
 
-**Current public reports to review (12 October 2026):** [desktop wallet unlock/send failure #134](https://github.com/promirmir/AuronQ/issues/134) and [Android fresh-install scalability blocker #149](https://github.com/promirmir/AuronQ/issues/149). These are unresolved engineering reports, **not proof of a consensus failure**. An exchange must independently validate its own wallet custody stack rather than assuming user-facing wallet issues are irrelevant.
+**Public issue status checked 14 October 2026:** [Android fresh-install scalability and safe-balance report #149](https://github.com/promirmir/AuronQ/issues/149) remains **open**. The [Desktop wallet password-unavailable support report #134](https://github.com/promirmir/AuronQ/issues/134) was **closed on 13 October 2026 without a confirmed software defect**; this closure does not establish that the wallet implementation was independently audited or repaired. Neither report by itself proves a consensus failure. Exchanges must independently validate their own custody, signing, deposit and withdrawal systems.
 
 
 ## 5. Autonomous integration and disclosure
