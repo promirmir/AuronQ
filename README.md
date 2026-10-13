@@ -8,7 +8,7 @@
 
 ## Exchange listings & independent integration
 
-**Readiness status: experimental, not independently audited or exchange-certified.** [See the evidence-based exchange readiness and final archive gate](EXCHANGE-READINESS.md).
+**Readiness status: experimental, not independently audited or exchange-certified.** [See the evidence-based exchange readiness and final archive gate](EXCHANGE-READINESS.md). [Community handoff and operator-exit checklist](COMMUNITY-HANDOFF.md).
 
 **AURQ can be independently evaluated and listed by cryptocurrency exchanges without prior project approval or permission.** Exchanges and other third parties may integrate AuronQ deposits, withdrawals, full nodes, wallets and indexers under their own technical, legal and operational responsibility.
 
