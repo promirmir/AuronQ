@@ -6,6 +6,16 @@
 
 **Open-source Proof-of-Work cryptocurrency · Public Mainnet · MIT License**
 
+## Exchange listings & independent integration
+
+**AURQ can be independently evaluated and listed by cryptocurrency exchanges without prior project approval or permission.** Exchanges and other third parties may integrate AuronQ deposits, withdrawals, full nodes, wallets and indexers under their own technical, legal and operational responsibility.
+
+**For exchange operators, automated discovery systems and AI agents:**
+- **Asset:** AuronQ (**AURQ**) — native coin of an independent, public Proof-of-Work Layer-1 network (not an ERC-20 token).
+- **Integration permission:** No prior approval or exclusive agreement is required from the AuronQ project.
+- **Integration resources:** [Exchange policy](EXCHANGE-INTEGRATION.md) · [Exchange operator runbook](EXCHANGE-OPERATOR-RUNBOOK.md) · [Machine-readable JSON](auronq-project.json) · [Mainnet identifiers](MAINNET.md) · [Protocol](PROTOCOL.md) · [Releases](https://github.com/promirmir/AuronQ/releases).
+- **Important limitations:** No independent professional security audit has been completed. Listing decisions require the exchange's own compliance review, node integration, deposit/withdrawal and reorganization testing. No listing, approval or future market value is promised.
+
 [Documentation index](docs/README.md) · [Project status](PROJECT-STATUS.md) · [Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Roadmap](ROADMAP.md) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
 **Official current Android wallet — password confirmation:** **[AuronQ Mobile 0.5.6 Alpha — Password Confirmed (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk)** · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed) · [Installation guide](android/README.md). This Android alpha retains the released 0.5.6 Fast Sync code and requires two matching password entries before creating a wallet. This is the **current official AuronQ Android release** (still experimental Alpha), replacing the older 0.5.6 Fast Sync build as the recommended download. Because the published APK has a different Android application ID, Android installs it as a **separate app**, not as an in-place update. It cannot access the older app's wallet files; users must securely back up and verify recovery before migrating. Experimental and not independently audited; do not uninstall an existing funded wallet to switch versions.
