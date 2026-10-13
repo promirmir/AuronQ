@@ -16,14 +16,18 @@ AuronQ (AURQ) is a native public PoW Layer-1 coin. [Independent listings require
 
 | Gate | Current evidence | State / acceptance evidence required |
 |---|---|---|
-| Wallet safety | [Desktop password/decryption report #134](https://github.com/promirmir/AuronQ/issues/134) | **OPEN:** reproduce with non-sensitive test fixtures, establish root cause, test backward-compatible recovery and signing; never ask for funded wallet seeds |
-| Mobile wallet | [Android cold-start and balance report #149](https://github.com/promirmir/AuronQ/issues/149) | **OPEN:** demonstrate zero-cache install, correct unknown/stale display, safe spend refusal on disagreement, and backed-up upgrade/recovery |
+| Wallet safety | [Desktop password report #134](https://github.com/promirmir/AuronQ/issues/134) | **OPERATOR-REPORTED RESOLVED (2026-10-13):** project operator attributes the incident to a forgotten password, not a demonstrated decryption defect, and reports wallets functioning normally. Treat this as a support case, not a confirmed software vulnerability. Independent backup/recovery and signing regression evidence remains desirable. |
+| Mobile wallet | [Android future-scale validation #149](https://github.com/promirmir/AuronQ/issues/149) | **CURRENT FUNCTIONALITY REPORTED WORKING (2026-10-13):** project operator reports wallet functionality normal. #149 also requests future-scale, zero-cache and adversarial balance-state evidence at 10k–1M blocks; those acceptance tests remain **NOT INDEPENDENTLY VERIFIED**, which is not evidence of a present malfunction. |
 | Consensus / cryptography | [Security policy](SECURITY.md), [test matrix](TEST-MATRIX.md) | **NOT INDEPENDENTLY AUDITED:** external review of UTXO, supply bounds, ML-DSA signatures, AQM64, difficulty, reorgs, serialization and P2P; publish scope, reproducible findings and remediations |
 | Independent operation | [Operator handoff checklist](docs/INDEPENDENT-OPERATION.md), [network independence](NETWORK-INDEPENDENCE.md) | **NOT PROVEN:** three distinct independently controlled archival/full nodes, diverse networks, independent miners, fresh bootstrap and block relay with original services offline; dated logs/chainwork/tip proofs |
 | Exchange custody integration | [Operator runbook](EXCHANGE-OPERATOR-RUNBOOK.md) | **NOT CERTIFIED:** exchange-owned full-node validation, persistent deposit indexing, reorg rollback, safe signing/withdrawals, crash and partition drills, accounting and maturity tests |
 | Software provenance | [Project status](PROJECT-STATUS.md), [release checksums](.github/release-integrity-baseline.json) | **PARTIAL:** reproducible signed/provenanced source and release chain where possible; third-party byte verification; immutable future releases and protected tags |
 | Mining and network risk | [Pool diversity #66](https://github.com/promirmir/AuronQ/issues/66) | **OPEN:** independently operated mining capacity and documented concentration/reorg threat assessment, not inferred solely from a pool dashboard |
 | Legal and market listing | [Integration policy](EXCHANGE-INTEGRATION.md), [listing status](LISTING-STATUS.md) | **OPERATOR RESPONSIBILITY:** exchange performs its own local legal/compliance, liquidity and custody assessment; project makes no readiness or listing guarantee |
+
+## User/operator reports versus independently tested claims
+
+As of 2026-10-13 the project operator reports both desktop and Android wallets working normally and attributes #134 to a forgotten password. These statements correct the earlier presentation of those issues as confirmed current defects. They do **not** substitute for an independent wallet security audit or prospective stress testing. Do not imply that a user who has forgotten the correct encryption password can recover funds without verified recovery material.
 
 ## Evidence format
 
