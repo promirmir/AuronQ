@@ -32,7 +32,11 @@ AuronQ is intended to be integrated from verifiable public information rather th
 - AQM64 Proof-of-Work: [AQM64.md](AQM64.md)
 - Pool integration: [POOL-INTEGRATION.md](POOL-INTEGRATION.md)
 - Independent exchange operator runbook (node, deposit/reorg checklist): [EXCHANGE-OPERATOR-RUNBOOK.md](EXCHANGE-OPERATOR-RUNBOOK.md)
-- Releases: https://github.com/promirmir/AuronQ/releases
+- Official release index (current downloads, version history and checksums): https://github.com/promirmir/AuronQ/releases
+- Current Desktop/full-node release: [v1.7.13](https://github.com/promirmir/AuronQ/releases/tag/v1.7.13) (Windows x64 / Linux amd64)
+- Current Android light-wallet release: [0.5.6 Alpha — Password Confirmed](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed) (separate app ID; [migration safety notice](android/README.md))
+- Current Universal Miner release: [v0.4.8 Alpha](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha) (Windows x64 / Linux amd64)
+- Historical ANN posts and third-party aggregator entries may reflect earlier releases. Current download references are those in the [official README](README.md) and linked GitHub Releases; software versions do not alter Mainnet identity.
 - Public project site: https://promirmir.github.io/AuronQ/
 - Public explorer example: https://mir.taild63f46.ts.net/explorer
 - Machine-readable project metadata: [auronq-project.json](auronq-project.json)
