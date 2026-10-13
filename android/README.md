@@ -2,12 +2,15 @@
 
 ## Download
 
-**Current recommended test build: AuronQ Mobile 0.5.6 Alpha — Fast Sync**
+**Current official download (14 October 2026): AuronQ Mobile 0.5.6 Alpha — Password Confirmed (Fast Sync).**
 
-- [Download Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-fast-sync/AuronQ-Mobile-0.5.6-Alpha-Fast-Sync.apk)
-- [Release notes and SHA-256 checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync)
+- [Download the official Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk)
+- [Release notes and SHA-256 checksums](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed)
+- APK SHA-256: `09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5`.
 
-Faster wallet synchronization while preserving wallet creation, receiving, sending, and transaction history, including pending transactions. This is an **experimental Android alpha**, not an independently audited financial application. The Fast Sync build uses a separate app identity and does not upgrade or migrate existing wallet files. Never uninstall an existing funded wallet or erase its data to install a different APK. Keep secure offline recovery material; do not test with valuable funds.
+This published build retains the 0.5.6 Fast Sync wallet behavior and adds two matching password fields during wallet creation. The older [0.5.6 Fast Sync release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-fast-sync) is historical, **not** the current recommended download.
+
+**Compatibility warning:** the current APK uses application ID `com.auronq.mobile.quick2stagev2.passwordcheck` and a CI debug signing certificate. It installs separately rather than updating the previous application in place, and cannot automatically access another installation's wallet files. **Do not uninstall an existing funded wallet, clear its data or assume automatic wallet migration.** Preserve and verify offline wallet recovery material first. The Android wallet is an Alpha light client without an independent professional security audit; fast synchronization is not proof of full historical validation.
 
 ## Current architecture and limitations
 

@@ -38,9 +38,9 @@ Use the official [GitHub Releases](https://github.com/promirmir/AuronQ/releases)
 
 ## Which operating systems are supported?
 
-The current Desktop/full-node release includes Windows x64 and Linux amd64 builds. An Android wallet client is available as an alpha release.
+The current official Desktop/full-node release is **v1.7.13 Mainnet**, published for **Windows x64 and Linux amd64**. The current official Android wallet is **0.5.6 Alpha — Password Confirmed (Fast Sync)**. It is a light client and installs separately from previous Android package IDs; see the [Android installation and recovery warning](android/README.md).
 
-The official Universal Miner v0.4.0 Alpha adds portable CPU-safe mining builds for Windows x64/ARM64, Linux x64/ARM64 and macOS x64/ARM64. Windows x64 also has the PL/EN GUI with NVIDIA CUDA acceleration; Linux x64 has an accelerated CUDA package. On unsupported/non-NVIDIA graphics, AUTO safely falls back to native CPU mining. See [UNIVERSAL-MINER-GUIDE.md](UNIVERSAL-MINER-GUIDE.md) and [GPU-MINER-GUIDE.md](GPU-MINER-GUIDE.md).
+The current published **Universal Miner v0.4.8 Alpha** includes a **Windows x64 GUI/GPU package** and a **Linux amd64 CPU/OpenCL package**. Older miner releases and references to v0.4.0 are historical, not the current recommended version. Consult the [official releases](https://github.com/promirmir/AuronQ/releases), [miner guide](UNIVERSAL-MINER-GUIDE.md) and [GPU guide](GPU-MINER-GUIDE.md) for compatibility details.
 
 ## Is the Android app a full node?
 
