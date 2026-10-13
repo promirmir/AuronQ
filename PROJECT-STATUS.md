@@ -1,6 +1,6 @@
 # AuronQ — canonical project status and preservation
 
-**Updated: 12 October 2026.** This is the navigation and release-integrity reference for the **existing public Mainnet**. The protocol and historical chain are not being reset or migrated.
+**Updated: 14 October 2026 (release and support-case reconciliation).** This is the navigation and release-integrity reference for the **existing public Mainnet**. The protocol and historical chain are not being reset or migrated.
 
 > **Status: Mainnet live, protocol change freeze in effect, stabilization incomplete.** No claim of a finished professional security audit, fully independent bootstrap, risk-free custody, or permanent immutability of GitHub account settings is made.
 
@@ -80,12 +80,12 @@ Long-term survival requires **independent copies**, not only permissions on an a
 
 These preservation checks are **not yet certified complete**. See [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md).
 
-## 6. Unresolved blockers; do not call this “final secure” yet
+## 6. Open engineering items and closed support case; do not call this “final secure” yet
 
-- [#134 — Desktop v1.7.13 wallet send/unlock failure](https://github.com/promirmir/AuronQ/issues/134): treat funded-wallet recovery safety as urgent until the root cause and tests are established.
-- [#149 — Android fresh-install scalability and safe balance](https://github.com/promirmir/AuronQ/issues/149): avoid claims of instant, independently verified balances or confirmed spendability on an unaudited light client.
-- [#65 — stabilization](https://github.com/promirmir/AuronQ/issues/65), [#66 — independent mining pools](https://github.com/promirmir/AuronQ/issues/66): prove independent operation and avoid hashrate concentration.
-- Professional consensus, PoW, P2P and wallet audits remain outstanding, as does review of legal classification and any future project-originated exchange activities.
+- **Open:** [#149 — Android fresh-install scalability and safe balance](https://github.com/promirmir/AuronQ/issues/149). Avoid claims of instant, independently verified balances or confirmed spendability on a light client without independent verification.
+- **Open:** [#65 — stabilization](https://github.com/promirmir/AuronQ/issues/65) and [#66 — independent mining pools](https://github.com/promirmir/AuronQ/issues/66). Independent operation and reduced hashrate concentration still need evidence.
+- **Closed 13 October 2026:** [#134 — Desktop wallet password-unavailable support case](https://github.com/promirmir/AuronQ/issues/134). GitHub records this report as closed without a confirmed software defect; no source-code wallet fix is claimed from this closure. Password recovery remains important, but this is **not an open release-blocking bug report**.
+- Independent professional consensus, PoW, P2P and wallet audits remain outstanding, as does review of legal classification and any future project-originated exchange activities.
 
 **Operational rule:** no new consensus features or emission changes. Security and critical wallet/data-loss fixes can still be proposed transparently, reviewed, tested and released without changing existing Mainnet rules. A total permanent repository lock is **not advised** while such issues remain open.
 
