@@ -81,6 +81,17 @@ type appState struct {
 	CryptoError      string       `json:"crypto_error,omitempty"`
 }
 
+type desktopStartupState struct {
+	Version       string `json:"version"`
+	Phase         string `json:"phase"`
+	Message       string `json:"message"`
+	NetworkLoaded bool   `json:"network_loaded"`
+	NodeRunning   bool   `json:"node_running"`
+	Height        uint64 `json:"height"`
+	Peers         int    `json:"peers"`
+	Error         string `json:"error,omitempty"`
+}
+
 type App struct {
 	mu sync.RWMutex
 
@@ -95,9 +106,11 @@ type App struct {
 	node       *aq.Node
 	chain      *aq.Chain
 	nodeCancel context.CancelFunc
-	nodeRun    bool
-	nodeErr    string
-	nodeURL    string
+	nodeRun      bool
+	nodeStarting bool
+	nodeStage    string
+	nodeErr      string
+	nodeURL      string
 
 	miner       minerState
 	minerCancel context.CancelFunc
@@ -112,6 +125,11 @@ type App struct {
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
+	// A second click should reopen the running UI without re-reading blockchain
+	// files or repeating the cryptographic self-test.
+	if reopenExisting("http://127.0.0.1:18445") {
+		return
+	}
 	app, err := newApp()
 	if err != nil {
 		log.Fatal(err)
@@ -137,15 +155,19 @@ func main() {
 		}
 	}()
 
-	if app.network != nil {
-		if err := app.startNode(); err != nil {
-			app.addLog("Node nie wystartował: " + err.Error())
-		} else {
-			app.startLANDiscovery()
-		}
-	}
+	// Make the interface visible before opening/recovering the full blockchain.
+	// OpenChain can take a long time after an interrupted sync or on slow disks.
 	if err := openDesktopWindow(url); err != nil {
 		app.addLog("Nie udało się automatycznie otworzyć okna: " + err.Error())
+	}
+	if app.network != nil {
+		go func() {
+			if err := app.startNode(); err != nil {
+				app.addLog("Node nie wystartował: " + err.Error())
+			} else {
+				app.startLANDiscovery()
+			}
+		}()
 	}
 
 	<-app.exit
@@ -335,6 +357,7 @@ func (a *App) shutdown() { a.stopMiner(); a.stopNode() }
 func (a *App) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/", a.handleIndex)
 	mux.HandleFunc("/api/state", a.handleState)
+	mux.HandleFunc("/api/startup", a.handleStartup)
 	mux.HandleFunc("/api/network/import", a.guard(a.handleNetworkImport))
 	mux.HandleFunc("/api/network/peers", a.guard(a.handleNetworkPeers))
 	mux.HandleFunc("/api/node/start", a.guard(a.handleNodeStart))
@@ -446,6 +469,57 @@ func (a *App) state() appState {
 	st.Wallets = a.walletViews(nodeRun)
 	return st
 }
+// startupSnapshot intentionally avoids wallet balance/history reads, which may
+// block while the node is catching up. It never calls unbounded P2P operations.
+func (a *App) startupSnapshot() desktopStartupState {
+	a.mu.RLock()
+	out := desktopStartupState{
+		Version: desktopVersion, NetworkLoaded: a.network != nil,
+		NodeRunning: a.nodeRun, Error: a.nodeErr,
+	}
+	starting, stage, nodeURL := a.nodeStarting, a.nodeStage, a.nodeURL
+	a.mu.RUnlock()
+	switch {
+	case !out.NetworkLoaded:
+		out.Phase, out.Message = "setup", "Wymagana jest konfiguracja sieci."
+		return out
+	case starting:
+		out.Phase, out.Message = "preparing", stage
+		if out.Message == "" {
+			out.Message = "Przygotowywanie pełnego noda..."
+		}
+		return out
+	case !out.NodeRunning && out.Error != "":
+		out.Phase, out.Message = "error", "Nie udało się uruchomić noda."
+		return out
+	case !out.NodeRunning:
+		out.Phase, out.Message = "offline", "Node jest wyłączony."
+		return out
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 450*time.Millisecond)
+	defer cancel()
+	st, err := aq.NewClient(nodeURL).StatusContext(ctx)
+	if err != nil {
+		out.Phase, out.Message = "connecting", "Uruchamianie API i połączeń P2P..."
+		return out
+	}
+	out.Height, out.Peers = st.Height, st.Peers
+	if st.Peers == 0 {
+		out.Phase, out.Message = "searching", "Sprawdzanie dostępnych peerów P2P..."
+	} else {
+		out.Phase, out.Message = "connected", "Połączono z peerami. Lokalny łańcuch może nadal się synchronizować."
+	}
+	return out
+}
+
+func (a *App) handleStartup(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method", http.StatusMethodNotAllowed)
+		return
+	}
+	writeJSON(w, a.startupSnapshot())
+}
+
 func (a *App) handleState(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		http.Error(w, "method", 405)
@@ -838,17 +912,34 @@ func probeAuronQPeer(peer string, networkID aq.Hash) bool {
 	return probeAuronQPeerWithTimeout(peer, networkID, 1500*time.Millisecond)
 }
 
-func (a *App) startNode() error {
+func (a *App) startNode() (startErr error) {
 	a.mu.Lock()
 	if a.nodeRun {
 		a.mu.Unlock()
 		return nil
 	}
+	if a.nodeStarting {
+		a.mu.Unlock()
+		return errors.New("uruchamianie noda już trwa")
+	}
 	n := a.network
-	a.mu.Unlock()
 	if n == nil {
+		a.mu.Unlock()
 		return errors.New("najpierw zaimportuj network.json")
 	}
+	a.nodeStarting = true
+	a.nodeStage = "Sprawdzanie lokalnego węzła..."
+	a.nodeErr = ""
+	a.mu.Unlock()
+	defer func() {
+		a.mu.Lock()
+		a.nodeStarting = false
+		a.nodeStage = ""
+		if startErr != nil {
+			a.nodeErr = startErr.Error()
+		}
+		a.mu.Unlock()
+	}()
 
 	// Never create a second localhost full node. GPU Miner can run its own node
 	// when Desktop is absent; if it already owns 18444, Desktop must fail
@@ -863,6 +954,9 @@ func (a *App) startNode() error {
 		return errors.New("inny lokalny node AuronQ już działa na porcie 18444; zamknij AuronQ GPU Miner albo jego node przed uruchomieniem noda Desktop")
 	}
 	cancelProbe()
+	a.mu.Lock()
+	a.nodeStage = "Otwieranie i sprawdzanie lokalnego blockchaina..."
+	a.mu.Unlock()
 	networkNodeDir := filepath.Join(a.nodeDir, n.NetworkID().String())
 	if err := os.MkdirAll(networkNodeDir, 0700); err != nil {
 		return err
@@ -871,6 +965,9 @@ func (a *App) startNode() error {
 	if err != nil {
 		return err
 	}
+	a.mu.Lock()
+	a.nodeStage = "Przygotowywanie połączeń sieci P2P..."
+	a.mu.Unlock()
 	ctx, cancel := context.WithCancel(context.Background())
 	a.mu.RLock()
 	peers := append([]string(nil), a.peerBook[n.NetworkID().String()]...)
@@ -1395,6 +1492,19 @@ func short(s string) string {
 
 func reopenExisting(base string) bool {
 	c := &http.Client{Timeout: 750 * time.Millisecond}
+	// The lightweight endpoint responds even if balance requests are blocked.
+	if r, err := c.Get(base + "/api/startup"); err == nil {
+		var st desktopStartupState
+		ok := r.StatusCode == http.StatusOK &&
+			json.NewDecoder(io.LimitReader(r.Body, 1<<20)).Decode(&st) == nil &&
+			st.Version != ""
+		r.Body.Close()
+		if ok {
+			_ = openDesktopWindow(base + "/")
+			return true
+		}
+	}
+	// Compatibility with existing Desktop releases that lack /api/startup.
 	r, err := c.Get(base + "/api/state")
 	if err != nil {
 		return false
