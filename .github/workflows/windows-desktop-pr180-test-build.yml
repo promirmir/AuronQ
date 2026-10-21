@@ -1,0 +1,72 @@
+name: Windows Desktop PR180 manual test artifact
+
+on:
+  push:
+    branches:
+      - fix/windows-desktop-visible-startup-20261021
+    paths:
+      - 'cmd/auronq-desktop/**'
+      - '.github/workflows/windows-desktop-pr180-test-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-desktop-smoke-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.2'
+          cache: false
+      - name: Unit and Desktop tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          go test ./cmd/auronq-desktop ./internal/auronq
+          if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
+          go vet ./cmd/auronq-desktop
+          if ($LASTEXITCODE -ne 0) { throw "Go vet failed" }
+      - name: Build unsigned test executable from PR branch
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $env:CGO_ENABLED = "0"
+          New-Item -Path "test-dist" -ItemType Directory -Force | Out-Null
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid= -H=windowsgui" -o "test-dist/AuronQ-Desktop-PR180-Test.exe" ./cmd/auronq-desktop
+          if ($LASTEXITCODE -ne 0) { throw "Desktop EXE build failed" }
+          Copy-Item network.json,bootstrap.json "test-dist/"
+          @"
+          AURONQ DESKTOP PR #180 - WINDOWS STARTUP FIX TEST BUILD
+          NOT AN OFFICIAL RELEASE. NOT MAINNET-APPROVED. DO NOT REDISTRIBUTE AS A RELEASE.
+
+          Build branch: fix/windows-desktop-visible-startup-20261021
+          Build commit: $env:GITHUB_SHA
+          Source review: https://github.com/promirmir/AuronQ/pull/180
+
+          BEFORE TESTING:
+          1. Back up your existing %%APPDATA%%/AuronQ/wallets and other AuronQ data.
+          2. In the running AuronQ Desktop, use the 'Zamknij AuronQ' action to stop its node and application.
+             Closing just the Edge window does NOT stop the backend.
+          3. Verify that the previous AuronQ-Desktop.exe is no longer running.
+          4. Keep this EXE, network.json, bootstrap.json together in the extracted folder.
+          5. Launch AuronQ-Desktop-PR180-Test.exe and observe immediate UI and startup status.
+          6. Test opening it again with the backend running: it should reopen the existing UI.
+          7. Do NOT run the old and test Desktop EXE simultaneously (both use ports 18444/18445).
+
+          This test build has no code-signing certificate and may show Windows SmartScreen warnings.
+          Never ignore a security warning blindly; verify checksums and the GitHub workflow source.
+          Do not use substantial funds or discard wallet backups while testing.
+          "@ | Set-Content -Encoding UTF8 "test-dist/READ-ME-PR180-TEST.txt"
+          Get-FileHash "test-dist/AuronQ-Desktop-PR180-Test.exe" -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  AuronQ-Desktop-PR180-Test.exe" } |
+            Set-Content -Encoding ascii "test-dist/SHA256SUMS.txt"
+          Get-Content "test-dist/SHA256SUMS.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AuronQ-Desktop-PR180-Windows-x64-TEST-ONLY
+          path: test-dist/*
+          retention-days: 14
+          if-no-files-found: error
