@@ -160,7 +160,7 @@ func main() {
 	if err := openDesktopWindow(url); err != nil {
 		app.addLog("Nie udało się automatycznie otworzyć okna: " + err.Error())
 	}
-	if app.network != nil {
+	if app.currentNetwork() != nil {
 		go func() {
 			if err := app.startNode(); err != nil {
 				app.addLog("Node nie wystartował: " + err.Error())
