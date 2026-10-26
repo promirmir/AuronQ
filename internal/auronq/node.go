@@ -502,6 +502,9 @@ func (n *Node) addDiscoveredPeer(p string) {
 		return
 	}
 	n.pmu.Lock()
+	if n.verified == nil {
+		n.verified = map[string]struct{}{}
+	}
 	if until, blocked := n.quarantined[p]; blocked {
 		if time.Now().Before(until) {
 			n.pmu.Unlock()
@@ -849,6 +852,9 @@ func (n *Node) recordPeerSuccess(peer string) {
 		return
 	}
 	n.pmu.Lock()
+	if n.verified == nil {
+		n.verified = map[string]struct{}{}
+	}
 	delete(n.failures, peer)
 	_, wasVerified := n.verified[peer]
 	if isPublicAdvertisedPeer(peer) {
