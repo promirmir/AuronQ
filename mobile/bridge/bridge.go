@@ -796,7 +796,7 @@ func checkNode(base string) error {
 	return err
 }
 
-func firstReachableMobileNode(raw []string) (string, error) {
+func chooseReachableMobileNode(raw []string) (string, error) {
 	seen := map[string]bool{}
 	candidates := make([]string, 0, len(raw))
 	for _, p := range raw {
@@ -807,44 +807,58 @@ func firstReachableMobileNode(raw []string) (string, error) {
 		seen[p] = true
 		candidates = append(candidates, p)
 	}
-	if len(candidates) > 1 {
-		start := int(time.Now().UnixNano() % int64(len(candidates)))
-		rotated := append([]string(nil), candidates[start:]...)
-		rotated = append(rotated, candidates[:start]...)
-		candidates = rotated
+	obs := observeNodes(candidates)
+	selected, _, err := chooseNodeQuorum(obs)
+	if err != nil {
+		return "", err
 	}
-	var lastErr error
-	for _, p := range candidates {
-		if err := checkNode(p); err == nil {
-			return p, nil
-		} else {
-			lastErr = err
-		}
-	}
-	if lastErr != nil {
-		return "", lastErr
-	}
-	return "", errors.New("no usable AuronQ Mainnet candidates")
+	return selected.Node, nil
 }
 
-func DiscoverNode() (string, error) {
-	// GitHub is deliberately outside the critical startup path. A fresh install
-	// probes the peer snapshot bundled into the APK first. Only if every bundled
-	// peer is unavailable is the GitHub manifest fetched as an optional freshness
-	// fallback. After first contact, the Android app also persists peers learned
-	// from verified AuronQ /p2p/hello responses and tries them before this function.
-	if node, err := firstReachableMobileNode(bundledBootstrapPeers); err == nil {
+func DiscoverResilientNode(preferred, knownJSON string) (string, error) {
+	// The critical path is fully independent of GitHub: preferred/cached peers and
+	// the bundled release snapshot are probed concurrently first. Only if none of
+	// them answers as the exact AuronQ Mainnet do we ask the optional GitHub
+	// manifest for fresher discovery metadata.
+	seen := map[string]bool{}
+	candidates := make([]string, 0, maxMobileProbeCandidates)
+	add := func(p string) {
+		p = normalizeMobileNode(p)
+		if p == "" || seen[p] || len(candidates) >= maxMobileProbeCandidates {
+			return
+		}
+		seen[p] = true
+		candidates = append(candidates, p)
+	}
+	add(preferred)
+	for _, p := range mobileCandidates(knownJSON) {
+		add(p)
+	}
+	if node, err := chooseReachableMobileNode(candidates); err == nil {
 		return node, nil
 	}
 
 	manifestPeers, manifestErr := fetchManifest()
-	if node, err := firstReachableMobileNode(manifestPeers); err == nil {
+	fallback := make([]string, 0, len(manifestPeers))
+	for _, p := range manifestPeers {
+		p = normalizeMobileNode(p)
+		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		fallback = append(fallback, p)
+	}
+	if node, err := chooseReachableMobileNode(fallback); err == nil {
 		return node, nil
 	} else if manifestErr != nil {
-		return "", fmt.Errorf("no reachable bundled AuronQ Mainnet node; optional manifest unavailable: %v; manifest peers: %v", manifestErr, err)
+		return "", fmt.Errorf("no reachable local/bundled AuronQ Mainnet peer; optional manifest unavailable: %v; manifest peers: %v", manifestErr, err)
 	} else {
-		return "", fmt.Errorf("no reachable AuronQ Mainnet node: %v", err)
+		return "", fmt.Errorf("no reachable AuronQ Mainnet peer: %v", err)
 	}
+}
+
+func DiscoverNode() (string, error) {
+	return DiscoverResilientNode("", "[]")
 }
 
 func Status(nodeURL string) (string, error) {
