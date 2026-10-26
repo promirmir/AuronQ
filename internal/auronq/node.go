@@ -748,16 +748,17 @@ func (n *Node) refreshBootstrapManifests(ctx context.Context) {
 			if len(peers) > maxBootstrapManifestPeers {
 				peers = peers[:maxBootstrapManifestPeers]
 			}
-			added := 0
+			accepted := 0
 			for _, peer := range peers {
 				if n.addManifestPeer(peer) {
-					added++
+					accepted++
+					go n.verifyAndAddPeer(peer)
 				}
 			}
-			if added > 0 {
-				n.savePeerStore()
-			}
-			log.Printf("bootstrap manifest %s accepted: %d peer(s)", manifestURL, len(peers))
+			// Manifest entries remain transient candidates until their own
+			// /p2p/hello callback proves protocol version + exact Network ID.
+			// Only then can addDiscoveredPeer persist and gossip them.
+			log.Printf("bootstrap manifest %s accepted for verification: %d/%d peer(s)", manifestURL, accepted, len(peers))
 		}()
 	}
 }
