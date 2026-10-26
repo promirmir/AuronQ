@@ -1269,6 +1269,191 @@ func FastBalanceOnObservedChain(knownNodesJSON, address, tip, work string, heigh
     return "", errors.New("conflicting or insufficient peer-reported balances")
 }
 
+
+ // lightStateNetgroups filters peer-reported tip/work/height to one reachable
+ // Mainnet node per public IPv4 /16 network. This is NOT AQM64 proof or
+ // evidence that the hosting operators are independent.
+func lightStateNetgroups(knownNodesJSON, tip, work string, height int64) ([]mobileNodeObservation, error) {
+    observations, err := verifiedStateObservations(knownNodesJSON, tip, work, height)
+    if err != nil { return nil, err }
+    byGroup := make(map[string]mobileNodeObservation)
+    for _, o := range observations {
+        group := mobileNetgroupKey(o.Node)
+        if group == "" { continue }
+        if _, exists := byGroup[group]; !exists { byGroup[group] = o }
+    }
+    if len(byGroup) < 3 {
+        return nil, errors.New("light mode needs three public IPv4 /16 groups on the exact same chain tip")
+    }
+    nodes := make([]mobileNodeObservation, 0, len(byGroup))
+    for _, node := range byGroup { nodes = append(nodes, node) }
+    sort.Slice(nodes, func(i, j int) bool { return nodes[i].Node < nodes[j].Node })
+    return nodes, nil
+}
+
+// LightHistoryOnObservedChain fetches history from independently routed
+// peer groups without requiring the phone to replay thousands of AQM64 hashes.
+// Chain validity is peer-reported; two identical confirmed histories are needed.
+// Pending mempool entries may differ between honest nodes.
+func LightHistoryOnObservedChain(knownNodesJSON, address, tip, work string, height int64, limit int) (string, error) {
+    netByte, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
+    if err != nil || netByte != aq.MainnetNetworkByte {
+        return "", errors.New("invalid AuronQ Mainnet address")
+    }
+    if limit < 1 { limit = 50 }
+    if limit > 250 { limit = 250 }
+    nodes, err := lightStateNetgroups(knownNodesJSON, tip, work, height)
+    if err != nil { return "", err }
+    type response struct { observation historyObservation; ok bool }
+    ch := make(chan response, len(nodes))
+    for _, node := range nodes {
+        node := node.Node
+        go func() {
+            cl := aq.NewClient(node)
+            cl.HTTP = mobileHTTP(6 * time.Second)
+            items, err := cl.History(address, limit)
+            if err != nil { ch <- response{}; return }
+            ch <- response{observation: historyObservation{
+                Node: node, Items: items, Key: historyFingerprint(items),
+            }, ok: true}
+        }()
+    }
+    deadline := time.NewTimer(7 * time.Second)
+    defer deadline.Stop()
+    groups := map[string][]historyObservation{}
+    observed := 0
+    pending := len(nodes)
+    for pending > 0 {
+        select {
+        case r := <-ch:
+            pending--
+            if !r.ok { continue }
+            observed++
+            groups[r.observation.Key] = append(groups[r.observation.Key], r.observation)
+            if len(groups[r.observation.Key]) >= 2 {
+                agreed := groups[r.observation.Key]
+                names := make([]string, 0, len(agreed))
+                for _, h := range agreed { names = append(names, h.Node) }
+                sort.Strings(names)
+                items := mergeHistoryPending(agreed)
+                if len(items) > limit { items = items[:limit] }
+                out := map[string]any{
+                    "address": strings.TrimSpace(address),
+                    "items": items,
+                    "peer_observed": observed,
+                    "peer_agreement": len(agreed),
+                    "agreement_nodes": names,
+                    "multi_peer_confirmed": true,
+                    "state_trust": "peer-quorum-no-independent-pow",
+                }
+                raw, _ := json.Marshal(out)
+                return string(raw), nil
+            }
+        case <-deadline.C:
+            return "", errors.New("light mode history quorum timed out")
+        }
+    }
+    return "", errors.New("no matching confirmed history from two public peer groups")
+}
+
+// SendMultiLight signs only on the device after three different public /16
+// groups agree on the current chain tip, cumulative work and exact UTXO set.
+// It deliberately does not claim independent PoW, consensus or UTXO proof.
+// A full node must validate and accept the signed transaction.
+func SendMultiLight(knownNodesJSON, walletPath, password, to, amount, tip, work string, height int64) (string, error) {
+    nodes, err := lightStateNetgroups(knownNodesJSON, tip, work, height)
+    if err != nil { return "", err }
+    wallet, err := aq.LoadWallet(walletPath, password)
+    if err != nil { return "", err }
+    defer wallet.Close()
+    if wallet.File.NetworkByte != aq.MainnetNetworkByte {
+        return "", errors.New("wallet is not an AuronQ Mainnet wallet")
+    }
+    amt, err := aq.ParseAmount(strings.TrimSpace(amount))
+    if err != nil { return "", err }
+    address := wallet.Address()
+    type utxoResult struct { node string; items []aq.UTXORecord; key string; ok bool }
+    ch := make(chan utxoResult, len(nodes))
+    for _, observation := range nodes {
+        node := observation.Node
+        go func() {
+            cl := aq.NewClient(node)
+            cl.HTTP = mobileHTTP(8 * time.Second)
+            items, err := cl.UTXOs(address)
+            if err != nil { ch <- utxoResult{}; return }
+            ch <- utxoResult{node: node, items: items, key: utxoFingerprint(items), ok: true}
+        }()
+    }
+    pending := len(nodes)
+    count := 0
+    agreedByHash := make(map[string][]utxoResult)
+    var agreed []utxoResult
+    deadline := time.NewTimer(9 * time.Second)
+    defer deadline.Stop()
+    for pending > 0 {
+        select {
+        case result := <-ch:
+            pending--
+            if !result.ok { continue }
+            count++
+            agreedByHash[result.key] = append(agreedByHash[result.key], result)
+            if len(agreedByHash[result.key]) >= 3 {
+                agreed = agreedByHash[result.key]
+                pending = 0
+            }
+        case <-deadline.C:
+            return "", errors.New("timed out confirming UTXOs across three public network groups")
+        }
+    }
+    if len(agreed) < 3 {
+        return "", errors.New("three independent network groups did not confirm identical UTXOs; refusing to send")
+    }
+    tx, fee, err := wallet.BuildTransaction(agreed[0].items, strings.TrimSpace(to), amt, aq.MainnetNetworkByte)
+    if err != nil { return "", err }
+
+    // Broadcast in parallel so one unavailable endpoint never holds the UI
+    // for repeated sequential 10-second HTTP timeouts.
+    broadcast := make(chan string, len(agreed))
+    for _, o := range agreed {
+        node := o.node
+        go func() {
+            cl := aq.NewClient(node)
+            cl.HTTP = mobileHTTP(8 * time.Second)
+            if _, err := cl.SubmitTx(tx); err != nil { broadcast <- ""; return }
+            broadcast <- node
+        }()
+    }
+    accepted := make([]string, 0, len(agreed))
+    broadcastDeadline := time.NewTimer(9 * time.Second)
+    defer broadcastDeadline.Stop()
+    for i := 0; i < len(agreed); i++ {
+        select {
+        case node := <-broadcast:
+            if node != "" { accepted = append(accepted, node) }
+        case <-broadcastDeadline.C:
+            i = len(agreed)
+        }
+    }
+    if len(accepted) == 0 {
+        return "", errors.New("no full node accepted the locally signed transaction")
+    }
+    sort.Strings(accepted)
+    result := map[string]any{
+        "txid": tx.ID().String(),
+        "fee_atoms": fee,
+        "fee": aq.FormatAmount(fee),
+        "broadcast_attempted": len(agreed),
+        "direct_accepted": len(accepted),
+        "accepted_nodes": accepted,
+        "utxo_peer_observed": count,
+        "utxo_peer_agreement": len(agreed),
+        "utxo_multi_peer_confirmed": true,
+        "state_trust": "peer-quorum-no-independent-pow",
+    }
+    raw, _ := json.Marshal(result)
+    return string(raw), nil
+}
+
 func QuorumBalanceVerified(knownNodesJSON, address string, verifiedTip, verifiedWork string, verifiedHeight int64) (string, error) {
 	obs, err := verifiedStateObservations(knownNodesJSON, verifiedTip, verifiedWork, verifiedHeight)
 	if err != nil {
