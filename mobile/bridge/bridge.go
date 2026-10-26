@@ -796,38 +796,23 @@ func checkNode(base string) error {
 	return err
 }
 
-func DiscoverNode() (string, error) {
-	// Fresh installs first use the peer snapshot bundled into the APK. The GitHub
-	// manifest is only an optional freshness source, not a runtime authority.
-	// After the first successful contact, Android persists peers learned directly
-	// from AuronQ /p2p/hello and tries those cached network peers before calling
-	// this function again.
-	manifestPeers, manifestErr := fetchManifest()
+func firstReachableMobileNode(raw []string) (string, error) {
 	seen := map[string]bool{}
-	candidates := make([]string, 0, len(bundledBootstrapPeers)+len(manifestPeers))
-	add := func(p string) {
+	candidates := make([]string, 0, len(raw))
+	for _, p := range raw {
 		p = normalizeMobileNode(p)
 		if p == "" || seen[p] {
-			return
+			continue
 		}
 		seen[p] = true
 		candidates = append(candidates, p)
 	}
-	for _, p := range bundledBootstrapPeers {
-		add(p)
-	}
-	for _, p := range manifestPeers {
-		add(p)
-	}
-
-	// Rotate the starting point so one bundled address is not permanently favored.
 	if len(candidates) > 1 {
 		start := int(time.Now().UnixNano() % int64(len(candidates)))
 		rotated := append([]string(nil), candidates[start:]...)
 		rotated = append(rotated, candidates[:start]...)
 		candidates = rotated
 	}
-
 	var lastErr error
 	for _, p := range candidates {
 		if err := checkNode(p); err == nil {
@@ -836,13 +821,30 @@ func DiscoverNode() (string, error) {
 			lastErr = err
 		}
 	}
-	if manifestErr != nil {
-		return "", fmt.Errorf("no reachable AuronQ Mainnet node; optional manifest: %v; last node: %v", manifestErr, lastErr)
-	}
 	if lastErr != nil {
-		return "", fmt.Errorf("no reachable AuronQ Mainnet node: %v", lastErr)
+		return "", lastErr
 	}
-	return "", errors.New("no reachable AuronQ Mainnet node")
+	return "", errors.New("no usable AuronQ Mainnet candidates")
+}
+
+func DiscoverNode() (string, error) {
+	// GitHub is deliberately outside the critical startup path. A fresh install
+	// probes the peer snapshot bundled into the APK first. Only if every bundled
+	// peer is unavailable is the GitHub manifest fetched as an optional freshness
+	// fallback. After first contact, the Android app also persists peers learned
+	// from verified AuronQ /p2p/hello responses and tries them before this function.
+	if node, err := firstReachableMobileNode(bundledBootstrapPeers); err == nil {
+		return node, nil
+	}
+
+	manifestPeers, manifestErr := fetchManifest()
+	if node, err := firstReachableMobileNode(manifestPeers); err == nil {
+		return node, nil
+	} else if manifestErr != nil {
+		return "", fmt.Errorf("no reachable bundled AuronQ Mainnet node; optional manifest unavailable: %v; manifest peers: %v", manifestErr, err)
+	} else {
+		return "", fmt.Errorf("no reachable AuronQ Mainnet node: %v", err)
+	}
 }
 
 func Status(nodeURL string) (string, error) {
@@ -1478,6 +1480,15 @@ func PeerCandidates(nodeURL string) (string, error) {
 			break
 		}
 	}
-	b, _ := json.Marshal(out)
+	// Do not persist or return a peer merely because another peer advertised it.
+	// Probe candidates concurrently and return only endpoints that themselves
+	// answer as the exact AuronQ Mainnet.
+	obs := observeNodes(out)
+	verified := make([]string, 0, len(obs))
+	for _, o := range obs {
+		verified = append(verified, o.Node)
+	}
+	sort.Strings(verified)
+	b, _ := json.Marshal(verified)
 	return string(b), nil
 }
