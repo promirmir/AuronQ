@@ -1,0 +1,100 @@
+name: Publish Android v0.5.8 Alpha Fast Balance
+
+on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'mobile/bridge/**'
+      - 'internal/auronq/**'
+      - '.github/workflows/publish-android-v0.5.8-alpha.yml'
+  push:
+    branches: [main]
+    paths:
+      - '.release/android-0.5.8'
+      - '.github/workflows/publish-android-v0.5.8-alpha.yml'
+
+permissions:
+  contents: write
+
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+  RELEASE_TAG: android-v0.5.8-alpha-fast-balance-logo
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Test Go bridge and immutable Mainnet
+        run: |
+          set -euo pipefail
+          grep -Fq "versionCode 13" android/app/build.gradle
+          grep -Fq "versionName '0.5.8-alpha'" android/app/build.gradle
+          grep -Fq "fast058" android/app/build.gradle
+          grep -Fq 'android:icon="@drawable/ic_auronq"' android/app/src/main/AndroidManifest.xml
+          grep -Fq 'Bridge.fastBalanceOnObservedChain' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'Bridge.sendMultiVerified' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          go test ./...
+          go vet ./...
+          go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1 -timeout=4m
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK and NDK
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Bind Go bridge to Android
+        run: |
+          set -euo pipefail
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build separate-install 0.5.8 APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleFast058
+      - name: Verify APK, icon, build variant and checksums
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/fast058/app-fast058.apk"
+          test -s "$APK"
+          test -s android/app/src/main/res/drawable/ic_auronq.xml
+          mkdir -p release
+          cp "$APK" release/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk
+          cd release
+          sha256sum AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Publish Android prerelease
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to overwrite $RELEASE_TAG." >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            release/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk \
+            release/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile 0.5.8 Alpha — Fast Balance + Logo" \
+            --prerelease \
+            --notes "Android 0.5.8 Alpha restores a fast parallel peer-reported balance preview from at least three distinct public IPv4 netgroups while keeping independent AQM64 header verification and verified transaction spending checks separate. The first balance is clearly marked peer-reported, not trustless. Adds the AuronQ launcher/header emblem and retains two password-confirmation fields. Installs side by side as com.auronq.mobile.fast058 (CI debug signed): it DOES NOT migrate or upgrade funded wallets. Back up and verify recovery before using; never uninstall a funded wallet as an upgrade workaround. No Mainnet consensus, wallet format, signing, genesis or network ID change. Not independently audited."
