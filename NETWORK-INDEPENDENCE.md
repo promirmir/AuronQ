@@ -78,4 +78,4 @@ The live network now has multiple reachable public full nodes and the crawler is
 
 ## Packaging status — 26 October 2026
 
-The runtime-independence implementation described above is present in protected source `main` after PR #187 and PR #189. The currently published Desktop v1.7.13, Android 0.5.6 Alpha and Universal Miner v0.4.8 Alpha were built before the final implementation. They do not gain new discovery/failover behavior merely because the repository changed. New release artifacts must be built, tested and published before ordinary users receive the updated runtime behavior.
+undefined
