@@ -680,7 +680,7 @@ public class MainActivity extends Activity {
             try {
                 // This filters balance providers against the observed chain
                 // (tip, work and height), without doing expensive header replay.
-                balance = Bridge.quorumBalanceVerified(
+                balance = Bridge.fastBalanceOnObservedChain(
                         prefs.getString("known_nodes", "[]"), address, tip, work, height);
             } catch (Exception ignored) {
             }
