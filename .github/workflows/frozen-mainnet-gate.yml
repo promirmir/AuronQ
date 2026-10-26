@@ -62,7 +62,7 @@ jobs:
                 mobile/bridge/bridge.go)
                   expected=7c53d8060c6951e1500deb1631dd9fdf55aa0885 ;;
                 mobile/bridge/bridge_test.go)
-                  expected=b43832f1c3291432e5584af9f89baaaeb405244e ;;
+                  expected=a230b01eebb8f91dbf2795871724c79dc4711a57 ;;
                 *)
                   echo "::error::Unapproved frozen AuronQ source change: $file"
                   exit 1 ;;
