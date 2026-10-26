@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -44,7 +45,9 @@ func defaultOpenCLPath() string {
 }
 
 func main() {
-	nodeURL := flag.String("node", "http://127.0.0.1:18444", "AuronQ full-node URL")
+	nodeURL := flag.String("node", "http://127.0.0.1:18444", "preferred AuronQ full-node URL")
+	networkPath := flag.String("network", "network.json", "network file used to verify Mainnet identity and seed fallbacks")
+	peerStore := flag.String("peer-store", "miner-client-peers.json", "verified miner node cache")
 	address := flag.String("address", "", "AURQ reward address")
 	computeBackend := flag.String("backend", "auto", "compute backend: auto, cuda, opencl or cpu")
 	cpuThreads := flag.Int("cpu-threads", 0, "CPU mining threads (0 = conservative automatic profile)")
@@ -89,6 +92,8 @@ func main() {
 				err := runMultiGPU(devices, multiGPUOptions{
 					Backend:          backendMode,
 					Node:             *nodeURL,
+					Network:          *networkPath,
+					PeerStore:        *peerStore,
 					Address:          *address,
 					Batch:            *batchFlag,
 					DLLPath:          *dllPath,
@@ -252,23 +257,27 @@ func main() {
 		os.Exit(2)
 	}
 
-	client := aq.NewClient(*nodeURL)
-	// The GUI may launch the worker while its local node is still booting.
-	// Wait without hashing; never skip the independent Network ID check.
-	st, err := client.Status()
-	for attempt := 0; err != nil; attempt++ {
+	network, err := aq.LoadNetwork(*networkPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "network:", err)
+		os.Exit(1)
+	}
+	if network.NetworkID().String() != mainnetNetworkID {
+		fmt.Fprintln(os.Stderr, "refusing to mine: configured network is not AuronQ Mainnet")
+		os.Exit(1)
+	}
+	resolver := &minerNodeResolver{network: network, preferred: *nodeURL, store: *peerStore}
+	for attempt := 0; ; attempt++ {
+		if err = resolver.connect(context.Background(), false); err == nil {
+			break
+		}
 		delay := nodeRecoveryDelay(attempt)
 		fmt.Printf("NODE_STARTUP_RETRY wait=%s error=%v\n", delay, err)
 		time.Sleep(delay)
-		st, err = client.Status()
 	}
-	if st.NetworkID.String() != mainnetNetworkID {
-		fmt.Fprintln(os.Stderr, "refusing to mine: node Network ID mismatch")
-		os.Exit(1)
-	}
-	fmt.Printf("Node: %s height=%d peers=%d\n", *nodeURL, st.Height, st.Peers)
+	fmt.Printf("Node: %s height=%d peers=%d\n", resolver.endpoint, resolver.status.Height, resolver.status.Peers)
 
-	if err := mineLoop(client, backend, *address, batch, *noncePrefix, thermal, conservativeUnmonitoredGPU); err != nil {
+	if err := mineLoop(resolver, backend, *address, batch, *noncePrefix, thermal, conservativeUnmonitoredGPU); err != nil {
 		fmt.Fprintln(os.Stderr, "miner stopped:", err)
 		os.Exit(1)
 	}
@@ -536,7 +545,11 @@ func runBenchmark(backend gpuBackend, batch int, duration time.Duration, thermal
 	return nil
 }
 
-func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, noncePrefix uint64, thermal *thermalController, conservativeUnmonitoredGPU bool) error {
+func mineLoop(resolver *minerNodeResolver, backend gpuBackend, address string, batch int, noncePrefix uint64, thermal *thermalController, conservativeUnmonitoredGPU bool) error {
+	if resolver == nil || resolver.client == nil {
+		return fmt.Errorf("nil miner node resolver")
+	}
+	client := resolver.client
 	var total uint64
 	start := time.Now()
 	lastReport := start
@@ -551,6 +564,14 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 		// Wait for the full node to recover; never hash without a fresh template.
 		template, err := client.Template(address)
 		for attempt := 0; err != nil; attempt++ {
+			if aq.IsRetryableNodeError(err) {
+				if ferr := resolver.connect(context.Background(), true); ferr == nil {
+					client = resolver.client
+					fmt.Printf("NODE_FAILOVER endpoint=%s reason=template\n", resolver.endpoint)
+					template, err = client.Template(address)
+					continue
+				}
+			}
 			delay := nodeRecoveryDelay(attempt)
 			fmt.Printf("NODE_TEMPLATE_RETRY wait=%s error=%v\n", delay, err)
 			time.Sleep(delay)
@@ -608,6 +629,13 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				found := template
 				found.Header.Nonce = prepared[i].nonce
 				resp, err := client.SubmitBlock(found)
+				if err != nil && aq.IsRetryableNodeError(err) {
+					if ferr := resolver.connect(context.Background(), true); ferr == nil {
+						client = resolver.client
+						fmt.Printf("NODE_FAILOVER endpoint=%s reason=submit\n", resolver.endpoint)
+						resp, err = client.SubmitBlock(found)
+					}
+				}
 				if err != nil {
 					fmt.Printf("Candidate nonce=%d rejected: %v\n", prepared[i].nonce, err)
 					break
@@ -627,8 +655,14 @@ func mineLoop(client *aq.Client, backend gpuBackend, address string, batch int, 
 				for attempt := 0; statusErr != nil; attempt++ {
 					consecutiveStatusErrors++
 					fmt.Printf("NODE_STATUS_WARNING consecutive=%d error=%v\n", consecutiveStatusErrors, statusErr)
-					// Pause GPU work during node errors. Backoff avoids rapidly
-					// exhausting the same shared rate limiter again.
+					if aq.IsRetryableNodeError(statusErr) {
+						if ferr := resolver.connect(context.Background(), true); ferr == nil {
+							client = resolver.client
+							fmt.Printf("NODE_FAILOVER endpoint=%s reason=status\n", resolver.endpoint)
+							st, statusErr = client.Status()
+							continue
+						}
+					}
 					delay := nodeRecoveryDelay(attempt)
 					fmt.Printf("NODE_STATUS_BACKOFF wait=%s attempt=%d\n", delay, attempt+1)
 					time.Sleep(delay)
