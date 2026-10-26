@@ -28,9 +28,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Maintenance exception #188 accepted thin-client failover changes through:
-          # a36ef6e1fc80089109b26aea99661e0a928fefc6
-          BASE=a36ef6e1fc80089109b26aea99661e0a928fefc6
+          # Maintenance exception #191 accepted release-packaging/UI correction through:
+          # 5163e07ac5c0148e83745e6fffed7da69a3aeb74
+          BASE=5163e07ac5c0148e83745e6fffed7da69a3aeb74
           git cat-file -e "$BASE^{commit}"
           changed="$(git diff --name-only "$BASE" HEAD -- \
             internal/auronq/ \
