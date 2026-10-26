@@ -6,8 +6,9 @@ on:
   push:
     branches: [main]
     paths:
+      # Historical release already exists; never rebuild it merely because
+      # the workflow metadata changes on a newer Android maintenance PR.
       - '.release/android-0.5.8'
-      - '.github/workflows/publish-android-v0.5.8-alpha.yml'
 
 permissions:
   contents: write
