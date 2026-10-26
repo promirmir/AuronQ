@@ -37,6 +37,7 @@ type Node struct {
 	publicClient *http.Client
 	pmu          sync.RWMutex
 	peers      map[string]struct{}
+	verified   map[string]struct{}
 	announced  map[string]struct{}
 	failures   map[string]int
 	quarantined map[string]time.Time
@@ -191,6 +192,7 @@ func NewNode(chain *Chain, cfg NodeConfig) *Node {
 		client:       &http.Client{Timeout: 8 * time.Second},
 		publicClient: newPublicPeerHTTPClient(cfg.LookupHost),
 		peers:        map[string]struct{}{},
+		verified:     map[string]struct{}{},
 		announced:    map[string]struct{}{},
 		failures:     map[string]int{},
 		quarantined:  map[string]time.Time{},
@@ -507,31 +509,37 @@ func (n *Node) addDiscoveredPeer(p string) {
 		}
 		delete(n.quarantined, p)
 	}
-	before := len(n.peers)
-	if before < maxKnownPeers {
-		if _, exists := n.peers[p]; !exists {
-			groupCount := 0
-			for existing := range n.peers {
-				if peerNetgroup(existing) == group {
-					groupCount++
-				}
-			}
-			if groupCount < maxPeersPerNetgroup {
-				n.peers[p] = struct{}{}
+	_, exists := n.peers[p]
+	if !exists {
+		if len(n.peers) >= maxKnownPeers {
+			n.pmu.Unlock()
+			return
+		}
+		groupCount := 0
+		for existing := range n.peers {
+			if peerNetgroup(existing) == group {
+				groupCount++
 			}
 		}
+		if groupCount >= maxPeersPerNetgroup {
+			n.pmu.Unlock()
+			return
+		}
+		n.peers[p] = struct{}{}
 	}
-	changed := len(n.peers) != before
+	_, wasVerified := n.verified[p]
+	n.verified[p] = struct{}{}
+	changed := !exists || !wasVerified
 	n.pmu.Unlock()
 	if changed {
 		n.savePeerStore()
 	}
 }
 
-// AddPeer is intended for a peer learned from the public P2P network. Configured
-// seed/manual peers are added through NodeConfig and may intentionally use a
-// private address for development. Runtime gossip is restricted to public IPs.
-func (n *Node) AddPeer(p string) { n.addDiscoveredPeer(p) }
+// AddPeer schedules callback verification for a peer learned from the public
+// P2P network. Only endpoints that answer with the exact protocol version and
+// Network ID are promoted into the verified/persistent gossip set.
+func (n *Node) AddPeer(p string) { go n.verifyAndAddPeer(p) }
 
 // AddLocalPeer adds an explicitly discovered local/private peer for the current
 // process. Local peers are deliberately not gossiped to the public network and
@@ -551,13 +559,14 @@ func (n *Node) peerList() []string {
 }
 
 func (n *Node) publicPeerList() []string {
-	all := n.peerList()
-	out := make([]string, 0, len(all))
-	for _, p := range all {
-		if isPublicAdvertisedPeer(p) {
+	n.pmu.RLock()
+	out := make([]string, 0, len(n.peers))
+	for p := range n.peers {
+		if _, ok := n.verified[p]; ok && isPublicAdvertisedPeer(p) {
 			out = append(out, p)
 		}
 	}
+	n.pmu.RUnlock()
 	return diversePeerOrder(out)
 }
 
@@ -798,7 +807,7 @@ func (n *Node) refreshDNSSeeds(ctx context.Context) {
 				continue
 			}
 			peer := "http://" + net.JoinHostPort(ip.String(), fmt.Sprintf("%d", port))
-			n.addDiscoveredPeer(peer)
+			go n.verifyAndAddPeer(peer)
 		}
 	}
 }
@@ -831,9 +840,20 @@ func observedAnnouncementPeer(remoteAddr string, port uint16) string {
 }
 
 func (n *Node) recordPeerSuccess(peer string) {
+	peer = normalizePeer(peer)
+	if peer == "" {
+		return
+	}
 	n.pmu.Lock()
 	delete(n.failures, peer)
+	_, wasVerified := n.verified[peer]
+	if isPublicAdvertisedPeer(peer) {
+		n.verified[peer] = struct{}{}
+	}
 	n.pmu.Unlock()
+	if !wasVerified && isPublicAdvertisedPeer(peer) {
+		n.savePeerStore()
+	}
 }
 
 func (n *Node) quarantinePeer(peer string) {
@@ -843,6 +863,7 @@ func (n *Node) quarantinePeer(peer string) {
 	}
 	n.pmu.Lock()
 	delete(n.peers, peer)
+	delete(n.verified, peer)
 	delete(n.failures, peer)
 	delete(n.announced, peer)
 	n.quarantined[peer] = time.Now().Add(deadPeerQuarantine)
@@ -1573,18 +1594,19 @@ func (n *Node) announceSelf(peer string) {
 	}
 }
 
-func (n *Node) verifyAndAddPeer(peer string) {
+func (n *Node) verifyAndAddPeer(peer string) bool {
 	if !isPublicAdvertisedPeer(peer) {
-		return
+		return false
 	}
 	var hello Hello
 	if err := n.getJSONLimit(peer, "/p2p/hello", smallP2PResponseLimit, &hello); err != nil {
-		return
+		return false
 	}
 	if hello.ProtocolVersion != 1 || hello.NetworkID != n.Chain.NetworkID() {
-		return
+		return false
 	}
 	n.addDiscoveredPeer(peer)
+	return true
 }
 
 func (n *Node) syncPeer(peer string) error {
@@ -1597,10 +1619,10 @@ func (n *Node) syncPeer(peer string) error {
 	}
 	go n.announceSelf(peer)
 	if hello.Advertise != "" {
-		n.addDiscoveredPeer(hello.Advertise)
+		go n.verifyAndAddPeer(hello.Advertise)
 	}
 	for _, p := range hello.Peers {
-		n.addDiscoveredPeer(p)
+		go n.verifyAndAddPeer(p)
 	}
 	local := n.Chain.State()
 	rw := new(big.Int)
