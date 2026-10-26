@@ -148,7 +148,7 @@
           <h1>AuronQ. A network you can verify.</h1>
           <p class="lead">AuronQ (AURQ) is an open-source UTXO cryptocurrency built in Go. It combines independent full-node validation, AQM64 Proof-of-Work and ML-DSA-87 transaction signatures.</p>
           <div class="btns">
-            <a class="btn btn-primary" href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk">Download Android wallet (APK)</a>
+            <a class="btn btn-primary" href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.7-alpha-runtime-independence/AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk">Download Android wallet (APK)</a>
             <a class="btn" href="#downloads">Desktop, nodes and miners</a>
             <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/ROADMAP.md">Project roadmap</a>
             <a class="btn" href="https://discord.gg/rmmNY9RhA">Join Discord</a>
@@ -172,44 +172,44 @@
 
     <section class="content wrap" id="downloads" aria-labelledby="downloads-title">
       <h2 id="downloads-title">Download AuronQ</h2>
-      <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk"><strong>Download AuronQ Mobile 0.5.6 Alpha with password confirmation</strong></a>. This is an experimental wallet release; use small test balances, verify the file hash, and do not uninstall an existing wallet to force an update. Other packages are below.</p>
-      <p class="note"><strong>Source status — 26 October 2026:</strong> protected <code>main</code> now contains reviewed GitHub-independent peer discovery and verified node failover for full nodes, Android, CLI clients and the Universal Miner. The published Desktop v1.7.13, Android 0.5.6 Alpha and Miner v0.4.8 Alpha below were built before those final changes. They do not update themselves from the repository; a new tested release is required before packaged applications receive the new runtime behavior.</p>
+      <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.7-alpha-runtime-independence/AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk"><strong>Download AuronQ Mobile 0.5.7 Alpha — Runtime Independence</strong></a>. Experimental and debug-signed. Verify SHA-256 and wallet recovery material before migrating; do not uninstall a funded older app to force an upgrade. Other packages are below.</p>
+      <p class="note"><strong>Release status — 26 October 2026:</strong> Desktop v1.7.14, Android 0.5.7 Alpha and Universal Miner v0.4.9 Alpha package GitHub-independent peer discovery and verified failover from reviewed PRs #187/#189. Previous releases do not update themselves. Source changes do not alter Mainnet consensus, and long-term founder-independent operation remains unproven.</p>
       <div class="grid">
         <article class="card">
           <span class="label">Run a full node</span>
           <h3>AuronQ Desktop</h3>
-          <div class="version">v1.7.13 · Mainnet</div>
+          <div class="version">v1.7.14 · Mainnet</div>
           <p>Validate the blockchain independently, manage a local wallet and inspect your node's Explorer.</p>
           <div class="links">
-            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Windows-x64.zip">Windows x64 ↓</a>
-            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.13/AuronQ-1.7.13-Linux-amd64.tar.gz">Linux amd64 ↓</a>
-            <a href="https://github.com/promirmir/AuronQ/releases/tag/v1.7.13">Release details →</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Windows-x64.zip">Windows x64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz">Linux amd64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/v1.7.14">Release details →</a>
           </div>
         </article>
         <article class="card">
           <span class="label">Mine AURQ</span>
           <h3>Universal Miner</h3>
-          <div class="version">v0.4.8 Alpha · Windows x64</div>
+          <div class="version">v0.4.9 Alpha · Windows x64</div>
           <p>Windows GUI with CPU and supported CUDA/OpenCL GPU backends, automatic selection and local safety controls. Early-stage software.</p>
           <div class="links">
-            <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Windows-x64-GUI-GPU.zip">Windows x64 ↓</a>
-            <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.8-alpha">Release details →</a>
-            <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz">Linux amd64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip">Windows x64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha">Release details →</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz">Linux x64 GPU ↓</a>
           </div>
         </article>
         <article class="card">
           <span class="label">Mobile wallet</span>
           <h3>AuronQ Mobile</h3>
-          <div class="version">v0.5.6 Alpha · Fast Sync + password confirmation · Android</div>
-          <p>Android light wallet retaining published 0.5.6 Fast Sync and requiring two matching password entries when creating a wallet. It is not a fully validating node: peer responses are not independent proof of consensus. This separately packaged debug-signed app cannot silently replace your older AuronQ wallet. Back up before any change; never clear existing wallet data.</p>
+          <div class="version">v0.5.7 Alpha · Runtime Independence · Android</div>
+          <p>Android light wallet with the reviewed network-discovery/failover changes, and two matching password entries with a 12-character minimum at wallet creation. It is not a fully validating node: peer responses alone do not independently prove consensus. This separately packaged, debug-signed app cannot overwrite an older funded wallet. Back up and verify recovery before migrating.</p>
           <div class="links">
-            <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk">Android APK ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.7-alpha-runtime-independence/AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk">Android APK ↓</a>
             
-            <a href="https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed">Release details →</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.7-alpha-runtime-independence">Release details →</a>
           </div>
         </article>
       </div>
-      <p class="note">Mobile APK SHA-256: <code>09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5</code>. This Android 0.5.6 password-confirmed APK is a <strong>separate installation</strong> (<code>com.auronq.mobile.quick2stagev2.passwordcheck</code>) and cannot update an older app in place. It is CI debug-signed. Never uninstall a funded wallet or clear wallet data to overcome install/signing issues. Mainnet consensus remains frozen for ordinary releases; reviewed non-consensus security, availability and independence maintenance is still allowed: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
+      <p class="note">Android 0.5.7 APK SHA-256: <code>95666cf3d4872224d6af71a5034d955a2987c497f084bf75188f6eae9dd26a07</code>. The APK is a <strong>separate installation</strong> (<code>com.auronq.mobile.runtime057</code>) with CI debug signing; it cannot update or access an older app's local wallet in place. Never uninstall a funded wallet or clear wallet data to resolve signing or upgrade issues. Mainnet consensus remains frozen for ordinary releases; reviewed non-consensus maintenance may continue: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
     </section>
 
     <section class="content wrap" id="start" aria-labelledby="start-title">
