@@ -55,9 +55,13 @@ type nodeHTTPError struct {
 	StatusCode int
 	Status     string
 	Message    string
+	APIError   bool
 }
 
 func (e *nodeHTTPError) Error() string {
+	if e.APIError && e.Message != "" {
+		return fmt.Sprintf("node: %s", e.Message)
+	}
 	if e.Message != "" {
 		return fmt.Sprintf("node HTTP %s: %s", e.Status, e.Message)
 	}
@@ -67,13 +71,15 @@ func (e *nodeHTTPError) Error() string {
 func decodeHTTPError(r *http.Response) error {
 	b, _ := io.ReadAll(io.LimitReader(r.Body, 8192))
 	msg := strings.TrimSpace(string(b))
+	apiError := false
 	var v map[string]any
 	if json.Unmarshal(b, &v) == nil {
 		if e, ok := v["error"].(string); ok {
 			msg = e
+			apiError = true
 		}
 	}
-	return &nodeHTTPError{StatusCode: r.StatusCode, Status: r.Status, Message: msg}
+	return &nodeHTTPError{StatusCode: r.StatusCode, Status: r.Status, Message: msg, APIError: apiError}
 }
 func (c *Client) StatusContext(ctx context.Context) (Status, error) {
 	var x Status
