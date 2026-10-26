@@ -10,8 +10,8 @@ android {
         applicationId 'com.auronq.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 11
-        versionName '0.5.5-alpha-p2p'
+        versionCode 12
+        versionName '0.5.7-alpha'
         manifestPlaceholders = [appLabel: 'AuronQ Mobile']
     }
 
@@ -48,6 +48,17 @@ android {
             versionNameSuffix '-network-test'
             signingConfig signingConfigs.debug
             manifestPlaceholders = [appLabel: 'AuronQ Mobile (Network Test)']
+        }
+
+        // Official 0.5.7 alpha maintenance candidate. It intentionally installs
+        // side by side so a different CI debug certificate cannot overwrite or
+        // strand an existing funded wallet.
+        runtime057 {
+            initWith debug
+            applicationIdSuffix '.runtime057'
+            versionNameSuffix '-runtime-independence'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile 0.5.7']
         }
     }
 
