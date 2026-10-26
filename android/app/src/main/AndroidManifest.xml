@@ -5,6 +5,8 @@
     <application
         android:allowBackup="false"
         android:label="${appLabel}"
+        android:icon="@drawable/ic_auronq"
+        android:roundIcon="@drawable/ic_auronq"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
         <activity
