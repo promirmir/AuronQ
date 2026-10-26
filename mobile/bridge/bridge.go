@@ -213,8 +213,8 @@ func observeNodes(candidates []string) []mobileNodeObservation {
 	}
 
 	// Do not make the mobile UI wait for every stale/dead endpoint once at least
-	// one Mainnet peer answered. Keep a short grace window to collect a second
-	// peer for quorum while preserving a six-second cold-start ceiling.
+	// one Mainnet peer answered. Keep a short grace window to collect three
+	// independent netgroups when available, while preserving a six-second ceiling.
 	deadline := time.NewTimer(6 * time.Second)
 	defer deadline.Stop()
 	var grace *time.Timer
@@ -232,8 +232,21 @@ func observeNodes(candidates []string) []mobileNodeObservation {
 			if r.ok {
 				out = append(out, r.obs)
 				if len(out) == 1 && pending > 0 {
-					grace = time.NewTimer(750 * time.Millisecond)
+					grace = time.NewTimer(1800 * time.Millisecond)
 					graceC = grace.C
+				}
+			}
+			// Stop as soon as three genuinely different public IP netgroups
+			// report an identical tip and chain work. Their account data still
+			// needs separate agreement before showing any balance.
+			if len(out) >= 3 {
+				groups := map[string][]mobileNodeObservation{}
+				for _, o := range out { groups[mobileStateKey(o)] = append(groups[mobileStateKey(o)], o) }
+				for _, sameChain := range groups {
+					if hasThreeObservedNetgroups(sameChain) {
+						if grace != nil { grace.Stop() }
+						return finish()
+					}
 				}
 			}
 			if pending == 0 {
@@ -252,6 +265,26 @@ func observeNodes(candidates []string) []mobileNodeObservation {
 		}
 	}
 	return finish()
+}
+
+// mobileNetgroupKey intentionally counts public IPv4 /16 groups, not raw IPs.
+// DNS names and unknown network topologies do not count toward the fast
+// wallet-balance threshold; this does not establish operator independence.
+func mobileNetgroupKey(node string) string {
+    u, err := url.Parse(node)
+    if err != nil { return "" }
+    ip := net.ParseIP(u.Hostname()).To4()
+    if ip == nil || mobileNonPublicIP(ip) { return "" }
+    return fmt.Sprintf("%d.%d", ip[0], ip[1])
+}
+
+func hasThreeObservedNetgroups(obs []mobileNodeObservation) bool {
+    groups := map[string]bool{}
+    for _, o := range obs {
+        g := mobileNetgroupKey(o.Node)
+        if g != "" { groups[g] = true }
+    }
+    return len(groups) >= 3
 }
 
 func mobileStateKey(o mobileNodeObservation) string {
@@ -1157,6 +1190,83 @@ func SendMultiVerified(knownNodesJSON, walletPath, password, to, amount, verifie
 	}
 	b, _ := json.Marshal(out)
 	return string(b), nil
+}
+
+// FastBalanceOnObservedChain is a UI-only, peer-reported balance read.
+// This intentionally does NOT verify header PoW and MUST NOT grant spending
+// authority. Wallet transaction creation still uses SendMultiVerified.
+func FastBalanceOnObservedChain(knownNodesJSON, address, tip, work string, height int64) (string, error) {
+    netByte, _, _, err := aq.DecodeAddress(strings.TrimSpace(address))
+    if err != nil || netByte != aq.MainnetNetworkByte {
+        return "", errors.New("invalid AuronQ Mainnet address")
+    }
+    obs, err := verifiedStateObservations(knownNodesJSON, tip, work, height)
+    if err != nil { return "", err }
+    // One node per public /16 netgroup: three machines in one hosting range
+    // are not counted as independent confirmations.
+    byGroup := map[string]mobileNodeObservation{}
+    for _, o := range obs {
+        group := mobileNetgroupKey(o.Node)
+        if group == "" { continue }
+        if _, exists := byGroup[group]; !exists { byGroup[group] = o }
+    }
+    if len(byGroup) < 3 { return "", errors.New("less than three agreeing public network groups") }
+    type balanceObservation struct {
+        Node string
+        Spendable uint64
+        Total uint64
+    }
+    ch := make(chan balanceObservation, len(byGroup))
+    for _, o := range byGroup {
+        node := o.Node
+        go func() {
+            cl := aq.NewClient(node)
+            cl.HTTP = mobileHTTP(6 * time.Second)
+            result, err := cl.Balance(address)
+            if err == nil {
+                ch <- balanceObservation{Node:node,Spendable:result.Spendable,Total:result.Total}
+            } else {
+                ch <- balanceObservation{}
+            }
+        }()
+    }
+    // Never wait serially for dead endpoints. Three matching responses are
+    // enough for a clearly *peer-reported* view, not for spending authority.
+    deadline := time.NewTimer(6 * time.Second)
+    defer deadline.Stop()
+    groups := map[string][]balanceObservation{}
+    pending := len(byGroup)
+    for pending > 0 {
+        select {
+        case result := <-ch:
+            pending--
+            if result.Node == "" { continue }
+            key := fmt.Sprintf("%d|%d", result.Spendable, result.Total)
+            groups[key] = append(groups[key], result)
+            if len(groups[key]) >= 3 {
+                agreed := groups[key]
+                names := make([]string, 0, len(agreed))
+                for _, b := range agreed { names = append(names, b.Node) }
+                sort.Strings(names)
+                payload := map[string]any{
+                    "address":strings.TrimSpace(address),
+                    "spendable_atoms":result.Spendable,
+                    "total_atoms":result.Total,
+                    "spendable":aq.FormatAmount(result.Spendable),
+                    "total":aq.FormatAmount(result.Total),
+                    "peer_observed":len(byGroup),
+                    "peer_agreement":len(agreed),
+                    "agreement_nodes":names,
+                    "state_trust":"peer-reported-not-independent-aqm64",
+                }
+                raw, _ := json.Marshal(payload)
+                return string(raw), nil
+            }
+        case <-deadline.C:
+            return "", errors.New("three independent network groups did not confirm the same balance")
+        }
+    }
+    return "", errors.New("conflicting or insufficient peer-reported balances")
 }
 
 func QuorumBalanceVerified(knownNodesJSON, address string, verifiedTip, verifiedWork string, verifiedHeight int64) (string, error) {
