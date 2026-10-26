@@ -259,6 +259,35 @@ func TestNormalizeMobileNodeAcceptsOnlySafePublicHTTPOrHTTPS(t *testing.T) {
 	}
 }
 
+func TestFastMobileBalanceRequiresThreePublicNetgroups(t *testing.T) {
+    tests := []struct{ node, group string }{
+        {"http://149.202.91.156:18444", "149.202"},
+        {"http://149.202.99.1:18444", "149.202"},
+        {"http://15.235.225.214:18444", "15.235"},
+        {"http://164.132.169.5:18444", "164.132"},
+        {"http://127.0.0.1:18444", ""},
+        {"http://10.0.0.5:18444", ""},
+        {"https://example.com", ""},
+    }
+    for _, tc := range tests {
+        if got := mobileNetgroupKey(tc.node); got != tc.group {
+            t.Errorf("mobileNetgroupKey(%q) = %q; want %q", tc.node, got, tc.group)
+        }
+    }
+    two := []mobileNodeObservation{
+        {Node: "http://149.202.91.156:18444"},
+        {Node: "http://149.202.99.1:18444"},
+        {Node: "http://15.235.225.214:18444"},
+    }
+    if hasThreeObservedNetgroups(two) {
+        t.Fatal("multiple IPs in the same /16 cannot satisfy 3-netgroup requirement")
+    }
+    three := append(two, mobileNodeObservation{Node: "http://164.132.169.5:18444"})
+    if !hasThreeObservedNetgroups(three) {
+        t.Fatal("three distinct public /16 network groups should be sufficient")
+    }
+}
+
 func TestBundledMobilePeersIncludeIndependentPublicIPv4Fallbacks(t *testing.T) {
 	publicHTTP := 0
 	for _, p := range bundledBootstrapPeers {

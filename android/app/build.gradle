@@ -10,8 +10,8 @@ android {
         applicationId 'com.auronq.mobile'
         minSdk 26
         targetSdk 35
-        versionCode 12
-        versionName '0.5.7-alpha'
+        versionCode 13
+        versionName '0.5.8-alpha'
         manifestPlaceholders = [appLabel: 'AuronQ Mobile']
     }
 
@@ -48,6 +48,16 @@ android {
             versionNameSuffix '-network-test'
             signingConfig signingConfigs.debug
             manifestPlaceholders = [appLabel: 'AuronQ Mobile (Network Test)']
+        }
+
+        // Fast, observable peer-balance repair with the official brand logo.
+        // Separate application identity protects funded 0.5.6/0.5.7 installs.
+        fast058 {
+            initWith debug
+            applicationIdSuffix '.fast058'
+            versionNameSuffix '-fast-balance'
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'AuronQ Mobile 0.5.8']
         }
 
         // Official 0.5.7 alpha maintenance candidate. It intentionally installs

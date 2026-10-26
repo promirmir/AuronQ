@@ -21,6 +21,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -35,6 +36,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashSet;
@@ -65,6 +67,14 @@ public class MainActivity extends Activity {
     // operations or block the quick (unverified) network status preview.
     private final ExecutorService networkPreviewExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService headerVerificationExecutor = Executors.newSingleThreadExecutor();
+    // Separate fast, peer-reported account view; never authorizes transactions.
+    private final ExecutorService fastBalanceExecutor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean fastBalanceBusy = new AtomicBoolean(false);
+    private JSONObject latestQuickSnapshot;
+    private String lastFastBalanceKey = "";
+    private long walletGeneration = 0;
+    private boolean verifiedBalanceDisplayed = false;
+    private long startedAtMillis = SystemClock.elapsedRealtime();
     // Peer checkpoint signatures are diagnostic hints only. Never mix this
     // task with AQM64 validation, wallet keys or verified spending.
     private final ExecutorService peerCheckpointExecutor = Executors.newSingleThreadExecutor();
@@ -115,6 +125,7 @@ public class MainActivity extends Activity {
 
     private TextView walletAddressText;
     private TextView walletBalance;
+    private TextView walletTrustStatus;
     private EditText passwordInput;
     private EditText confirmPasswordInput;
     private Button backupButton;
@@ -207,10 +218,10 @@ public class MainActivity extends Activity {
         top.setPadding(dp(18), dp(12), dp(18), dp(12));
         top.setBackgroundColor(Color.rgb(9, 14, 22));
 
-        TextView mark = text("A", 18, true);
-        mark.setTextColor(Color.rgb(7, 16, 23));
-        mark.setGravity(Gravity.CENTER);
-        mark.setBackground(roundGradient(ACCENT, BLUE, 13));
+        ImageView mark = new ImageView(this);
+        mark.setImageResource(R.drawable.ic_auronq);
+        mark.setContentDescription("AuronQ");
+        mark.setScaleType(ImageView.ScaleType.FIT_CENTER);
         top.addView(mark, new LinearLayout.LayoutParams(dp(42), dp(42)));
 
         LinearLayout brand = new LinearLayout(this);
@@ -278,7 +289,7 @@ public class MainActivity extends Activity {
         root.addView(sub, mt(5));
 
         LinearLayout stats1 = row();
-        dashBalance = statCard(stats1, tr("SALDO", "BALANCE"), "0.00000000", "AURQ");
+        dashBalance = statCard(stats1, tr("SALDO", "BALANCE"), "—", "AURQ");
         dashHeight = statCard(stats1, tr("WYSOKOŚĆ", "HEIGHT"), "—", tr("łańcuch", "chain"));
         root.addView(stats1, mt(20));
 
@@ -329,6 +340,10 @@ public class MainActivity extends Activity {
         balanceCard.addView(section(tr("SALDO DOSTĘPNE", "SPENDABLE BALANCE")));
         walletBalance = text("— AURQ", 29, true);
         balanceCard.addView(walletBalance, mt(8));
+        walletTrustStatus = text(tr("Oczekiwanie na saldo z węzłów…",
+                "Waiting for peer-reported balance…"), 11, false);
+        walletTrustStatus.setTextColor(BLUE);
+        balanceCard.addView(walletTrustStatus, mt(8));
         root.addView(balanceCard, mt(18));
 
         LinearLayout addressCard = card();
@@ -570,7 +585,13 @@ public class MainActivity extends Activity {
     // executor with network polling or PoW verification.
     private void refreshAll() {
         refreshPreview();
-        refreshVerification();
+        // Give the fast account request a head start on cold launch. The
+        // memory-hard AQM64 verifier still runs independently shortly after.
+        if (!walletFile.exists()
+                || (SystemClock.elapsedRealtime() - startedAtMillis >= 15000L)
+                || (latestQuickSnapshot != null && !fastBalanceBusy.get())) {
+            refreshVerification();
+        }
         refreshPeerCheckpointHints();
     }
 
@@ -593,12 +614,112 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     applyNetworkPreview(raw);
                     applySyncProgress(verifiedProgress);
+                    if (walletFile.exists()) scheduleFastBalance();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> handleNetworkRefreshFailure(e.getMessage()));
             } finally {
                 previewBusy.set(false);
             }
+        });
+    }
+
+
+    // A snapshot from at least three distinct public IPv4 /16 netgroups is
+    // suitable for *displaying a peer-reported balance*, never for spending.
+    // Unknown hostnames are not counted as independent operators.
+    private static String balanceNetgroup(String node) {
+        try {
+            String host = new URI(node).getHost();
+            if (host == null) return "";
+            String[] parts = host.split("\\.");
+            if (parts.length != 4) return "";
+            for (String part : parts) {
+                int octet = Integer.parseInt(part);
+                if (octet < 0 || octet > 255) return "";
+            }
+            return parts[0] + "." + parts[1];
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private static boolean threeIndependentGroups(JSONArray nodes) {
+        if (nodes == null) return false;
+        Set<String> groups = new LinkedHashSet<>();
+        for (int i = 0; i < nodes.length(); i++) {
+            String key = balanceNetgroup(nodes.optString(i, ""));
+            if (!key.isEmpty()) groups.add(key);
+        }
+        return groups.size() >= 3;
+    }
+
+    // Must be called on the UI thread. Fast balances are *not* independent
+    // AQM64 proofs, and must not change verifiedHeight/Tip/Work or Send buttons.
+    private void scheduleFastBalance() {
+        JSONObject state = latestQuickSnapshot;
+        if (state == null || walletAddress.isEmpty() || !walletFile.exists()) return;
+        if (!Bridge.mainnetNetworkID().equals(state.optString("network_id", ""))) return;
+        long height = state.optLong("height", -1);
+        String tip = state.optString("tip", "");
+        String work = state.optString("chain_work", "");
+        if (height < 1 || !tip.matches("[0-9a-fA-F]{128}") || work.isEmpty()
+                || state.optInt("peer_agreement", 0) < 3
+                || !threeIndependentGroups(state.optJSONArray("agreement_nodes"))) {
+            walletTrustStatus.setText(tr("Czekam na zgodne grupy węzłów — saldo nieustalone",
+                    "Waiting for independent peer groups — balance unknown"));
+            walletTrustStatus.setTextColor(BLUE);
+            return;
+        }
+        final String address = walletAddress;
+        final long generation = walletGeneration;
+        final String requestKey = address + ":" + height + ":" + tip + ":" + work + ":" + state.optInt("mempool", -1);
+        if (requestKey.equals(lastFastBalanceKey) || !fastBalanceBusy.compareAndSet(false, true)) return;
+        fastBalanceExecutor.execute(() -> {
+            String balance = null;
+            try {
+                // This filters balance providers against the observed chain
+                // (tip, work and height), without doing expensive header replay.
+                balance = Bridge.fastBalanceOnObservedChain(
+                        prefs.getString("known_nodes", "[]"), address, tip, work, height);
+            } catch (Exception ignored) {
+            }
+            final String raw = balance;
+            runOnUiThread(() -> {
+                fastBalanceBusy.set(false);
+                JSONObject latest = latestQuickSnapshot;
+                if (generation != walletGeneration || !address.equals(walletAddress)
+                        || latest == null || latest.optLong("height", -1) != height
+                        || !tip.equalsIgnoreCase(latest.optString("tip", ""))
+                        || !work.equalsIgnoreCase(latest.optString("chain_work", "")))
+                    return;
+                if (raw == null) {
+                    walletTrustStatus.setText(tr("Saldo nieustalone — ponawiam odczyt z węzłów",
+                            "Balance unknown — retrying peer requests"));
+                    walletTrustStatus.setTextColor(BLUE);
+                    return;
+                }
+                try {
+                    JSONObject result = new JSONObject(raw);
+                    String amount = result.optString("spendable", "");
+                    if (!address.equals(result.optString("address", ""))
+                            || !amount.matches("[0-9]+\\.[0-9]{8}")
+                            || result.optInt("peer_agreement", 0) < 3
+                            || !threeIndependentGroups(result.optJSONArray("agreement_nodes")))
+                        return;
+                    lastFastBalanceKey = requestKey;
+                    if (!verifiedBalanceDisplayed) {
+                        dashBalance.setText(amount);
+                        walletBalance.setText(amount + " AURQ");
+                        walletTrustStatus.setText(tr(
+                                "Saldo zgodne w 3 grupach sieci — bez pełnej weryfikacji AQM64",
+                                "Balance agreed across 3 network groups — not a full AQM64 proof"));
+                        walletTrustStatus.setTextColor(BLUE);
+                    }
+                } catch (Exception ignored) {
+                    // Never show zero merely because the result was malformed.
+                }
+            });
         });
     }
 
@@ -720,7 +841,21 @@ public class MainActivity extends Activity {
             final String finalHistory = history;
             final String finalHistoryError = historyError;
             runOnUiThread(() -> {
-                if (finalBalance != null) applyBalance(finalBalance);
+                if (finalBalance != null
+                        && state.optLong("verified_height", -1) == verifiedHeight
+                        && state.optString("verified_tip", "").equalsIgnoreCase(verifiedTip)
+                        && latestQuickSnapshot != null
+                        && latestQuickSnapshot.optLong("height", -1) == verifiedHeight
+                        && verifiedTip.equalsIgnoreCase(latestQuickSnapshot.optString("tip", ""))) {
+                    try {
+                        JSONObject corroboration = new JSONObject(finalBalance);
+                        if (corroboration.optInt("peer_agreement", 0) >= 2) {
+                            applyBalance(finalBalance);
+                        }
+                    } catch (Exception ignored) {
+                        // A malformed response is never rendered as a balance.
+                    }
+                }
                 if (finalHistory != null) {
                     applyHistory(finalHistory);
                 } else if (finalHistoryError != null && "wallet".equals(currentScreen)) {
@@ -826,6 +961,22 @@ public class MainActivity extends Activity {
     private void applyNetworkPreview(String raw) {
         try {
             JSONObject j = new JSONObject(raw);
+            if (!Bridge.mainnetNetworkID().equals(j.optString("network_id", ""))) return;
+            String newTip = j.optString("tip", "");
+            long newHeight = j.optLong("height", -1);
+            if (newHeight < 1 || !newTip.matches("[0-9a-fA-F]{128}")) return;
+            if (latestQuickSnapshot != null
+                    && (latestQuickSnapshot.optLong("height", -1) != newHeight
+                    || !latestQuickSnapshot.optString("tip", "").equalsIgnoreCase(newTip))) {
+                lastFastBalanceKey = "";
+                verifiedBalanceDisplayed = false;
+                dashBalance.setText("—");
+                walletBalance.setText("— AURQ");
+                walletTrustStatus.setText(tr("Nowy blok — aktualizuję saldo…",
+                        "New block — refreshing balance…"));
+                walletTrustStatus.setTextColor(BLUE);
+            }
+            latestQuickSnapshot = j;
             networkReachable = true;
             nodeUrl = j.optString("node", nodeUrl);
             long height = j.optLong("height");
@@ -882,6 +1033,16 @@ public class MainActivity extends Activity {
 
     private void setNetworkOffline(String error) {
         networkReachable = false;
+        latestQuickSnapshot = null;
+        lastFastBalanceKey = "";
+        verifiedBalanceDisplayed = false;
+        if (walletTrustStatus != null && walletFile.exists()) {
+            walletTrustStatus.setText(tr("Brak połączenia — saldo nieustalone",
+                    "Disconnected — balance unknown"));
+            walletTrustStatus.setTextColor(BLUE);
+            walletBalance.setText("— AURQ");
+            dashBalance.setText("—");
+        }
         topNetworkDot.setTextColor(DANGER);
         dashNode.setText(tr("● Brak połączenia", "● Offline"));
         dashNode.setTextColor(DANGER);
@@ -929,9 +1090,17 @@ public class MainActivity extends Activity {
     private void applyBalance(String raw) {
         try {
             JSONObject j = new JSONObject(raw);
-            String spendable = j.optString("spendable", "0.00000000");
+            String spendable = j.optString("spendable", "");
+            if (!spendable.matches("[0-9]+\\.[0-9]{8}")) return;
             dashBalance.setText(spendable);
             walletBalance.setText(spendable + " AURQ");
+            verifiedBalanceDisplayed = true;
+            if (walletTrustStatus != null) {
+                walletTrustStatus.setText(tr(
+                        "Sprawdzono nagłówki AQM64; saldo uzgodnione przez węzły",
+                        "AQM64 headers checked; balance corroborated by peers"));
+                walletTrustStatus.setTextColor(ACCENT);
+            }
         } catch (Exception ignored) {
         }
     }
@@ -1153,11 +1322,23 @@ public class MainActivity extends Activity {
     }
 
     private void loadWalletState() {
+        walletGeneration++;
+        lastFastBalanceKey = "";
+        verifiedBalanceDisplayed = false;
+        if (walletFile.exists()) {
+            dashBalance.setText("—");
+            walletBalance.setText("— AURQ");
+            walletTrustStatus.setText(tr("Pobieram saldo z niezależnych węzłów…",
+                    "Checking balance with independent peers…"));
+            walletTrustStatus.setTextColor(BLUE);
+        }
         if (!walletFile.exists()) {
             walletAddress = "";
             walletAddressText.setText(tr("Brak lokalnego portfela", "No local wallet"));
-            walletBalance.setText("0.00000000 AURQ");
-            dashBalance.setText("0.00000000");
+            walletBalance.setText("— AURQ");
+            dashBalance.setText("—");
+            walletTrustStatus.setText(tr("Brak lokalnego portfela", "No local wallet"));
+            walletTrustStatus.setTextColor(MUTED);
             backupButton.setEnabled(false);
             copyButton.setEnabled(false);
             sendShortcutButton.setEnabled(false);
@@ -1175,6 +1356,7 @@ public class MainActivity extends Activity {
                 runOnUiThread(() -> {
                     walletAddress = addr;
                     walletAddressText.setText(addr);
+                    scheduleFastBalance();
                     backupButton.setEnabled(true);
                     copyButton.setEnabled(true);
                     sendShortcutButton.setEnabled(true);
@@ -1460,6 +1642,7 @@ public class MainActivity extends Activity {
         networkPreviewExecutor.shutdownNow();
         headerVerificationExecutor.shutdownNow();
         peerCheckpointExecutor.shutdownNow();
+        fastBalanceExecutor.shutdownNow();
         super.onDestroy();
     }
 }
