@@ -673,7 +673,7 @@ public class MainActivity extends Activity {
         }
         final String address = walletAddress;
         final long generation = walletGeneration;
-        final String requestKey = address + ":" + height + ":" + tip + ":" + work;
+        final String requestKey = address + ":" + height + ":" + tip + ":" + work + ":" + state.optInt("mempool", -1);
         if (requestKey.equals(lastFastBalanceKey) || !fastBalanceBusy.compareAndSet(false, true)) return;
         fastBalanceExecutor.execute(() -> {
             String balance = null;
@@ -843,8 +843,18 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (finalBalance != null
                         && state.optLong("verified_height", -1) == verifiedHeight
-                        && state.optString("verified_tip", "").equalsIgnoreCase(verifiedTip)) {
-                    applyBalance(finalBalance);
+                        && state.optString("verified_tip", "").equalsIgnoreCase(verifiedTip)
+                        && latestQuickSnapshot != null
+                        && latestQuickSnapshot.optLong("height", -1) == verifiedHeight
+                        && verifiedTip.equalsIgnoreCase(latestQuickSnapshot.optString("tip", ""))) {
+                    try {
+                        JSONObject corroboration = new JSONObject(finalBalance);
+                        if (corroboration.optInt("peer_agreement", 0) >= 2) {
+                            applyBalance(finalBalance);
+                        }
+                    } catch (Exception ignored) {
+                        // A malformed response is never rendered as a balance.
+                    }
                 }
                 if (finalHistory != null) {
                     applyHistory(finalHistory);
@@ -1632,6 +1642,7 @@ public class MainActivity extends Activity {
         networkPreviewExecutor.shutdownNow();
         headerVerificationExecutor.shutdownNow();
         peerCheckpointExecutor.shutdownNow();
+        fastBalanceExecutor.shutdownNow();
         super.onDestroy();
     }
 }
