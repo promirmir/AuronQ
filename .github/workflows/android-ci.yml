@@ -66,4 +66,11 @@ jobs:
 
       - name: Build Android APK
         working-directory: android
-        run: gradle --no-daemon :app:assembleDebug
+        run: gradle --no-daemon :app:assembleDebug :app:assembleLight059
+      - name: Upload isolated light-client 0.5.9 test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuronQ-Mobile-0.5.9-Light-TEST
+          path: android/app/build/outputs/apk/light059/app-light059.apk
+          if-no-files-found: error
+          retention-days: 7
