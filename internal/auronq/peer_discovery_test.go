@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"net/http"
+	"os"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -32,9 +33,14 @@ func testPeerNetwork(t *testing.T) (*NetworkConfig, *Chain) {
 	return netCfg, c
 }
 
-func TestHelloAdvertisesOnlyPublicPeers(t *testing.T) {
+func TestHelloAdvertisesOnlyVerifiedPublicPeers(t *testing.T) {
 	_, c := testPeerNetwork(t)
 	n := NewNode(c, NodeConfig{Peers: []string{"http://127.0.0.1:18444", "http://localhost:18445", "http://[::1]:18446", "http://100.64.0.10:18445", "http://192.168.1.10:18444", "http://1.1.1.1:18445"}})
+
+	// A configured seed is only a connection candidate until a successful
+	// Mainnet hello/sync proves it belongs to this network.
+	n.recordPeerSuccess("http://1.1.1.1:18445")
+
 	req := httptest.NewRequest("GET", "/p2p/hello", nil)
 	rec := httptest.NewRecorder()
 	n.handler().ServeHTTP(rec, req)
@@ -47,6 +53,34 @@ func TestHelloAdvertisesOnlyPublicPeers(t *testing.T) {
 	}
 	if len(h.Peers) != 1 || h.Peers[0] != "http://1.1.1.1:18445" {
 		t.Fatalf("advertised peers=%v", h.Peers)
+	}
+}
+
+func TestUnverifiedSeedIsNotAdvertisedOrPersisted(t *testing.T) {
+	_, c := testPeerNetwork(t)
+	store := t.TempDir() + "/peers.json"
+	peer := "http://1.1.1.1:18445"
+	n := NewNode(c, NodeConfig{Peers: []string{peer}, PeerStorePath: store})
+
+	if got := n.publicPeerList(); len(got) != 0 {
+		t.Fatalf("unverified seed leaked into public gossip: %v", got)
+	}
+	n.savePeerStore()
+	b, err := os.ReadFile(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var saved []string
+	if err := json.Unmarshal(b, &saved); err != nil {
+		t.Fatal(err)
+	}
+	if len(saved) != 0 {
+		t.Fatalf("unverified seed persisted: %v", saved)
+	}
+
+	n.recordPeerSuccess(peer)
+	if got := n.publicPeerList(); len(got) != 1 || got[0] != peer {
+		t.Fatalf("verified seed not promoted: %v", got)
 	}
 }
 

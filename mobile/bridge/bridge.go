@@ -27,11 +27,14 @@ const (
 )
 
 var bundledBootstrapPeers = []string{
-	"https://mir.taild63f46.ts.net",
-	"https://desktop-4nifg1j.taild63f46.ts.net",
-	"http://45.88.201.77:18444",
-	"http://54.38.81.30:18444",
-	"http://69.173.206.211:18444",
+	"http://149.202.91.156:18444",
+	"http://15.235.225.214:18444",
+	"http://164.132.169.5:18444",
+	"http://51.222.240.201:18444",
+	"http://13.140.74.146:18444",
+	"http://146.59.217.34:18444",
+	"http://194.110.207.11:18444",
+	"http://47.165.130.205:18444",
 }
 
 type bootstrapManifest struct {
@@ -793,53 +796,69 @@ func checkNode(base string) error {
 	return err
 }
 
-func DiscoverNode() (string, error) {
-	// Fresh installs first use the peer snapshot bundled into the APK. The GitHub
-	// manifest is only an optional freshness source, not a runtime authority.
-	// After the first successful contact, Android persists peers learned directly
-	// from AuronQ /p2p/hello and tries those cached network peers before calling
-	// this function again.
-	manifestPeers, manifestErr := fetchManifest()
+func chooseReachableMobileNode(raw []string) (string, error) {
 	seen := map[string]bool{}
-	candidates := make([]string, 0, len(bundledBootstrapPeers)+len(manifestPeers))
-	add := func(p string) {
+	candidates := make([]string, 0, len(raw))
+	for _, p := range raw {
 		p = normalizeMobileNode(p)
 		if p == "" || seen[p] {
+			continue
+		}
+		seen[p] = true
+		candidates = append(candidates, p)
+	}
+	obs := observeNodes(candidates)
+	selected, _, err := chooseNodeQuorum(obs)
+	if err != nil {
+		return "", err
+	}
+	return selected.Node, nil
+}
+
+func DiscoverResilientNode(preferred, knownJSON string) (string, error) {
+	// The critical path is fully independent of GitHub: preferred/cached peers and
+	// the bundled release snapshot are probed concurrently first. Only if none of
+	// them answers as the exact AuronQ Mainnet do we ask the optional GitHub
+	// manifest for fresher discovery metadata.
+	seen := map[string]bool{}
+	candidates := make([]string, 0, maxMobileProbeCandidates)
+	add := func(p string) {
+		p = normalizeMobileNode(p)
+		if p == "" || seen[p] || len(candidates) >= maxMobileProbeCandidates {
 			return
 		}
 		seen[p] = true
 		candidates = append(candidates, p)
 	}
-	for _, p := range bundledBootstrapPeers {
+	add(preferred)
+	for _, p := range mobileCandidates(knownJSON) {
 		add(p)
 	}
+	if node, err := chooseReachableMobileNode(candidates); err == nil {
+		return node, nil
+	}
+
+	manifestPeers, manifestErr := fetchManifest()
+	fallback := make([]string, 0, len(manifestPeers))
 	for _, p := range manifestPeers {
-		add(p)
-	}
-
-	// Rotate the starting point so one bundled address is not permanently favored.
-	if len(candidates) > 1 {
-		start := int(time.Now().UnixNano() % int64(len(candidates)))
-		rotated := append([]string(nil), candidates[start:]...)
-		rotated = append(rotated, candidates[:start]...)
-		candidates = rotated
-	}
-
-	var lastErr error
-	for _, p := range candidates {
-		if err := checkNode(p); err == nil {
-			return p, nil
-		} else {
-			lastErr = err
+		p = normalizeMobileNode(p)
+		if p == "" || seen[p] {
+			continue
 		}
+		seen[p] = true
+		fallback = append(fallback, p)
 	}
-	if manifestErr != nil {
-		return "", fmt.Errorf("no reachable AuronQ Mainnet node; optional manifest: %v; last node: %v", manifestErr, lastErr)
+	if node, err := chooseReachableMobileNode(fallback); err == nil {
+		return node, nil
+	} else if manifestErr != nil {
+		return "", fmt.Errorf("no reachable local/bundled AuronQ Mainnet peer; optional manifest unavailable: %v; manifest peers: %v", manifestErr, err)
+	} else {
+		return "", fmt.Errorf("no reachable AuronQ Mainnet peer: %v", err)
 	}
-	if lastErr != nil {
-		return "", fmt.Errorf("no reachable AuronQ Mainnet node: %v", lastErr)
-	}
-	return "", errors.New("no reachable AuronQ Mainnet node")
+}
+
+func DiscoverNode() (string, error) {
+	return DiscoverResilientNode("", "[]")
 }
 
 func Status(nodeURL string) (string, error) {
@@ -1475,6 +1494,15 @@ func PeerCandidates(nodeURL string) (string, error) {
 			break
 		}
 	}
-	b, _ := json.Marshal(out)
+	// Do not persist or return a peer merely because another peer advertised it.
+	// Probe candidates concurrently and return only endpoints that themselves
+	// answer as the exact AuronQ Mainnet.
+	obs := observeNodes(out)
+	verified := make([]string, 0, len(obs))
+	for _, o := range obs {
+		verified = append(verified, o.Node)
+	}
+	sort.Strings(verified)
+	b, _ := json.Marshal(verified)
 	return string(b), nil
 }

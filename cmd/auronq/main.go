@@ -382,9 +382,12 @@ func cmdNode(args []string) error {
 	advertise := fs.String("advertise", "", "public peer URL, e.g. http://203.0.113.10:18444")
 	autoPublic := fs.Bool("auto-public", true, "automatically try UPnP for the node listen port when no public endpoint is known")
 	peers := fs.String("peers", "", "comma-separated peers")
-	peerStore := fs.String("peer-store", "", "persistent cache of discovered public peers")
+	peerStore := fs.String("peer-store", "", "persistent cache of discovered public peers (default: <data>/public-peers.json)")
 	if err := fs.Parse(args); err != nil {
 		return err
+	}
+	if strings.TrimSpace(*peerStore) == "" {
+		*peerStore = filepath.Join(*data, "public-peers.json")
 	}
 	n, err := aq.LoadNetwork(*network)
 	if err != nil {

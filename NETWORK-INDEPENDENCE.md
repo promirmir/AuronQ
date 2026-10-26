@@ -16,6 +16,16 @@ Full nodes:
 
 Therefore, once multiple full nodes know one another, the original bootstrap computer is not required for consensus or continued block production.
 
+## Runtime independence requirement
+
+AuronQ applications must not require GitHub to join or continue using Mainnet. GitHub-hosted manifests are optional freshness/distribution helpers only.
+
+- Full Node/Desktop must retain multiple bundled public seed peers and persisted/gossiped peer recovery.
+- Android must retain multiple bundled public peer fallbacks and persist peers learned from the live AuronQ network.
+- Once any valid Mainnet peer is reached, peer gossip should provide additional discovery routes.
+- Loss of GitHub must not change Network ID, consensus validation, wallet keys, balances or transaction rules.
+- A fresh-install drill with GitHub-based manifests unavailable is part of the independence acceptance gate.
+
 ## Fresh-install discovery
 
 A computer with no peer history still needs at least one rendezvous path. Current release metadata also ships a reviewed multi-peer seed snapshot, so the CLI is not dependent on a successful GitHub manifest fetch for first contact. AuronQ supports:

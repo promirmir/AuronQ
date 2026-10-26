@@ -28,7 +28,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BASE=c1001ee2950158781f216820cc5e4911aa0044a9
+          # Maintenance exception #186 accepted discovery/runtime-independence changes through:
+          # f53015c8411342f50e749c7a212350b379274b4a
+          BASE=f53015c8411342f50e749c7a212350b379274b4a
           git cat-file -e "$BASE^{commit}"
           changed="$(git diff --name-only "$BASE" HEAD -- \
             internal/auronq/ \
