@@ -1,12 +1,12 @@
-# AuronQ — Mainnet feature freeze and Android public download
+# AuronQ — Mainnet feature freeze and release policy
 **Decision: 10 October 2026. Status: maintenance / verification, not a claim of a completed security audit.**
 
-## Current official Android release — correction as of 12 October 2026
+## Current published Android release — 26 October 2026
 
-- **Canonical Android APK:** [AuronQ Mobile 0.5.6 Alpha — Password Confirmed](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk).
-- **Published APK SHA-256:** `09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5`.
-- [Official release metadata](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed). The Android package identifier is `com.auronq.mobile.quick2stagev2.passwordcheck`, different from the prior Fast Sync APK; it uses CI debug signing, so it **does not install as an in-place update**. Do not uninstall a funded wallet without verified recovery.
-- **Current project/release navigation:** [PROJECT-STATUS.md](PROJECT-STATUS.md). The 10 October record below is kept unchanged as historical evidence, **not current download advice**.
+- **Current APK:** [AuronQ Mobile 0.5.7 Alpha — Runtime Independence](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.7-alpha-runtime-independence/AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk).
+- **Published APK SHA-256:** `95666cf3d4872224d6af71a5034d955a2987c497f084bf75188f6eae9dd26a07`.
+- [Official release metadata](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.7-alpha-runtime-independence). The Android application ID is `com.auronq.mobile.runtime057`; CI debug signing means it **installs side by side**, not as an in-place upgrade from an older funded wallet. Verify offline recovery material first. Do not uninstall an existing funded installation.
+- **Current project/release navigation:** [PROJECT-STATUS.md](PROJECT-STATUS.md). Earlier release and freeze decisions below are retained as dated historical records, not current download guidance.
 
 ## Current maintenance state — 26 October 2026
 
@@ -15,9 +15,9 @@ The consensus freeze remains in force, but it does **not** prohibit reviewed non
 - PR #187: GitHub-independent runtime peer discovery, verified peer persistence/gossip and updated Android fallback behavior;
 - PR #189 / issue #188: verified failover for CLI thin clients and standalone/multi-GPU Universal Miner workers.
 
-Both changes preserved Mainnet identity and consensus rules and passed cross-platform CI plus Frozen Mainnet checks. The current protected source head after #189 is `33edbe4cceebe7d0fcaa766b35bbb6794ac635dd`.
+The network maintenance changes preserved Mainnet identity and consensus rules and passed cross-platform CI and Frozen Mainnet checks. Packaged applications were published as **Desktop 1.7.14, Android 0.5.7 Alpha and Miner 0.4.9 Alpha** after reviewed release PRs #192 and #193; [release verification](PROJECT-STATUS.md) records current asset hashes.
 
-**Important distribution distinction:** the published Desktop v1.7.13, Android 0.5.6 Alpha and Universal Miner v0.4.8 Alpha predate these final maintenance changes. Existing installed binaries do not acquire them automatically. A new reviewed release is still required before users receive the updated runtime behavior through normal downloads.
+**Distribution:** verified downloads of Desktop v1.7.14, Android 0.5.7 Alpha and Universal Miner v0.4.9 Alpha include the 26 October runtime-independence work. Historic 1.7.13 / 0.5.6 / 0.4.8 installed binaries do not update themselves automatically. Publishing software does not prove professional security review or founder-independent long-duration network operation.
 - Neither a version number nor a published checksum proves the light wallet has been professionally audited; the scaling and wallet-safety issues remain open.
 
 ## Historical 10 October 2026 Android release snapshot (superseded)
@@ -32,9 +32,9 @@ Both changes preserved Mainnet identity and consensus rules and passed cross-pla
 
 ## Full-node Mainnet and release freeze
 
-- Keep the current publicly published **v1.7.13 full-node** binaries and their running chain data unchanged. Do not automatically install new binaries or rewrite genesis/Network ID/AQM64/difficulty/emission/transaction validity/UTXO validation/chainwork selection.
+- Preserve both historical **v1.7.13** and current **v1.7.14** full-node release archives and all participants' chain data. Do not automatically update users' binaries or rewrite genesis/Network ID/AQM64/difficulty/emission/transaction validity/UTXO validation/chainwork selection.
 - PR [#145](https://github.com/promirmir/AuronQ/pull/145) introduced only node-self-signed, **nonconsensus** checkpoint hints. A self-signature proves the signing node's identity, not the correctness of historic work. Full validation rules stay authoritative.
-- PR [#146](https://github.com/promirmir/AuronQ/pull/146) was **closed without merge** to avoid deploying another Mainnet full-node version during the freeze. No automated rollout or automatic v1.7.14 release is authorized.
+- **Historical decision (10 October 2026):** PR [#146](https://github.com/promirmir/AuronQ/pull/146) was closed without merge, and at that time automatic release of v1.7.14 was not authorized. This restriction on that earlier proposal was superseded by the reviewed and tested maintenance-release approvals in [PR #192](https://github.com/promirmir/AuronQ/pull/192) and [PR #193](https://github.com/promirmir/AuronQ/pull/193), without changing Mainnet consensus.
 - Do not delete or relocate any real participant's full chain, wallet, seed identity or peer store. Existing peer discovery and miners continue as configured.
 - There is no magical guarantee of Mainnet survival if all full historical copies are lost, miners stop or no node remains reachable. Independent archival full nodes, node operator diversity, off-GitHub source+binary mirrors and proven offline bootstrap tests remain operational resilience requirements, not a reason to change consensus in a hurry.
 
@@ -47,13 +47,13 @@ A feature freeze is not an instruction to ignore vulnerabilities. Necessary nonc
 4. An explicit rollback plan and data backup exist. Stage nontrivial changes on a **noncritical test node** first, never all live Mainnet peers together.
 5. No critical Mainnet code is changed via undocumented or unreviewed PRs. Consensus-breaking changes are **out of scope** for this maintenance freeze and would require a distinct public protocol proposal and testnet rollout.
 
-The `main` branch is protected on GitHub. The [Frozen Mainnet source guard](.github/workflows/frozen-mainnet-gate.yml) rejects changes to frozen core files relative to the latest explicitly accepted maintenance baseline (currently issue #188 baseline `a36ef6e1fc80089109b26aea99661e0a928fefc6`) and separately verifies immutable public Mainnet identity. This is defense-in-depth and is not a substitute for repository ruleset/administrator protections or independent review.
+The `main` branch is protected on GitHub. The [Frozen Mainnet source guard](.github/workflows/frozen-mainnet-gate.yml) rejects unreviewed changes to protected paths against its latest accepted maintenance baseline (release exception #191 commit `5163e07ac5c0148e83745e6fffed7da69a3aeb74`) and independently verifies immutable Mainnet identity. Protection requires further independent review for consensus-critical changes.
 
 ## Operational checklist for finishing
 
 - Verify the canonical Android download/HTTPS release and SHA-256 stay available.
 - Give users one small written installation guide and a clearly marked *alpha/no-large-funds* warning.
-- Preserve full-node v1.7.13 binary/archive and at least two independent physical operator backups of complete validated history.
+- Preserve full-node v1.7.13 historical and v1.7.14 current binaries and at least two independent physical operator backups of complete validated history.
 - Keep collecting reproducible bug reports, especially missing peers, transaction broadcast failures, signature migration errors and multi-node chain divergence.
 - Avoid expanding unreviewed checkpoint trust models. Retired GitHub Release entries are not current distribution channels; preserve source code, Git tags and protocol history.
 
