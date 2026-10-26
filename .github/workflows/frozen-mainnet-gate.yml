@@ -52,7 +52,7 @@ jobs:
             while IFS= read -r file; do
               case "$file" in
                 android/app/src/main/java/com/auronq/mobile/MainActivity.java)
-                  expected=2e5b6d1cdaa9dbb687d0eafb08d1d9b4c3428b1b ;;
+                  expected=7d24966b4a373e4d2c729fb40c7b09756f0ff565 ;;
                 android/app/build.gradle)
                   expected=ab4b9dc5158addcdc18436a1970aa7dcc1fdd67b ;;
                 android/app/src/main/AndroidManifest.xml)
