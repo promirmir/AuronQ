@@ -357,7 +357,7 @@ func TestDistinctLightNetgroupsFiltersPrivateHostsAndSameRange(t *testing.T) {
     if len(selected) != 3 {
         t.Fatalf("expected exactly three public netgroups, got %+v", selected)
     }
-    if selected[1].Node != "http://149.202.91.156:18444" {
+    if selected[0].Node != "http://149.202.91.156:18444" {
         t.Fatalf("nondeterministic or incorrect representative: %+v", selected)
     }
     if !hasThreeObservedNetgroups(selected) {
