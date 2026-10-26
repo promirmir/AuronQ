@@ -51,7 +51,7 @@ Current protected source also applies the same independence principle to compone
 
 These thin clients do **not** advertise themselves as P2P full nodes. Public peer advertisement remains a full-node responsibility.
 
-undefined
+The source implementation above was merged and packaged on 26 October 2026 in **Desktop v1.7.14, Android 0.5.7 Alpha and Universal Miner v0.4.9 Alpha**; [official downloads and checksums](https://github.com/promirmir/AuronQ/releases) are published. Older 1.7.13 / 0.5.6 / 0.4.8 installations do not automatically receive the new network behavior. Independent real-world multi-operator continuity and loss-of-bootstrap testing remain separate operational acceptance checks.
 
 AuronQ also supports DNS seeds. Adding independently operated DNS seeds later gives a second discovery mechanism that does not depend on the repository manifest.
 
