@@ -1,12 +1,8 @@
 name: Publish Android v0.5.7 Alpha
 
 on:
-  pull_request:
-    paths:
-      - 'android/**'
-      - 'mobile/bridge/**'
-      - 'internal/auronq/**'
-      - '.github/workflows/publish-android-v0.5.7-alpha.yml'
+  # Historical 0.5.7 release is already published. Do not rerun its
+  # version-pinned acceptance gate on newer Android source PRs.
   push:
     branches: [main]
     paths:
