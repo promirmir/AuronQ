@@ -10,11 +10,13 @@ import (
 )
 
 func survivabilityTestNode(peerCount int) *Node {
-	n := &Node{peers: map[string]struct{}{}}
+	n := &Node{peers: map[string]struct{}{}, verified: map[string]struct{}{}}
 	for i := 0; i < peerCount; i++ {
 		// 11/8 is globally routable and gives us many independent-looking
 		// netgroups for the diversity ordering used by publicPeerList.
-		n.peers[fmt.Sprintf("http://11.%d.%d.%d:18444", (i%200)+1, ((i/200)%200)+1, (i%250)+1)] = struct{}{}
+		peer := fmt.Sprintf("http://11.%d.%d.%d:18444", (i%200)+1, ((i/200)%200)+1, (i%250)+1)
+		n.peers[peer] = struct{}{}
+		n.verified[peer] = struct{}{}
 	}
 	return n
 }
