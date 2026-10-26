@@ -76,12 +76,12 @@ class PinnedReleaseIntegrityTests(unittest.TestCase):
         fake = {
             "schema": 1,
             "repository": "promirmir/AuronQ",
-            "releases": [dict(self.expected, tag=t) for t in ("a", "b", "c")],
+            "releases": [dict(self.expected, tag=t) for t in ("a", "b", "c", "d", "e", "f")],
         }
         with tempfile.TemporaryDirectory() as root:
             path = Path(root, "release.json")
             path.write_text(json.dumps(fake), encoding="utf-8")
-            self.assertEqual(len(watch.manifest_load(path)["releases"]), 3)
+            self.assertEqual(len(watch.manifest_load(path)["releases"]), 6)
             fake["releases"][0]["assets"]["sample.bin"]["sha256"] = "not-sha256"
             path.write_text(json.dumps(fake), encoding="utf-8")
             with self.assertRaisesRegex(watch.IntegrityError, "invalid pinned SHA"):
