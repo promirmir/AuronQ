@@ -262,12 +262,15 @@ func TestNormalizeMobileNodeAcceptsOnlySafePublicHTTPOrHTTPS(t *testing.T) {
 func TestBundledMobilePeersIncludeIndependentPublicIPv4Fallbacks(t *testing.T) {
 	publicHTTP := 0
 	for _, p := range bundledBootstrapPeers {
+		if strings.Contains(p, "github.com") || strings.Contains(p, "githubusercontent.com") {
+			t.Fatalf("GitHub must not be a bundled runtime peer dependency: %q", p)
+		}
 		if strings.HasPrefix(p, "http://") && normalizeMobileNode(p) != "" {
 			publicHTTP++
 		}
 	}
-	if publicHTTP < 3 {
-		t.Fatalf("expected at least three public IPv4 fallback peers, got %d: %v", publicHTTP, bundledBootstrapPeers)
+	if publicHTTP < 6 {
+		t.Fatalf("expected at least six public IPv4 fallback peers independent of GitHub, got %d: %v", publicHTTP, bundledBootstrapPeers)
 	}
 }
 
