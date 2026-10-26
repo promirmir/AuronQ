@@ -13,6 +13,8 @@ AuronQ is a live, open-source Proof-of-Work cryptocurrency with its own Mainnet.
 - Published universal miner v0.4.8 Alpha: Windows GUI/GPU build and Linux amd64 CPU/OpenCL package. Hardware compatibility varies, and not every backend is independently validated.
 - UTXO validation and cumulative-work reorganization.
 - Persistent P2P peer storage and gossip.
+- GitHub-independent full-node/Android runtime discovery with callback-verified peer promotion and persistent verified peer recovery (source `main`, PR #187).
+- Verified automatic node failover for CLI thin clients and standalone/multi-GPU Universal Miner workers (source `main`, PR #189).
 - Replaceable/prunable bootstrap peers.
 - Native local blockchain Explorer on every full node.
 - Peer-aware public Explorer links.
@@ -51,6 +53,7 @@ Until those criteria are satisfied, avoid discretionary consensus changes. Secur
 - Move from debug-signed alpha packaging toward production release signing when the software is ready.
 
 ### Release integrity
+- Publish refreshed Desktop, Android and Universal Miner builds from the reviewed post-#187/#189 source so packaged applications receive the runtime-independence work.
 - Preserve deterministic/reproducible builds.
 - Add stronger artifact provenance/attestation.
 - Introduce production code signing for supported platforms when operationally feasible.
