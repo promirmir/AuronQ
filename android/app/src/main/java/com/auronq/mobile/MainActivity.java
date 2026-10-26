@@ -545,7 +545,10 @@ public class MainActivity extends Activity {
     private void rememberNetwork(String node) {
         try {
             Set<String> nodes = new LinkedHashSet<>();
-            if (node != null && node.startsWith("https://")) nodes.add(node);
+            // discoverResilientNode/Bridge.status already verified this endpoint
+            // against the exact AuronQ Mainnet Network ID. Public IPv4 full nodes
+            // intentionally use HTTP on port 18444, so persist both safe schemes.
+            if (node != null && (node.startsWith("https://") || node.startsWith("http://"))) nodes.add(node);
 
             try {
                 String learned = Bridge.peerCandidates(node);
