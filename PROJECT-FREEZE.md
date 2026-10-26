@@ -7,6 +7,17 @@
 - **Published APK SHA-256:** `09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5`.
 - [Official release metadata](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed). The Android package identifier is `com.auronq.mobile.quick2stagev2.passwordcheck`, different from the prior Fast Sync APK; it uses CI debug signing, so it **does not install as an in-place update**. Do not uninstall a funded wallet without verified recovery.
 - **Current project/release navigation:** [PROJECT-STATUS.md](PROJECT-STATUS.md). The 10 October record below is kept unchanged as historical evidence, **not current download advice**.
+
+## Current maintenance state — 26 October 2026
+
+The consensus freeze remains in force, but it does **not** prohibit reviewed non-consensus security/availability/independence maintenance. Two controlled maintenance exceptions have now been merged to protected `main`:
+
+- PR #187: GitHub-independent runtime peer discovery, verified peer persistence/gossip and updated Android fallback behavior;
+- PR #189 / issue #188: verified failover for CLI thin clients and standalone/multi-GPU Universal Miner workers.
+
+Both changes preserved Mainnet identity and consensus rules and passed cross-platform CI plus Frozen Mainnet checks. The current protected source head after #189 is `33edbe4cceebe7d0fcaa766b35bbb6794ac635dd`.
+
+**Important distribution distinction:** the published Desktop v1.7.13, Android 0.5.6 Alpha and Universal Miner v0.4.8 Alpha predate these final maintenance changes. Existing installed binaries do not acquire them automatically. A new reviewed release is still required before users receive the updated runtime behavior through normal downloads.
 - Neither a version number nor a published checksum proves the light wallet has been professionally audited; the scaling and wallet-safety issues remain open.
 
 ## Historical 10 October 2026 Android release snapshot (superseded)
@@ -36,7 +47,7 @@ A feature freeze is not an instruction to ignore vulnerabilities. Necessary nonc
 4. An explicit rollback plan and data backup exist. Stage nontrivial changes on a **noncritical test node** first, never all live Mainnet peers together.
 5. No critical Mainnet code is changed via undocumented or unreviewed PRs. Consensus-breaking changes are **out of scope** for this maintenance freeze and would require a distinct public protocol proposal and testnet rollout.
 
-The `main` branch is marked protected on GitHub, but exact required checks/rules may require repo administrator verification. The optional [freeze-gate workflow](.github/workflows/frozen-mainnet-gate.yml) rejects changes to frozen core files relative to the merged baseline `c1001ee2950158781f216820cc5e4911aa0044a9`. This is defense-in-depth and is not a substitute for repository ruleset/administrator protections.
+The `main` branch is protected on GitHub. The [Frozen Mainnet source guard](.github/workflows/frozen-mainnet-gate.yml) rejects changes to frozen core files relative to the latest explicitly accepted maintenance baseline (currently issue #188 baseline `a36ef6e1fc80089109b26aea99661e0a928fefc6`) and separately verifies immutable public Mainnet identity. This is defense-in-depth and is not a substitute for repository ruleset/administrator protections or independent review.
 
 ## Operational checklist for finishing
 
@@ -46,4 +57,4 @@ The `main` branch is marked protected on GitHub, but exact required checks/rules
 - Keep collecting reproducible bug reports, especially missing peers, transaction broadcast failures, signature migration errors and multi-node chain divergence.
 - Avoid expanding unreviewed checkpoint trust models. Retired GitHub Release entries are not current distribution channels; preserve source code, Git tags and protocol history.
 
-This is a **code and release change freeze**, not shutdown of the blockchain. The chain is expected to be operated independently by its participants, with the above real-world constraints.
+This is a **consensus/feature freeze with a narrow maintenance path**, not shutdown of the blockchain. Necessary reviewed non-consensus security, compatibility, availability and independence fixes may still be accepted under the Mainnet change policy. The chain is expected to be operated independently by its participants, with the above real-world constraints.
