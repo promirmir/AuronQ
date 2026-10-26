@@ -1,0 +1,111 @@
+name: Publish Desktop v1.7.14
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.release/desktop-1.7.14'
+      - '.github/workflows/publish-desktop-v1.7.14.yml'
+
+permissions:
+  contents: write
+
+env:
+  VERSION: 1.7.14
+  TAG: v1.7.14
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - name: Verify release source and immutable Mainnet identity
+        run: |
+          set -euo pipefail
+          grep -Fq 'const version = "1.7.14"' cmd/auronq/main.go
+          grep -Fq 'const desktopVersion = "1.7.14"' cmd/auronq-desktop/main.go
+          go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1 -timeout=4m
+          go test ./...
+          go vet ./...
+          go test -race ./...
+
+  windows:
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - name: Build Windows release
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $env:CGO_ENABLED="0"
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid= -H=windowsgui" -o AuronQ-Desktop.exe ./cmd/auronq-desktop
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq-cli.exe ./cmd/auronq
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item AuronQ-Desktop.exe,auronq-cli.exe,network.json,bootstrap.json,README-WINDOWS.md,START-AURONQ.cmd,START-PUBLIC-NODE.cmd,START-SEED-NODE.cmd dist\
+          Get-FileHash dist\AuronQ-Desktop.exe -Algorithm SHA256 | Format-List | Out-File dist\SHA256SUMS-Windows.txt
+          Get-FileHash dist\auronq-cli.exe -Algorithm SHA256 | Format-List | Out-File -Append dist\SHA256SUMS-Windows.txt
+          Compress-Archive -Path dist\* -DestinationPath "AuronQ-1.7.14-Windows-x64.zip" -Force
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-1.7.14
+          path: AuronQ-1.7.14-Windows-x64.zip
+          if-no-files-found: error
+
+  linux:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - name: Build Linux release
+        run: |
+          set -euo pipefail
+          CGO_ENABLED=0 go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o auronq ./cmd/auronq
+          mkdir -p dist
+          cp auronq network.json bootstrap.json README.md MAINNET.md dist/
+          sha256sum dist/auronq > dist/SHA256SUMS-Linux.txt
+          tar -C dist -czf AuronQ-1.7.14-Linux-amd64.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-linux-1.7.14
+          path: AuronQ-1.7.14-Linux-amd64.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Verify assets and publish checksums
+        run: |
+          set -euo pipefail
+          cd release
+          test -s AuronQ-1.7.14-Windows-x64.zip
+          test -s AuronQ-1.7.14-Linux-amd64.tar.gz
+          sha256sum AuronQ-1.7.14-Windows-x64.zip AuronQ-1.7.14-Linux-amd64.tar.gz > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Publish immutable-by-policy new release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; refusing to overwrite." >&2
+            exit 1
+          fi
+          gh release create "$TAG"             release/AuronQ-1.7.14-Windows-x64.zip             release/AuronQ-1.7.14-Linux-amd64.tar.gz             release/SHA256SUMS.txt             --target "$GITHUB_SHA"             --title "AuronQ v1.7.14 Mainnet"             --notes "Maintenance release delivering the reviewed runtime-independence work from PRs #187/#189: verified peer persistence/gossip, GitHub-independent first-contact paths, and verified node failover for CLI clients. Mainnet genesis, Network ID, AQM64, difficulty, monetary policy and validity rules are unchanged. This software has not received an independent professional security audit; verify SHA-256 checksums and do not treat it as mature financial infrastructure."
