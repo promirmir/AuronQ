@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Official AuronQ A/Q symbol adapted from assets/brand/auronq-icon.svg.
+     Android VectorDrawable omits SVG glow/filter effects but preserves the emblem geometry. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="1024" android:viewportHeight="1024">
+    <path android:fillColor="#081426" android:pathData="M0,0h1024v1024h-1024z" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#2D7BFF"
+        android:strokeWidth="18" android:pathData="M512,170 A330,330 0,1 1,512 830 A330,330 0,1 1,512 170" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#5BE4FF"
+        android:strokeWidth="7" android:pathData="M512,208 A292,292 0,1 1,512 792 A292,292 0,1 1,512 208" />
+    <path android:fillColor="#DCE9FF" android:strokeColor="#5485E8"
+        android:strokeWidth="9" android:pathData="M512,92 L126,766 L300,766 L512,392 L724,766 L898,766 Z" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#146BF3"
+        android:strokeWidth="90" android:strokeLineCap="round"
+        android:pathData="M145,756 C292,610 401,570 512,628 C640,695 754,784 899,651" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#68EAFF"
+        android:strokeWidth="38" android:strokeLineCap="round"
+        android:pathData="M145,756 C292,610 401,570 512,628 C640,695 754,784 899,651" />
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#6CF7FF"
+        android:strokeWidth="6" android:pathData="M512,117 L512,884" />
+    <path android:fillColor="#4E91FF" android:strokeColor="#CBFBFF"
+        android:strokeWidth="8" android:pathData="M512,434 A66,66 0,1 1,512 566 A66,66 0,1 1,512 434" />
+    <path android:fillColor="#FFFFFF" android:pathData="M512,486 A14,14 0,1 1,512 514 A14,14 0,1 1,512 486" />
+</vector>
