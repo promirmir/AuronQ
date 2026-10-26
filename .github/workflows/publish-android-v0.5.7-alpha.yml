@@ -1,6 +1,12 @@
 name: Publish Android v0.5.7 Alpha
 
 on:
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'mobile/bridge/**'
+      - 'internal/auronq/**'
+      - '.github/workflows/publish-android-v0.5.7-alpha.yml'
   push:
     branches: [main]
     paths:
@@ -74,6 +80,7 @@ jobs:
           sha256sum AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk > SHA256SUMS.txt
           cat SHA256SUMS.txt
       - name: Publish Android prerelease
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
