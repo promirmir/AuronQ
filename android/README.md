@@ -2,19 +2,19 @@
 
 ## Download
 
-**Current published Android build (26 October 2026): AuronQ Mobile 0.5.7 Alpha — Runtime Independence.**
+**Current published Android build (26 October 2026): AuronQ Mobile 0.5.8 Alpha — Fast Balance + Logo.**
 
-- [Download the Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.7-alpha-runtime-independence/AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk)
-- [Release notes and SHA-256 checksums](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.7-alpha-runtime-independence)
-- APK SHA-256: `95666cf3d4872224d6af71a5034d955a2987c497f084bf75188f6eae9dd26a07`.
+- [Download the Android APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.8-alpha-fast-balance-logo/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk)
+- [Release notes and SHA-256 checksums](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.8-alpha-fast-balance-logo)
+- APK SHA-256: `dcf8c06c87e3c3509252b247c4f889f8d383f86f71243d00109bc13c5ede9844`.
 
-This 0.5.7 Alpha packages the reviewed GitHub-independent discovery/failover source changes, while keeping two matching password fields and a 12-character minimum when creating a wallet. Prior [0.5.6 password-confirmed](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed) and Fast Sync APKs are historical downloads and cannot upgrade automatically.
+This 0.5.8 Alpha preserves independent network discovery/failover, restores fast **peer-reported balance** display after agreement from three public IPv4 network groups, keeps separate AQM64 verification and verified sending, and displays the official AuronQ logo. Wallet creation keeps two matching password fields and a 12-character minimum. Earlier [0.5.7](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.7-alpha-runtime-independence) and [0.5.6](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed) APKs remain historical and do not upgrade automatically.
 
-**Compatibility warning:** the current APK uses application ID `com.auronq.mobile.runtime057` and a CI debug signing certificate. It installs separately rather than updating older versions in place, and cannot automatically access another installation's wallet files. **Do not uninstall an existing funded wallet, clear its data or assume automatic wallet migration.** Preserve and verify offline wallet recovery material first. This is Alpha light-client software without an independent professional security audit; fast synchronization is not proof of full historical validation.
+**Compatibility warning:** this APK uses application ID `com.auronq.mobile.fast058` and a CI debug-signing certificate. It installs **beside** older versions, not over them, and cannot automatically access another app installation's encrypted local wallet. **Never uninstall a funded wallet or clear its data to force an upgrade.** Preserve and verify offline recovery material first. The app is Alpha light-client software with no independent professional security audit.
 
 ## Current architecture and limitations
 
-AuronQ Mobile 0.5.7 Alpha is a **light wallet**, not a full validating node. It uses fast synchronization and information obtained from network peers. Newly displayed balances, transaction history and transaction state must not be confused with independent verification of the entire blockchain.
+AuronQ Mobile 0.5.8 Alpha is a **light wallet**, not a full validating node. Fast displayed balances are corroborated by peer groups and explicitly labelled as **not a full AQM64 proof**; sending remains gated by separate verified-chain checks. Peer netgroup agreement cannot prove independent operators or trustless UTXO state.
 
 The source repository contains experimental advisory peer checkpoint components, but their existence **does not mean they are active, required or independently security-audited in every published full-node or Android binary**. Peer signatures and multiple IP groups alone cannot prove honest chain history. The technical history is available in [checkpoint design notes](../docs/DECENTRALIZED-CHECKPOINTS.md); those notes do not define a current user setup procedure.
 

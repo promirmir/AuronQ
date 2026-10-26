@@ -3,9 +3,9 @@
 
 ## Current published Android release — 26 October 2026
 
-- **Current APK:** [AuronQ Mobile 0.5.7 Alpha — Runtime Independence](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.7-alpha-runtime-independence/AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk).
-- **Published APK SHA-256:** `95666cf3d4872224d6af71a5034d955a2987c497f084bf75188f6eae9dd26a07`.
-- [Official release metadata](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.7-alpha-runtime-independence). The Android application ID is `com.auronq.mobile.runtime057`; CI debug signing means it **installs side by side**, not as an in-place upgrade from an older funded wallet. Verify offline recovery material first. Do not uninstall an existing funded installation.
+- **Current APK:** [AuronQ Mobile 0.5.8 Alpha — Fast Balance + Logo](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.8-alpha-fast-balance-logo/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk).
+- **Published APK SHA-256:** `dcf8c06c87e3c3509252b247c4f889f8d383f86f71243d00109bc13c5ede9844`.
+- [Official release metadata](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.8-alpha-fast-balance-logo). The app ID is `com.auronq.mobile.fast058`, signed with CI debug credentials. It **installs separately from previous funded wallet apps** and cannot automatically access or migrate their local data. Never uninstall an existing funded wallet without verified recovery.
 - **Current project/release navigation:** [PROJECT-STATUS.md](PROJECT-STATUS.md). Earlier release and freeze decisions below are retained as dated historical records, not current download guidance.
 
 ## Current maintenance state — 26 October 2026
