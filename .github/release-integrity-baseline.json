@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "repository": "promirmir/AuronQ",
-  "recorded_at_utc": "2026-10-12",
-  "purpose": "Detect changes to three publicly advertised release tags, GitHub Release identities, assets and downloaded bytes; read-only, not immutable-release enforcement.",
+  "recorded_at_utc": "2026-10-26",
+  "purpose": "Detect unauthorized changes to six published historical/current official AuronQ release identities, tags and downloaded asset bytes; read-only monitoring, not immutable-release enforcement.",
   "releases": [
     {
       "tag": "v1.7.13",
@@ -58,6 +58,83 @@
         "SHA256SUMS-LINUX-0.4.8.txt": {
           "size": 111,
           "sha256": "ab4ed1f5f8ff058cbef589fff8f5eae6af949163806f99b47ed564f644cc8099"
+        }
+      }
+    },
+    {
+      "tag": "v1.7.14",
+      "commit": "6db1784b054c56540cee8dc68751552d6a5f0abc",
+      "release_id": 424192316,
+      "assets": {
+        "AuronQ-1.7.14-Linux-amd64.tar.gz": {
+          "size": 2869001,
+          "sha256": "a86a0f7f9814de1fe2a0c85fd5d30e7bc8882e2f579b93e59acfa2e9cb6a160f"
+        },
+        "AuronQ-1.7.14-Windows-x64.zip": {
+          "size": 6060525,
+          "sha256": "5e6c3537286aefa5a59d9074e6ad810bd903ad755d238c8d98224356c3455a97"
+        },
+        "SHA256SUMS.txt": {
+          "size": 195,
+          "sha256": "477b251a126a8ae5bd69617fe44ef5fc7997f4afd8365cfa293ace925c64ae22"
+        }
+      }
+    },
+    {
+      "tag": "android-v0.5.7-alpha-runtime-independence",
+      "commit": "6269ac5ec128668775ecf59f277a3df696e2c3c8",
+      "release_id": 424140024,
+      "assets": {
+        "AuronQ-Mobile-0.5.7-Alpha-Runtime-Independence.apk": {
+          "size": 9710762,
+          "sha256": "95666cf3d4872224d6af71a5034d955a2987c497f084bf75188f6eae9dd26a07"
+        },
+        "SHA256SUMS.txt": {
+          "size": 117,
+          "sha256": "1d99e80edf084b1780b7ec6bd7c486b9452d23c33f4b90b269d5b11a7107f992"
+        }
+      }
+    },
+    {
+      "tag": "miner-v0.4.9-alpha",
+      "commit": "6269ac5ec128668775ecf59f277a3df696e2c3c8",
+      "release_id": 424157355,
+      "assets": {
+        "AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz": {
+          "size": 11509806,
+          "sha256": "4939ac1e444c12628f816cd8deb1324ccf01fd7b28204dc65d66b144d096f2ee"
+        },
+        "AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip": {
+          "size": 17296046,
+          "sha256": "2ba02cb17c56359f54da28fb52474e36a90465a30f82c00e5d34c7154f219547"
+        },
+        "AuronQ-Universal-Miner-v0.4.9-alpha-darwin-amd64.tar.gz": {
+          "size": 10210952,
+          "sha256": "43c3b132ad0e8b10ba5705b5ce0fac29ff3e5cdcf40ad37772123e2e92bed08e"
+        },
+        "AuronQ-Universal-Miner-v0.4.9-alpha-darwin-arm64.tar.gz": {
+          "size": 9702681,
+          "sha256": "f2dc44ec88659f09dcdd955df889e204c29eb73c8f2592cd6238cc6ab3f09137"
+        },
+        "AuronQ-Universal-Miner-v0.4.9-alpha-linux-amd64.tar.gz": {
+          "size": 10421816,
+          "sha256": "d7789d2a739afe7c12664740e3c0097fc60f949b149abfefadabe61b93864078"
+        },
+        "AuronQ-Universal-Miner-v0.4.9-alpha-linux-arm64.tar.gz": {
+          "size": 9749091,
+          "sha256": "92fc2ebe2272768dd2da8155b2a2c7d47a860f239753642507412dcf9d9d5548"
+        },
+        "AuronQ-Universal-Miner-v0.4.9-alpha-windows-amd64.zip": {
+          "size": 10507709,
+          "sha256": "fcb0477d74bfe309b8e22d11f97752ab12a4fd2e9c72dd222270ca19e1b359a9"
+        },
+        "AuronQ-Universal-Miner-v0.4.9-alpha-windows-arm64.zip": {
+          "size": 9738202,
+          "sha256": "07d4512d8b5d73f310789db309fee05541f2b027750e1544727fac10d777c4a7"
+        },
+        "SHA256SUMS-AURONQ-MINER.txt": {
+          "size": 955,
+          "sha256": "df7fb8e9b6fe0dda921f3e9d9a119cad3065aeb645fa782b35debdd7056fe6c4"
         }
       }
     }
