@@ -87,6 +87,10 @@ jobs:
     needs: [windows, linux]
     runs-on: ubuntu-latest
     steps:
+      # gh release needs explicit repository context in a fresh publish job.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/download-artifact@v4
         with:
           path: release
@@ -104,8 +108,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          if gh release view "$TAG" >/dev/null 2>&1; then
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "Release $TAG already exists; refusing to overwrite." >&2
             exit 1
           fi
-          gh release create "$TAG"             release/AuronQ-1.7.14-Windows-x64.zip             release/AuronQ-1.7.14-Linux-amd64.tar.gz             release/SHA256SUMS.txt             --target "$GITHUB_SHA"             --title "AuronQ v1.7.14 Mainnet"             --notes "Maintenance release delivering the reviewed runtime-independence work from PRs #187/#189: verified peer persistence/gossip, GitHub-independent first-contact paths, and verified node failover for CLI clients. Mainnet genesis, Network ID, AQM64, difficulty, monetary policy and validity rules are unchanged. This software has not received an independent professional security audit; verify SHA-256 checksums and do not treat it as mature financial infrastructure."
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY"             release/AuronQ-1.7.14-Windows-x64.zip             release/AuronQ-1.7.14-Linux-amd64.tar.gz             release/SHA256SUMS.txt             --target "$GITHUB_SHA"             --title "AuronQ v1.7.14 Mainnet"             --notes "Maintenance release delivering the reviewed runtime-independence work from PRs #187/#189: verified peer persistence/gossip, GitHub-independent first-contact paths, and verified node failover for CLI clients. Mainnet genesis, Network ID, AQM64, difficulty, monetary policy and validity rules are unchanged. This software has not received an independent professional security audit; verify SHA-256 checksums and do not treat it as mature financial infrastructure."
