@@ -21,14 +21,17 @@ Therefore, once multiple full nodes know one another, the original bootstrap com
 AuronQ applications must not require GitHub to join or continue using Mainnet. GitHub-hosted manifests are optional freshness/distribution helpers only.
 
 - Full Node/Desktop must retain multiple bundled public seed peers and persisted/gossiped peer recovery.
-- Android must retain multiple bundled public peer fallbacks and persist peers learned from the live AuronQ network.
+- Android must retain multiple bundled public peer fallbacks, prefer cached/bundled peers before optional manifests, and persist only independently verified gossip candidates.
+- CLI thin clients and standalone miners must prefer the configured/local node, then locally cached verified peers, then bundled Mainnet seed hints.
+- Thin clients must verify the exact Mainnet Network ID before use, quarantine repeated endpoint failures and fail closed on clear same-height tip conflicts.
 - Once any valid Mainnet peer is reached, peer gossip should provide additional discovery routes.
+- Only an actual reachable full node may advertise itself as a P2P peer; light clients/miners do not pretend to be full nodes.
 - Loss of GitHub must not change Network ID, consensus validation, wallet keys, balances or transaction rules.
 - A fresh-install drill with GitHub-based manifests unavailable is part of the independence acceptance gate.
 
 ## Fresh-install discovery
 
-A computer with no peer history still needs at least one rendezvous path. Current release metadata also ships a reviewed multi-peer seed snapshot, so the CLI is not dependent on a successful GitHub manifest fetch for first contact. AuronQ supports:
+A computer with no peer history still needs at least one rendezvous path. Current source ships a reviewed multi-peer seed snapshot and runtime logic that can use bundled/cached peers before any optional GitHub manifest. AuronQ supports:
 
 1. local persisted peers;
 2. fixed seed peers;
@@ -36,7 +39,7 @@ A computer with no peer history still needs at least one rendezvous path. Curren
 4. HTTPS bootstrap manifests;
 5. peer gossip after first contact.
 
-Bootstrap metadata is discovery-only and excluded from the Network ID. AuronQ now uses two HTTPS manifest layers: a reviewed static fallback from `main` and a supplemental live registry published by the crawler on `automation/peer-registry`. Either can fail without changing consensus.
+Bootstrap metadata is discovery-only and excluded from the Network ID. AuronQ uses two HTTPS manifest layers: a reviewed static fallback from `main` and a supplemental live registry published by the crawler on `automation/peer-registry`. They are optional discovery inputs, not runtime authorities; either can fail without changing consensus.
 
 ## Autonomous registry
 
@@ -72,3 +75,7 @@ The strongest practical test is:
 Only after this passes should the network be described as operationally independent of the original bootstrap machine.
 
 The live network now has multiple reachable public full nodes and the crawler is discovering additional peers through ordinary gossip. The remaining independence test is operational rather than protocol-level: perform a clean-install join and block-relay drill while the original project-operated rendezvous machines are completely offline, and continue improving provider/operator diversity.
+
+## Packaging status — 26 October 2026
+
+The runtime-independence implementation described above is present in protected source `main` after PR #187 and PR #189. The currently published Desktop v1.7.13, Android 0.5.6 Alpha and Universal Miner v0.4.8 Alpha were built before the final implementation. They do not gain new discovery/failover behavior merely because the repository changed. New release artifacts must be built, tested and published before ordinary users receive the updated runtime behavior.
