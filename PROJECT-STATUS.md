@@ -1,8 +1,8 @@
 # AuronQ — canonical project status and preservation
 
-**Updated: 14 October 2026 (release and support-case reconciliation).** This is the navigation and release-integrity reference for the **existing public Mainnet**. The protocol and historical chain are not being reset or migrated.
+**Updated: 26 October 2026 (runtime-independence and release-status reconciliation).** This is the navigation and release-integrity reference for the **existing public Mainnet**. The protocol and historical chain are not being reset or migrated.
 
-> **Status: Mainnet live, protocol change freeze in effect, stabilization incomplete.** No claim of a finished professional security audit, fully independent bootstrap, risk-free custody, or permanent immutability of GitHub account settings is made.
+> **Status: Mainnet live, protocol change freeze in effect, stabilization incomplete.** Protected `main` includes reviewed non-consensus runtime-independence improvements, but no claim of a finished professional security audit, witnessed founder-independent bootstrap, risk-free custody, or permanent immutability of GitHub account settings is made.
 
 ## 1. One source of truth for each subject
 
@@ -48,6 +48,18 @@ These are the **published** files identified on GitHub as of this document's dat
 | Miner v0.4.8 Alpha Linux amd64 | [AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.8-alpha/AuronQ-Miner-v0.4.8-alpha-Linux-amd64.tar.gz) | `ccea8334c6705f8350a267a1b6f84a24284f3fb9db51e7c1794b96e7bb86cd48` |
 
 The Android password-confirmation APK has a **different application ID** (`com.auronq.mobile.quick2stagev2.passwordcheck`) and a CI debug signing certificate. It **cannot perform an in-place upgrade** from the former Android 0.5.6 installation. Never uninstall a funded wallet without verified recovery material. The Android light wallet is not a fully validating node.
+
+### Source newer than the published application binaries
+
+As of 26 October 2026, protected `main` contains the reviewed maintenance work merged through commit `33edbe4cceebe7d0fcaa766b35bbb6794ac635dd`:
+
+- full-node/Desktop discovery separates candidates from callback-verified public peers and persists/gossips only verified peers;
+- Android prefers cached/bundled Mainnet peers before optional GitHub manifests and verifies gossip candidates before persistence;
+- CLI thin clients and standalone/miner workers can fail over across locally cached and bundled Mainnet endpoints after exact Network ID verification;
+- repeated endpoint failures are locally quarantined, and clear same-height conflicting tips fail closed;
+- the Universal Miner multi-GPU path propagates the same network/failover settings to child workers.
+
+These changes passed PR CI plus post-merge Windows/Linux CI, race detection, Mainnet safety tests, Android build, reproducible-build checks, network-hardening tests, Universal Miner compatibility and Frozen Mainnet identity checks. They **do not retroactively modify already published v1.7.13 / Android 0.5.6 / Miner v0.4.8 files**. New release artifacts must be built, tested, checksummed and published before end users receive this behavior through normal downloads.
 
 **Release-immutability gap as of 12 October 2026:** GitHub reports `immutable: false` for the listed existing releases. SHA-256 checksums identify the bytes observed at publication but do not prevent their replacement at the same URL. Immutable Releases can be enabled for **future** releases in repository settings, but that toggle is **not retroactive**. Historic released binaries should also be copied to independent archival storage with digests and provenance. Do not reissue new, untested binaries solely to get an immutable badge.
 

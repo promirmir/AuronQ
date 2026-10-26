@@ -2,6 +2,23 @@
 
 This file is the concise public history of AuronQ. Detailed historical release notes and old checksum files are preserved under [docs/archive/](docs/archive/).
 
+## 26 October 2026 — runtime-independence maintenance merged to source main
+
+- Merged PR #187: full-node/Desktop discovery now distinguishes transient candidates from callback-verified public peers, persists/gossips only verified peers, refreshes bundled public fallbacks and keeps GitHub manifests outside the critical runtime path; Android prefers cached/bundled peers before optional manifests and verifies gossip candidates before persistence.
+- Merged PR #189 (closes issue #188): CLI thin clients and standalone Universal Miner workers now use a shared verified-node resolver with exact Network ID checks, local peer cache, fallback to bundled `network.json` seeds, repeated-failure quarantine and fail-closed handling for clear same-height conflicting tips.
+- CPU remote mining stops after repeated node transport loss instead of hashing indefinitely against potentially stale work; standalone and multi-GPU miner paths can switch to another verified node.
+- Thin clients/miners do not advertise themselves as P2P full nodes; public peer advertisement remains a full-node responsibility.
+- PR and post-merge checks passed across Windows/Linux CI, race detector, Mainnet safety gate, Android, reproducible builds, network hardening, portable miner compatibility and CUDA/OpenCL package workflows.
+- No genesis, Network ID, AQM64, difficulty, monetary policy, transaction/block validity, wallet-key/signing format or cumulative-work chain-selection rule changed.
+- **Release pending:** the published Desktop v1.7.13, Android 0.5.6 Alpha and Universal Miner v0.4.8 Alpha predate these final source changes and do not receive them automatically.
+
+## Current published releases — rechecked 26 October 2026
+
+- Desktop / Full Node: **v1.7.13**.
+- Android: **0.5.6 Alpha — Password Confirmed**.
+- Universal Miner: **v0.4.8 Alpha**.
+- These are the current published artifacts; source `main` is newer as described above.
+
 ## Intelligent Universal Miner — 8 October 2026 (merged into main; Windows GPU TEST artifact)
 
 - Merged [PR #118](https://github.com/promirmir/AuronQ/pull/118), commit [eb24ea8](https://github.com/promirmir/AuronQ/commit/eb24ea82230d06480a9c0439d5cbfc4c47436777).
@@ -35,7 +52,7 @@ This file is the concise public history of AuronQ. Detailed historical release n
 - updates the UI to show a verified network snapshot immediately instead of waiting for slower wallet balance/history quorum requests;
 - no Mainnet consensus, Network ID, genesis, transaction, PoW or monetary changes.
 
-## Current releases
+## Historical release notes
 
 ### Universal Miner v0.4.6 Alpha
 

@@ -21,7 +21,7 @@
 
 **Official current Android wallet — password confirmation:** **[AuronQ Mobile 0.5.6 Alpha — Password Confirmed (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk)** · [Release notes and checksum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.6-alpha-password-confirmed) · [Installation guide](android/README.md). This Android alpha retains the released 0.5.6 Fast Sync code and requires two matching password entries before creating a wallet. This is the **current official AuronQ Android release** (still experimental Alpha), replacing the older 0.5.6 Fast Sync build as the recommended download. Because the published APK has a different Android application ID, Android installs it as a **separate app**, not as an in-place update. It cannot access the older app's wallet files; users must securely back up and verify recovery before migrating. Experimental and not independently audited; do not uninstall an existing funded wallet to switch versions.
 
-**Project state — maintenance/freeze:** the Mainnet consensus and existing desktop v1.7.13 are held unchanged; no new features or node rollouts are scheduled. Security/availability fixes still require review and testing. [Release/freeze decision](PROJECT-FREEZE.md).
+**Project state — stabilization / maintenance:** Mainnet consensus remains frozen for ordinary releases, while reviewed non-consensus security, availability and independence fixes may continue. On 26 October 2026, protected `main` added GitHub-independent peer discovery plus verified node failover for full nodes, Android, CLI clients and the Universal Miner without changing genesis, Network ID, AQM64, difficulty, monetary policy or validity rules. [Release/freeze decision](PROJECT-FREEZE.md) · [Network independence](NETWORK-INDEPENDENCE.md).
 
 AuronQ is a public UTXO Layer-1 network written in Go. Full nodes independently validate transactions and blocks using AQM64 Proof of Work and ML-DSA-87 transaction signatures. **Mainnet is live, but the project remains experimental and in stabilization.**
 
@@ -41,7 +41,9 @@ Third-party hashrate, worker counts and pool-share estimates may be stale or inc
 
 ## Downloads
 
-These are **published builds**, not claims of defect-free or production-ready operation. Each download points to a specific GitHub Release. **Release references verified 14 October 2026.** Historical ANN posts and third-party aggregators may cite older versions; use this table and [GitHub Releases](https://github.com/promirmir/AuronQ/releases) for current downloads, and [Mainnet identifiers](MAINNET.md) to verify network identity.
+These are **published builds**, not claims of defect-free or production-ready operation. Each download points to a specific GitHub Release. **Release references rechecked 26 October 2026.** Historical ANN posts and third-party aggregators may cite older versions; use this table and [GitHub Releases](https://github.com/promirmir/AuronQ/releases) for current downloads, and [Mainnet identifiers](MAINNET.md) to verify network identity.
+
+> **Source vs published binaries:** protected `main` now contains the reviewed runtime-independence work from PRs #187 and #189: self-healing peer discovery, verified peer persistence/gossip, GitHub-independent Android startup paths, and verified failover for CLI/miner clients. The currently published Desktop v1.7.13, Android 0.5.6 Alpha and Universal Miner v0.4.8 Alpha were built **before** those changes and do not automatically gain them. A new tested release is required before ordinary users receive the new behavior.
 
 | Software | Published release | Download and details |
 | --- | --- | --- |
@@ -75,7 +77,7 @@ The Android wallet is a **light client, not a full validating node**. Initial ve
 
 **Canonical network identity and consensus rules:** [Mainnet](MAINNET.md) · [Protocol](PROTOCOL.md) · [AQM64](AQM64.md). Live peer counts, block height and estimated hashrate are deliberately not hardcoded here: they change and must be obtained from a validating node.
 
-Bootstrap servers are discovery hints, not consensus authorities. Network operation without the original project machines is a goal **still requiring an independent offline-bootstrap drill**, not a proven guarantee. See [Network independence](NETWORK-INDEPENDENCE.md), [Decentralization](DECENTRALIZATION.md) and [Stabilization](STABILIZATION.md).
+Bootstrap servers are discovery hints, not consensus authorities. Current source code can discover, verify, persist and gossip peers without requiring GitHub at runtime, and thin clients/miners can fail over across verified Mainnet nodes. The stronger claim that the network is operationally independent of the original project machines **still requires a witnessed clean-install/offline-bootstrap and block-relay drill** with those machines unavailable. See [Network independence](NETWORK-INDEPENDENCE.md), [Decentralization](DECENTRALIZATION.md) and [Stabilization](STABILIZATION.md).
 
 **Stability before features:** consensus-critical parameters (genesis, Network ID, AQM64, difficulty, monetary rules and transaction/block validation) must not be changed in an ordinary maintenance release. See the [Mainnet change policy](MAINNET-CHANGE-POLICY.md).
 

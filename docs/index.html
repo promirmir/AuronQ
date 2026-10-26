@@ -173,6 +173,7 @@
     <section class="content wrap" id="downloads" aria-labelledby="downloads-title">
       <h2 id="downloads-title">Download AuronQ</h2>
       <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.6-alpha-password-confirmed/AuronQ-Mobile-0.5.6-Alpha-Password-Confirmed.apk"><strong>Download AuronQ Mobile 0.5.6 Alpha with password confirmation</strong></a>. This is an experimental wallet release; use small test balances, verify the file hash, and do not uninstall an existing wallet to force an update. Other packages are below.</p>
+      <p class="note"><strong>Source status — 26 October 2026:</strong> protected <code>main</code> now contains reviewed GitHub-independent peer discovery and verified node failover for full nodes, Android, CLI clients and the Universal Miner. The published Desktop v1.7.13, Android 0.5.6 Alpha and Miner v0.4.8 Alpha below were built before those final changes. They do not update themselves from the repository; a new tested release is required before packaged applications receive the new runtime behavior.</p>
       <div class="grid">
         <article class="card">
           <span class="label">Run a full node</span>
@@ -208,7 +209,7 @@
           </div>
         </article>
       </div>
-      <p class="note">Mobile APK SHA-256: <code>09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5</code>. This Android 0.5.6 password-confirmed APK is a <strong>separate installation</strong> (<code>com.auronq.mobile.quick2stagev2.passwordcheck</code>) and cannot update an older app in place. It is CI debug-signed. Never uninstall a funded wallet or clear wallet data to overcome install/signing issues. Consensus changes and new full-node rollouts are currently frozen: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
+      <p class="note">Mobile APK SHA-256: <code>09b8ece07746f7e0390aba812c2382f96d1df317c782793a538f0811fea0ebb5</code>. This Android 0.5.6 password-confirmed APK is a <strong>separate installation</strong> (<code>com.auronq.mobile.quick2stagev2.passwordcheck</code>) and cannot update an older app in place. It is CI debug-signed. Never uninstall a funded wallet or clear wallet data to overcome install/signing issues. Mainnet consensus remains frozen for ordinary releases; reviewed non-consensus security, availability and independence maintenance is still allowed: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
     </section>
 
     <section class="content wrap" id="start" aria-labelledby="start-title">
@@ -228,7 +229,7 @@
 
     <section class="content wrap" id="network" aria-labelledby="network-title">
       <h2 id="network-title">Independent network operation</h2>
-      <p class="intro">AuronQ is designed around nodes that validate rules locally. Bootstrap peers help nodes find each other; they do not control consensus.</p>
+      <p class="intro">AuronQ is designed around nodes that validate rules locally. Current source can discover, verify, persist and exchange peers without requiring GitHub at runtime, while CLI/miner clients can fail over across verified Mainnet endpoints. Bootstrap metadata helps first contact; it does not control consensus. A witnessed founder-offline clean-install drill is still required before claiming complete operational independence.</p>
       <div class="split">
         <div>
           <h3>Verify for yourself</h3>
