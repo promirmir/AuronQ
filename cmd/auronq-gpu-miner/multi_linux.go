@@ -19,6 +19,8 @@ import (
 type multiGPUOptions struct {
 	Backend          string
 	Node             string
+	Network          string
+	PeerStore        string
 	Address          string
 	Batch            int
 	DLLPath          string
@@ -129,7 +131,14 @@ func runMultiGPU(devices []int, opt multiGPUOptions) error {
 		if opt.Benchmark {
 			args = append(args, "--benchmark", "--benchmark-seconds", strconv.Itoa(opt.BenchmarkSeconds))
 		} else {
-			args = append(args, "--node", opt.Node)
+			childStore := opt.PeerStore
+			if strings.TrimSpace(childStore) != "" {
+				childStore = fmt.Sprintf("%s.gpu%d", childStore, device)
+			}
+			args = append(args, "--node", opt.Node, "--network", opt.Network)
+			if strings.TrimSpace(childStore) != "" {
+				args = append(args, "--peer-store", childStore)
+			}
 			if strings.TrimSpace(opt.Address) != "" {
 				args = append(args, "--address", opt.Address)
 			}

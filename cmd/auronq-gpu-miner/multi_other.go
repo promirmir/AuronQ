@@ -7,6 +7,8 @@ import "errors"
 type multiGPUOptions struct {
 	Backend          string
 	Node             string
+	Network          string
+	PeerStore        string
 	Address          string
 	Batch            int
 	DLLPath          string

@@ -94,3 +94,30 @@ func TestMineRemoteTemplateKeepsCurrentTipUntilCallerCancels(t *testing.T) {
 		t.Fatalf("error=%v want context deadline exceeded", err)
 	}
 }
+
+
+func TestMineRemoteTemplateStopsAfterRepeatedNodeLoss(t *testing.T) {
+	var tip Hash
+	tip[0] = 1
+	tpl := miningWatchTemplate(tip)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/status" {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, "temporary outage", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	started := time.Now()
+	_, err := MineRemoteTemplate(ctx, NewClient(srv.URL), tpl, 1, 5*time.Millisecond, nil)
+	if !errors.Is(err, ErrMiningNodeUnavailable) {
+		t.Fatalf("error=%v want ErrMiningNodeUnavailable", err)
+	}
+	if elapsed := time.Since(started); elapsed > time.Second {
+		t.Fatalf("node-loss stop was not prompt: %v", elapsed)
+	}
+}

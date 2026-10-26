@@ -449,9 +449,30 @@ func cmdWalletInfo(args []string) error {
 	return nil
 }
 
+func defaultClientPeerStore(networkPath, override string) string {
+	if strings.TrimSpace(override) != "" {
+		return override
+	}
+	dir := filepath.Dir(filepath.Clean(networkPath))
+	return filepath.Join(dir, "client-peers.json")
+}
+
+func resolveCLIClient(ctx context.Context, n *aq.NetworkConfig, preferred, store string, exclude []string) (aq.VerifiedClientResolution, error) {
+	return aq.ResolveVerifiedClient(ctx, aq.VerifiedClientConfig{
+		ExpectedNetworkID: n.NetworkID(),
+		Preferred:         preferred,
+		Seeds:             n.SeedPeers,
+		StorePath:         store,
+		Exclude:           exclude,
+		Timeout:           4 * time.Second,
+	})
+}
+
 func cmdBalance(args []string) error {
 	fs := flag.NewFlagSet("balance", flag.ContinueOnError)
-	node := fs.String("node", "http://127.0.0.1:18444", "node URL")
+	node := fs.String("node", "http://127.0.0.1:18444", "preferred node URL")
+	network := fs.String("network", "network.json", "network file used to verify Mainnet identity and seed fallbacks")
+	peerStore := fs.String("peer-store", "", "verified client peer cache (default: beside network.json)")
 	addr := fs.String("address", "", "AuronQ address")
 	wallet := fs.String("wallet", "", "wallet file (address read without decrypting)")
 	if err := fs.Parse(args); err != nil {
@@ -472,7 +493,22 @@ func cmdBalance(args []string) error {
 	if a == "" {
 		return fmt.Errorf("--address or --wallet is required")
 	}
-	r, err := aq.NewClient(*node).Balance(a)
+	n, err := aq.LoadNetwork(*network)
+	if err != nil {
+		return err
+	}
+	store := defaultClientPeerStore(*network, *peerStore)
+	resolved, err := resolveCLIClient(context.Background(), n, *node, store, nil)
+	if err != nil {
+		return err
+	}
+	r, err := resolved.Client.Balance(a)
+	if err != nil && aq.IsRetryableNodeError(err) {
+		resolved, err = resolveCLIClient(context.Background(), n, *node, store, []string{resolved.Endpoint})
+		if err == nil {
+			r, err = resolved.Client.Balance(a)
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -484,6 +520,7 @@ func cmdSend(args []string) error {
 	fs := flag.NewFlagSet("send", flag.ContinueOnError)
 	node := fs.String("node", "http://127.0.0.1:18444", "node URL")
 	network := fs.String("network", "network.json", "network file")
+	peerStore := fs.String("peer-store", "", "verified client peer cache (default: beside network.json)")
 	wallet := fs.String("wallet", "wallet.json", "wallet path")
 	to := fs.String("to", "", "recipient address")
 	amount := fs.String("amount", "", "amount in AURQ")
@@ -511,8 +548,20 @@ func cmdSend(args []string) error {
 	if err != nil {
 		return err
 	}
-	cl := aq.NewClient(*node)
+	store := defaultClientPeerStore(*network, *peerStore)
+	resolved, err := resolveCLIClient(context.Background(), n, *node, store, nil)
+	if err != nil {
+		return err
+	}
+	cl := resolved.Client
 	us, err := cl.UTXOs(w.Address())
+	if err != nil && aq.IsRetryableNodeError(err) {
+		resolved, err = resolveCLIClient(context.Background(), n, *node, store, []string{resolved.Endpoint})
+		if err == nil {
+			cl = resolved.Client
+			us, err = cl.UTXOs(w.Address())
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -521,6 +570,15 @@ func cmdSend(args []string) error {
 		return err
 	}
 	r, err := cl.SubmitTx(tx)
+	if err != nil && aq.IsRetryableNodeError(err) {
+		resolved, rerr := resolveCLIClient(context.Background(), n, *node, store, []string{resolved.Endpoint})
+		if rerr == nil {
+			cl = resolved.Client
+			r, err = cl.SubmitTx(tx)
+		} else {
+			err = rerr
+		}
+	}
 	if err != nil {
 		return err
 	}
@@ -554,7 +612,9 @@ func safeCPUMiningThreads(requested int) (int, error) {
 
 func cmdMine(args []string) error {
 	fs := flag.NewFlagSet("mine", flag.ContinueOnError)
-	node := fs.String("node", "http://127.0.0.1:18444", "node URL")
+	node := fs.String("node", "http://127.0.0.1:18444", "preferred node URL")
+	network := fs.String("network", "network.json", "network file used to verify Mainnet identity and seed fallbacks")
+	peerStore := fs.String("peer-store", "", "verified client peer cache (default: beside network.json)")
 	addr := fs.String("address", "", "reward address")
 	wallet := fs.String("wallet", "", "wallet file (public metadata only)")
 	threads := fs.Int("threads", 0, "CPU mining threads (0 = conservative automatic profile, max 16)")
@@ -581,9 +641,18 @@ func cmdMine(args []string) error {
 	if a == "" {
 		return fmt.Errorf("--address or --wallet is required")
 	}
+	n, err := aq.LoadNetwork(*network)
+	if err != nil {
+		return err
+	}
+	store := defaultClientPeerStore(*network, *peerStore)
 	ctx, cancel := ctxSignals()
 	defer cancel()
-	cl := aq.NewClient(*node)
+	resolved, err := resolveCLIClient(ctx, n, *node, store, nil)
+	if err != nil {
+		return err
+	}
+	cl := resolved.Client
 	for {
 		select {
 		case <-ctx.Done():
@@ -591,6 +660,13 @@ func cmdMine(args []string) error {
 		default:
 		}
 		tpl, err := cl.Template(a)
+		if err != nil && aq.IsRetryableNodeError(err) {
+			resolved, err = resolveCLIClient(ctx, n, *node, store, []string{resolved.Endpoint})
+			if err == nil {
+				cl = resolved.Client
+				tpl, err = cl.Template(a)
+			}
+		}
 		if err != nil {
 			return err
 		}
@@ -608,9 +684,27 @@ func cmdMine(args []string) error {
 				fmt.Println("Chain tip changed; refreshing mining template")
 				continue
 			}
+			if errors.Is(err, aq.ErrMiningNodeUnavailable) || aq.IsRetryableNodeError(err) {
+				resolved, err = resolveCLIClient(ctx, n, *node, store, []string{resolved.Endpoint})
+				if err != nil {
+					return err
+				}
+				cl = resolved.Client
+				fmt.Printf("Node failover: %s\n", resolved.Endpoint)
+				continue
+			}
 			return err
 		}
 		br, err := cl.SubmitBlock(res.Block)
+		if err != nil && aq.IsRetryableNodeError(err) {
+			resolved, rerr := resolveCLIClient(ctx, n, *node, store, []string{resolved.Endpoint})
+			if rerr == nil {
+				cl = resolved.Client
+				br, err = cl.SubmitBlock(res.Block)
+			} else {
+				err = rerr
+			}
+		}
 		if err != nil {
 			fmt.Println("Block rejected; refreshing template:", err)
 			continue
@@ -625,14 +719,22 @@ func cmdMine(args []string) error {
 
 func cmdStatus(args []string) error {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
-	node := fs.String("node", "http://127.0.0.1:18444", "node URL")
+	node := fs.String("node", "http://127.0.0.1:18444", "preferred node URL")
+	network := fs.String("network", "network.json", "network file used to verify Mainnet identity and seed fallbacks")
+	peerStore := fs.String("peer-store", "", "verified client peer cache (default: beside network.json)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	s, err := aq.NewClient(*node).Status()
+	n, err := aq.LoadNetwork(*network)
 	if err != nil {
 		return err
 	}
+	store := defaultClientPeerStore(*network, *peerStore)
+	resolved, err := resolveCLIClient(context.Background(), n, *node, store, nil)
+	if err != nil {
+		return err
+	}
+	s := resolved.Status
 	fmt.Printf("Network: %s\nNetwork ID: %s\nHeight: %d\nTip: %s\nIssued: %s AURQ / 21000000.00000000\nMempool: %d\nPeers: %d\n", s.Network, s.NetworkID, s.Height, s.Tip, aq.FormatAmount(s.Issued), s.Mempool, s.Peers)
 	return nil
 }

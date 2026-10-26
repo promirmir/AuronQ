@@ -28,9 +28,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Maintenance exception #186 accepted discovery/runtime-independence changes through:
-          # f53015c8411342f50e749c7a212350b379274b4a
-          BASE=f53015c8411342f50e749c7a212350b379274b4a
+          # Maintenance exception #188 accepted thin-client failover changes through:
+          # a36ef6e1fc80089109b26aea99661e0a928fefc6
+          BASE=a36ef6e1fc80089109b26aea99661e0a928fefc6
           git cat-file -e "$BASE^{commit}"
           changed="$(git diff --name-only "$BASE" HEAD -- \
             internal/auronq/ \
