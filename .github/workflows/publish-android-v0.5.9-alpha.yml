@@ -1,0 +1,94 @@
+name: Publish Android v0.5.9 Alpha Light Quorum
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.release/android-0.5.9'
+      - '.github/workflows/publish-android-v0.5.9-alpha.yml'
+
+permissions:
+  contents: write
+
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+  ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+  RELEASE_TAG: android-v0.5.9-alpha-light-quorum
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Verify version, security invariants, and Go tests
+        run: |
+          set -euo pipefail
+          grep -Fq "versionCode 14" android/app/build.gradle
+          grep -Fq "versionName '0.5.9-alpha'" android/app/build.gradle
+          grep -Fq "applicationIdSuffix '.light059'" android/app/build.gradle
+          grep -Fq 'android:icon="@drawable/ic_auronq"' android/app/src/main/AndroidManifest.xml
+          grep -Fq 'Bridge.fastBalanceOnObservedChain' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'Bridge.lightHistoryOnObservedChain' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          grep -Fq 'Bridge.sendMultiLight' android/app/src/main/java/com/auronq/mobile/MainActivity.java
+          go test ./...
+          go vet ./...
+          go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1 -timeout=4m
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK and NDK
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Bind Go bridge to Android
+        run: |
+          set -euo pipefail
+          go get golang.org/x/mobile@latest
+          go get -tool golang.org/x/mobile/cmd/gobind@latest
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+          mkdir -p android/app/libs
+          gomobile bind -target=android/arm64 -androidapi 26 -javapkg com.auronq.mobilebind -o android/app/libs/auronqmobile.aar ./mobile/bridge
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Build isolated 0.5.9 Alpha APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleLight059
+      - name: Stage immutable APK and SHA256
+        run: |
+          set -euo pipefail
+          APK="android/app/build/outputs/apk/light059/app-light059.apk"
+          test -s "$APK"
+          test -s android/app/src/main/res/drawable/ic_auronq.xml
+          mkdir -p release
+          cp "$APK" release/AuronQ-Mobile-0.5.9-Alpha-Light.apk
+          cd release
+          sha256sum AuronQ-Mobile-0.5.9-Alpha-Light.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Publish Android Alpha release without replacement
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to overwrite $RELEASE_TAG." >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            release/AuronQ-Mobile-0.5.9-Alpha-Light.apk \
+            release/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Mobile 0.5.9 Alpha — Light Quorum / Fast Start" \
+            --prerelease \
+            --notes "Android 0.5.9 Alpha Light Quorum connects to public AuronQ nodes without replaying thousands of memory-hard AQM64 headers or relying on checkpoints during app startup. Fast peer-reported balance requires agreement across three different public IPv4 /16 groups. History and sending use bounded peer-quorum queries; sending additionally requires three matching UTXO sets and local ML-DSA-87 signing. IMPORTANT: this mobile mode does not independently verify AQM64 PoW, difficulty, or UTXO validity, and multiple netgroups may still share an operator. It is not trustless SPV or a fully validating node. This debug-signed APK installs separately as com.auronq.mobile.light059, does NOT migrate older wallets, and must never replace a funded install without a verified offline backup. No consensus or wallet-key format changes; no independent security audit."

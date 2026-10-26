@@ -1,12 +1,8 @@
 name: Publish Android v0.5.8 Alpha Fast Balance
 
 on:
-  pull_request:
-    paths:
-      - 'android/**'
-      - 'mobile/bridge/**'
-      - 'internal/auronq/**'
-      - '.github/workflows/publish-android-v0.5.8-alpha.yml'
+  # 0.5.8 was already published; its pinned acceptance gate must not run on
+  # future source changes or rebuild the historical release from newer code.
   push:
     branches: [main]
     paths:

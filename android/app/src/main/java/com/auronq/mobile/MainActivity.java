@@ -69,6 +69,8 @@ public class MainActivity extends Activity {
     private final ExecutorService headerVerificationExecutor = Executors.newSingleThreadExecutor();
     // Separate fast, peer-reported account view; never authorizes transactions.
     private final ExecutorService fastBalanceExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService lightHistoryExecutor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean lightHistoryBusy = new AtomicBoolean(false);
     private final AtomicBoolean fastBalanceBusy = new AtomicBoolean(false);
     private JSONObject latestQuickSnapshot;
     private String lastFastBalanceKey = "";
@@ -449,8 +451,8 @@ public class MainActivity extends Activity {
         root.addView(sendResult, mt(14));
 
         TextView security = text(tr(
-                "Przed wysłaniem sprawdź cały adres i kwotę. AuronQ Mobile nie wysyła hasła ani klucza prywatnego do publicznego noda.",
-                "Before sending, verify the full address and amount. AuronQ Mobile never sends your password or private key to a public node."), 12, false);
+                "Klucze i hasło pozostają w telefonie. Tryb lekki wymaga zgodnych UTXO z trzech grup węzłów, ale nie sprawdza samodzielnie całego PoW ani reguł konsensusu.",
+                "Keys and password stay on the phone. Light mode requires matching UTXOs from three network groups but does not independently validate all PoW or consensus rules."), 12, false);
         security.setTextColor(MUTED);
         root.addView(security, mt(16));
 
@@ -471,8 +473,8 @@ public class MainActivity extends Activity {
         root.addView(netStatus, mt(16));
 
         TextView firstSyncNote = text(tr(
-                "Każdy pełny node może sam tworzyć podpisane checkpointy P2P co 256 bloków, bez GitHuba i bez Twoich kluczy. Podpisy peerów są jedynie wskazówkami. Portfel nie ufa im automatycznie: nadal sam sprawdza AQM64 od lokalnego zweryfikowanego punktu kontrolnego.",
-                "Each validating full node can self-sign P2P checkpoint hints every 256 blocks, without GitHub or user keys. Peer signatures are advisory only. The wallet does NOT silently trust them and continues validating AQM64 after its local release checkpoint."), 11, false);
+                "Tryb lekki: telefon porównuje Network ID, wysokość, tip i pracę łańcucha w osobnych grupach węzłów. Nie pobiera checkpointów ani nie oblicza tysięcy AQM64. To nie zastępuje pełnej niezależnej walidacji.",
+                "Light mode: the phone compares Network ID, height, tip and reported chain work across different peer groups. It downloads no checkpoints and does not replay thousands of AQM64 hashes. This is not independent full validation."), 11, false);
         firstSyncNote.setTextColor(MUTED);
         root.addView(firstSyncNote, mt(8));
 
@@ -493,8 +495,6 @@ public class MainActivity extends Activity {
         netTip = kv(details, "Tip", "—");
         netWork = kv(details, "Chain work", "—");
         netObserved = kv(details, tr("Ostatni odczyt", "Last update"), "—");
-        netCheckpointPeers = kv(details, tr("Podpisane checkpointy P2P (wskazówki)", "P2P signed checkpoint hints"),
-                tr("Sprawdzanie niezależnych źródeł…", "Checking independent sources…"));
         root.addView(details, mt(16));
 
         LinearLayout live = card();
@@ -512,8 +512,8 @@ public class MainActivity extends Activity {
         root.addView(refresh, mt(14));
 
         TextView model = text(tr(
-                "AuronQ Mobile jest klientem weryfikującym nagłówki, nie pełnym nodem. Klucze pozostają lokalnie. Telefon zaczyna od zaufanego punktu kontrolnego z wydania (blok 1284) i sam sprawdza następne nagłówki AQM64, difficulty, ciągłość hashy i reguły czasu; porównuje peery i rozgłasza lokalnie podpisane transakcje. Pełna walidacja transakcji i UTXO nadal należy do full nodów.",
-                "AuronQ Mobile is a header-verifying light client, not a full node. Keys remain local. The phone starts from the release-trusted checkpoint (block 1284), independently checks subsequent headers for AQM64 PoW, difficulty, hash continuity and timestamps, compares peers, and broadcasts locally signed transactions to multiple nodes. Full transaction and UTXO validation still belongs to full nodes."), 12, false);
+                "Tryb lekki bazuje na zgodności minimum trzech publicznych grup sieci /16. Saldo i historia są zgłaszane przez węzły; przed wysłaniem wymagamy także identycznych UTXO z trzech grup i lokalnie podpisujemy transakcję ML-DSA-87. Portfel nie weryfikuje niezależnie AQM64 ani pełnego stanu UTXO. Węzły mogą być pod kontrolą jednego operatora.",
+                "Light mode relies on agreement across at least three public /16 network groups. Balances and history are peer-reported; sending also requires identical UTXOs from three groups and uses local ML-DSA-87 signing. This wallet does not independently verify AQM64 or the full UTXO state. Different network groups may share an operator."), 12, false);
         model.setTextColor(MUTED);
         root.addView(model, mt(18));
 
@@ -536,7 +536,10 @@ public class MainActivity extends Activity {
         if ("wallet".equals(which)) topTitle.setText(tr("Portfel", "Wallet"));
         if ("send".equals(which)) topTitle.setText(tr("Wyślij", "Send"));
         if ("network".equals(which)) topTitle.setText(tr("Sieć na żywo", "Network Live"));
-        if ("wallet".equals(which)) refreshAll();
+        if ("wallet".equals(which)) {
+            refreshAll();
+            scheduleLightHistory();
+        }
     }
 
     private String discoverResilientNode() throws Exception {
@@ -584,15 +587,10 @@ public class MainActivity extends Activity {
     // UI callbacks invoke this on the main thread. Do not share the wallet
     // executor with network polling or PoW verification.
     private void refreshAll() {
+        // Lightweight mode: never replay memory-hard AQM64 headers or fetch
+        // advisory checkpoints on a phone's normal startup/refresh path.
+        // Full nodes validate the network; the app visibly reports peer trust.
         refreshPreview();
-        // Give the fast account request a head start on cold launch. The
-        // memory-hard AQM64 verifier still runs independently shortly after.
-        if (!walletFile.exists()
-                || (SystemClock.elapsedRealtime() - startedAtMillis >= 15000L)
-                || (latestQuickSnapshot != null && !fastBalanceBusy.get())) {
-            refreshVerification();
-        }
-        refreshPeerCheckpointHints();
     }
 
     private void refreshPreview() {
@@ -604,17 +602,12 @@ public class MainActivity extends Activity {
             try {
                 String known = prefs.getString("known_nodes", "[]");
                 String raw = Bridge.quorumSnapshot(known, 1);
-                String progress = null;
-                try {
-                    progress = Bridge.headerSyncProgress(headerCacheFile.getAbsolutePath());
-                } catch (Exception ignored) {
-                    // Progress is informational; network preview still works.
-                }
-                final String verifiedProgress = progress;
                 runOnUiThread(() -> {
                     applyNetworkPreview(raw);
-                    applySyncProgress(verifiedProgress);
-                    if (walletFile.exists()) scheduleFastBalance();
+                    if (walletFile.exists()) {
+                        scheduleFastBalance();
+                        if ("wallet".equals(currentScreen)) scheduleLightHistory();
+                    }
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> handleNetworkRefreshFailure(e.getMessage()));
@@ -638,6 +631,17 @@ public class MainActivity extends Activity {
                 int octet = Integer.parseInt(part);
                 if (octet < 0 || octet > 255) return "";
             }
+            int a = Integer.parseInt(parts[0]);
+            int b = Integer.parseInt(parts[1]);
+            int c = Integer.parseInt(parts[2]);
+            if (a == 0 || a == 10 || a == 127 || a >= 224
+                    || (a == 169 && b == 254)
+                    || (a == 172 && b >= 16 && b <= 31)
+                    || (a == 192 && b == 168)
+                    || (a == 100 && b >= 64 && b <= 127)
+                    || (a == 192 && b == 0 && c == 2)
+                    || (a == 198 && b == 51 && c == 100)
+                    || (a == 203 && b == 0 && c == 113)) return "";
             return parts[0] + "." + parts[1];
         } catch (Exception ignored) {
             return "";
@@ -723,6 +727,54 @@ public class MainActivity extends Activity {
         });
     }
 
+
+    // The confirmed part of the transaction history must agree in at least
+    // two independent public /16 groups on the same tip. The entire operation
+    // is read-only and stays off the UI thread. No checkpoint is involved.
+    private void scheduleLightHistory() {
+        JSONObject state = latestQuickSnapshot;
+        if (state == null || walletAddress.isEmpty() || !walletFile.exists()) return;
+        if (!Bridge.mainnetNetworkID().equals(state.optString("network_id", ""))) return;
+        long height = state.optLong("height", -1);
+        String tip = state.optString("tip", "");
+        String work = state.optString("chain_work", "");
+        if (height <= 0 || !tip.matches("[0-9a-fA-F]{128}") || work.isEmpty()
+                || state.optInt("peer_agreement", 0) < 3
+                || !threeIndependentGroups(state.optJSONArray("agreement_nodes"))) return;
+        final String address = walletAddress;
+        final long generation = walletGeneration;
+        final String key = address + ":" + height + ":" + tip + ":" + work
+                + ":" + state.optInt("mempool", -1);
+        if (key.equals(lastHistoryKey) || !lightHistoryBusy.compareAndSet(false, true)) return;
+        lightHistoryExecutor.execute(() -> {
+            String response = null;
+            try {
+                response = Bridge.lightHistoryOnObservedChain(
+                        prefs.getString("known_nodes", "[]"), address, tip, work, height, 50);
+            } catch (Exception ignored) {
+            }
+            final String raw = response;
+            runOnUiThread(() -> {
+                lightHistoryBusy.set(false);
+                JSONObject latest = latestQuickSnapshot;
+                if (generation != walletGeneration || !address.equals(walletAddress)
+                        || latest == null || latest.optLong("height", -1) != height
+                        || !tip.equalsIgnoreCase(latest.optString("tip", ""))
+                        || !work.equalsIgnoreCase(latest.optString("chain_work", ""))) return;
+                if (raw != null) {
+                    lastHistoryKey = key;
+                    applyHistory(raw);
+                } else if ("wallet".equals(currentScreen)) {
+                    walletHistoryStatus.setText(tr(
+                            "Historia: oczekiwanie na zgodne odpowiedzi z węzłów",
+                            "History: waiting for matching peer responses"));
+                    walletHistoryStatus.setTextColor(BLUE);
+                }
+            });
+        });
+    }
+
+    // Historical diagnostic helper only: never called in lightweight mode.
     private void refreshPeerCheckpointHints() {
         long now = SystemClock.elapsedRealtime();
         if (peerCheckpointBusy.get() || now - lastPeerCheckpointProbe < 900_000L) return;
@@ -986,21 +1038,22 @@ public class MainActivity extends Activity {
             dashHeight.setText(String.valueOf(height));
             dashPeers.setText(String.valueOf(peers));
             dashMempool.setText(String.valueOf(mempool));
-            // Never turn a currently verified state into a generic "unverified"
-            // state just because a background status poll completed later.
-            if (verifiedHeight >= 0
-                    && verifiedHeight == height
-                    && verifiedTip.equalsIgnoreCase(j.optString("tip", ""))
-                    && verifiedWork.equalsIgnoreCase(j.optString("chain_work", ""))) {
-                return;
-            }
-            dashNode.setText(headerCacheFile != null && headerCacheFile.exists()
-                    ? tr("● Połączono • trwa weryfikacja AQM64…", "● Connected • verifying AQM64…")
-                    : tr("● Połączono • sprawdzam nagłówki od punktu 1284…", "● Connected • checking headers after checkpoint 1284…"));
+            int agreement = j.optInt("peer_agreement", 0);
+            boolean lightQuorum = agreement >= 3
+                    && threeIndependentGroups(j.optJSONArray("agreement_nodes"));
+            dashNode.setText(lightQuorum
+                    ? tr("● Połączono • 3 grupy zgodne • tryb lekki",
+                            "● Connected • 3 network groups agree • light mode")
+                    : tr("● Połączono • oczekiwanie na 3 zgodne grupy węzłów",
+                            "● Connected • waiting for 3 matching peer groups"));
             dashNode.setTextColor(BLUE);
             dashTip.setText("Tip: " + shortHash(j.optString("tip")));
 
-            netStatus.setText(tr("● Sieć osiągalna • lokalna weryfikacja nagłówków trwa", "● Network reachable • local header verification in progress"));
+            netStatus.setText(lightQuorum
+                    ? tr("● Tryb lekki • zgodność grup, bez weryfikacji PoW",
+                            "● Light mode • peer-group agreement, no independent PoW")
+                    : tr("● Sieć osiągalna • oczekiwanie na zgodność grup",
+                            "● Network reachable • waiting for group agreement"));
             netStatus.setTextColor(BLUE);
             netHeight.setText(String.valueOf(height));
             netPeers.setText(String.valueOf(peers));
@@ -1249,10 +1302,19 @@ public class MainActivity extends Activity {
             toast(tr("Najpierw utwórz albo zaimportuj portfel", "Create or import a wallet first"));
             return;
         }
-        if (nodeUrl.isEmpty() || verifiedHeight < 0 || verifiedTip.isEmpty() || verifiedWork.isEmpty()) {
-            toast(tr("Brak niezależnie zweryfikowanego stanu AuronQ Mainnet", "No independently verified AuronQ Mainnet state"));
+        JSONObject chain = latestQuickSnapshot;
+        if (chain == null || !Bridge.mainnetNetworkID().equals(chain.optString("network_id", ""))
+                || chain.optInt("peer_agreement", 0) < 3
+                || !threeIndependentGroups(chain.optJSONArray("agreement_nodes"))
+                || !chain.optString("tip", "").matches("[0-9a-fA-F]{128}")
+                || chain.optString("chain_work", "").isEmpty() || chain.optLong("height", -1) < 1) {
+            toast(tr("Wysyłka wymaga zgodności 3 grup węzłów Mainnet",
+                    "Sending requires agreement of three Mainnet peer groups"));
             return;
         }
+        final String tip = chain.optString("tip");
+        final String work = chain.optString("chain_work");
+        final long height = chain.optLong("height");
         String password = sendPassword.getText().toString();
         String to = recipientInput.getText().toString().trim();
         String amount = amountInput.getText().toString().trim();
@@ -1260,20 +1322,20 @@ public class MainActivity extends Activity {
         new AlertDialog.Builder(this)
                 .setTitle(tr("Potwierdź wysyłkę", "Confirm transaction"))
                 .setMessage(tr(
-                        "Wyślij " + amount + " AURQ na:\n\n" + to + "\n\nTransakcja po zatwierdzeniu w blockchainie jest nieodwracalna.",
-                        "Send " + amount + " AURQ to:\n\n" + to + "\n\nA confirmed blockchain transaction is irreversible."))
+                        "Wyślij " + amount + " AURQ na:\n\n" + to + "\n\nTryb lekki: stan i UTXO są potwierdzane przez 3 grupy węzłów, bez niezależnej weryfikacji AQM64. Transakcja jest nieodwracalna.",
+                        "Send " + amount + " AURQ to:\n\n" + to + "\n\nLight mode: chain state and UTXOs are checked across 3 peer groups, without independent AQM64 verification. Transactions are irreversible."))
                 .setNegativeButton(tr("Anuluj", "Cancel"), null)
                 .setPositiveButton(tr("Wyślij", "Send"), (d, w) ->
                         run(tr("Podpisywanie i wysyłanie…", "Signing and sending…"),
-                                () -> Bridge.sendMultiVerified(
+                                 () -> Bridge.sendMultiLight(
                                         prefs.getString("known_nodes", "[]"),
                                         walletFile.getAbsolutePath(),
                                         password,
                                         to,
                                         amount,
-                                        verifiedTip,
-                                        verifiedWork,
-                                        verifiedHeight),
+                                        tip,
+                                        work,
+                                        height),
                                 value -> {
                                     try {
                                         JSONObject j = new JSONObject(value);
@@ -1324,6 +1386,7 @@ public class MainActivity extends Activity {
     private void loadWalletState() {
         walletGeneration++;
         lastFastBalanceKey = "";
+        lastHistoryKey = "";
         verifiedBalanceDisplayed = false;
         if (walletFile.exists()) {
             dashBalance.setText("—");
@@ -1643,6 +1706,7 @@ public class MainActivity extends Activity {
         headerVerificationExecutor.shutdownNow();
         peerCheckpointExecutor.shutdownNow();
         fastBalanceExecutor.shutdownNow();
+        lightHistoryExecutor.shutdownNow();
         super.onDestroy();
     }
 }

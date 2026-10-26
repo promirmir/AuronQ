@@ -341,3 +341,60 @@ func TestHeaderSyncProgressFreshCacheAndPersistedHeight(t *testing.T) {
         t.Fatalf("progress read unexpectedly removed the cache: %v", err)
     }
 }
+
+
+func TestDistinctLightNetgroupsFiltersPrivateHostsAndSameRange(t *testing.T) {
+    input := []mobileNodeObservation{
+        {Node: "http://149.202.99.1:18444"},
+        {Node: "http://149.202.91.156:18444"},
+        {Node: "http://15.235.225.214:18444"},
+        {Node: "http://164.132.169.5:18444"},
+        {Node: "http://10.0.0.1:18444"},
+        {Node: "https://node.example.com"},
+        {Node: "http://127.0.0.1:18444"},
+    }
+    selected := distinctLightNetgroups(input)
+    if len(selected) != 3 {
+        t.Fatalf("expected exactly three public netgroups, got %+v", selected)
+    }
+    if selected[0].Node != "http://149.202.91.156:18444" {
+        t.Fatalf("nondeterministic or incorrect representative: %+v", selected)
+    }
+    if !hasThreeObservedNetgroups(selected) {
+        t.Fatal("selected light peers do not represent three public groups")
+    }
+}
+
+func TestDistinctLightNetgroupsDoesNotCountThreeIPsAsThreeOperators(t *testing.T) {
+    selected := distinctLightNetgroups([]mobileNodeObservation{
+        {Node: "http://149.202.1.1:18444"},
+        {Node: "http://149.202.2.2:18444"},
+        {Node: "http://15.235.3.3:18444"},
+    })
+    if len(selected) != 2 || hasThreeObservedNetgroups(selected) {
+        t.Fatalf("a single /16 must count only once: %+v", selected)
+    }
+}
+
+func TestDistinctLightNetgroupsOrderIndependent(t *testing.T) {
+    original := []mobileNodeObservation{
+        {Node: "http://149.202.99.1:18444"},
+        {Node: "http://15.235.225.214:18444"},
+        {Node: "http://149.202.91.156:18444"},
+        {Node: "http://164.132.169.5:18444"},
+    }
+    forward := distinctLightNetgroups(original)
+    reversed := append([]mobileNodeObservation(nil), original...)
+    for i, j := 0, len(reversed)-1; i < j; i, j = i+1, j-1 {
+        reversed[i], reversed[j] = reversed[j], reversed[i]
+    }
+    backward := distinctLightNetgroups(reversed)
+    if len(forward) != len(backward) {
+        t.Fatalf("order changed the number of netgroups: %+v / %+v", forward, backward)
+    }
+    for i := range forward {
+        if forward[i].Node != backward[i].Node {
+            t.Fatalf("selection depends on peer return order: %+v / %+v", forward, backward)
+        }
+    }
+}
