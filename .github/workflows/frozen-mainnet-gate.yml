@@ -45,24 +45,24 @@ jobs:
             .github/workflows/ci.yml \
             .github/workflows/release.yml)"
           if [ -n "$changed" ]; then
-            # Owner-requested Android 0.5.8 fast-balance/logo maintenance exception.
+            # Owner-requested 0.5.9 lightweight peer-quorum maintenance: exact reviewed blobs only.
             # This is an exact reviewed blob allowlist, NOT a blanket carve-out:
             # edits to core consensus, signing, wallet serialization, network
             # identity, or any future unapproved change still fail closed.
             while IFS= read -r file; do
               case "$file" in
                 android/app/src/main/java/com/auronq/mobile/MainActivity.java)
-                  expected=2ff6a732e08b677d5975000694116704b3ccd0d2 ;;
+                  expected=2e5b6d1cdaa9dbb687d0eafb08d1d9b4c3428b1b ;;
                 android/app/build.gradle)
-                  expected=264464cbde675b969212e3b3db207c1453e58a51 ;;
+                  expected=ab4b9dc5158addcdc18436a1970aa7dcc1fdd67b ;;
                 android/app/src/main/AndroidManifest.xml)
                   expected=db1adae34a81a4063275d135391eebdacb6ab80c ;;
                 android/app/src/main/res/drawable/ic_auronq.xml)
                   expected=d80e0b17dd4e5bc706ca55e2d411d7e55775852b ;;
                 mobile/bridge/bridge.go)
-                  expected=16e07c1cca6cbbbafe2e8a5fbfb193cb9b95b42a ;;
+                  expected=7c53d8060c6951e1500deb1631dd9fdf55aa0885 ;;
                 mobile/bridge/bridge_test.go)
-                  expected=3d86fa0d6ba9a20cea54ab0746966a448e2c01af ;;
+                  expected=b43832f1c3291432e5584af9f89baaaeb405244e ;;
                 *)
                   echo "::error::Unapproved frozen AuronQ source change: $file"
                   exit 1 ;;
@@ -73,7 +73,7 @@ jobs:
                 exit 1
               fi
             done <<< "$changed"
-            echo "Only the exact pinned Android 0.5.8 maintenance blobs differ from baseline."
+            echo "Only exact pinned Android wallet maintenance blobs differ from baseline."
           else
             echo "Frozen Mainnet source is byte-for-byte unchanged."
           fi
