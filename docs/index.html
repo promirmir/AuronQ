@@ -148,7 +148,7 @@
           <h1>AuronQ. A network you can verify.</h1>
           <p class="lead">AuronQ (AURQ) is an open-source UTXO cryptocurrency built in Go. It combines independent full-node validation, AQM64 Proof-of-Work and ML-DSA-87 transaction signatures.</p>
           <div class="btns">
-            <a class="btn btn-primary" href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.8-alpha-fast-balance-logo/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk">Download Android wallet (APK)</a>
+            <a class="btn btn-primary" href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk">Download Android wallet (APK)</a>
             <a class="btn" href="#downloads">Desktop, nodes and miners</a>
             <a class="btn" href="https://github.com/promirmir/AuronQ/blob/main/ROADMAP.md">Project roadmap</a>
             <a class="btn" href="https://discord.gg/rmmNY9RhA">Join Discord</a>
@@ -172,8 +172,8 @@
 
     <section class="content wrap" id="downloads" aria-labelledby="downloads-title">
       <h2 id="downloads-title">Download AuronQ</h2>
-      <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.8-alpha-fast-balance-logo/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk"><strong>Download AuronQ Mobile 0.5.8 Alpha — Fast Balance + Logo</strong></a>. Experimental and debug-signed. Verify SHA-256 and wallet recovery material before migrating; do not uninstall a funded older app to force an upgrade. Other packages are below.</p>
-      <p class="note"><strong>Release status — 26 October 2026:</strong> Desktop v1.7.14, Android 0.5.8 Alpha and Universal Miner v0.4.9 Alpha package GitHub-independent peer discovery and verified failover from reviewed PRs #187/#189. Previous releases do not update themselves. Source changes do not alter Mainnet consensus, and long-term founder-independent operation remains unproven.</p>
+      <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk"><strong>Download AuronQ Mobile 0.5.9 Alpha — Light Quorum / Fast Start</strong></a>. Experimental and debug-signed. Verify SHA-256 and wallet recovery material before migrating; do not uninstall a funded older app to force an upgrade. Other packages are below.</p>
+      <p class="note"><strong>Release status — 26 October 2026:</strong> Desktop v1.7.14, Android 0.5.9 Alpha and Universal Miner v0.4.9 Alpha package GitHub-independent peer discovery and verified failover from reviewed PRs #187/#189. Previous releases do not update themselves. Source changes do not alter Mainnet consensus, and long-term founder-independent operation remains unproven.</p>
       <div class="grid">
         <article class="card">
           <span class="label">Run a full node</span>
@@ -200,16 +200,16 @@
         <article class="card">
           <span class="label">Mobile wallet</span>
           <h3>AuronQ Mobile</h3>
-          <div class="version">v0.5.8 Alpha · Fast Balance + Logo · Android</div>
-          <p>Fast, peer-reported wallet balance after agreement across three public network groups, while AQM64 header checks continue independently. Includes the official AuronQ logo and retains two matching password fields. Peer agreement is not a trustless blockchain proof and does not bypass verified spending checks. This separate, debug-signed installation cannot migrate an older funded wallet automatically.</p>
+          <div class="version">v0.5.9 Alpha · Light Quorum / Fast Start · Android</div>
+          <p>Opens without on-device AQM64 header replay or checkpoint downloads. Peer-reported balance requires matching reports from three public IPv4 /16 groups; two groups must agree on confirmed history, and sending also requires three identical reported UTXO sets and local signing. This is NOT independent PoW or UTXO verification. The separate debug-signed installation does not migrate funded older wallets.</p>
           <div class="links">
-            <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.8-alpha-fast-balance-logo/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk">Android APK ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk">Android APK ↓</a>
             
-            <a href="https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.8-alpha-fast-balance-logo">Release details →</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.9-alpha-light-quorum">Release details →</a>
           </div>
         </article>
       </div>
-      <p class="note">Android 0.5.8 APK SHA-256: <code>dcf8c06c87e3c3509252b247c4f889f8d383f86f71243d00109bc13c5ede9844</code>. The APK is a <strong>separate installation</strong> (<code>com.auronq.mobile.fast058</code>) with CI debug signing; it cannot update or access an older app's local wallet in place. Never uninstall a funded wallet or clear wallet data to resolve signing or upgrade issues. Mainnet consensus remains frozen for ordinary releases; reviewed non-consensus maintenance may continue: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
+      <p class="note">Android 0.5.9 APK SHA-256: <code>4ce9f59f07fa7544e4edb66cac0c3158c80a12808b75f820dbfc20cf54b9915f</code>. The APK is a <strong>separate installation</strong> (<code>com.auronq.mobile.light059</code>) with CI debug signing; it cannot update or access an older app's local wallet in place. Balance and spending rely on peer reports and do NOT independently validate PoW or UTXOs. Never uninstall a funded wallet or clear wallet data to resolve signing or upgrade issues. Mainnet consensus remains frozen for ordinary releases; reviewed non-consensus maintenance may continue: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
     </section>
 
     <section class="content wrap" id="start" aria-labelledby="start-title">
