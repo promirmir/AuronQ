@@ -1,0 +1,43 @@
+name: Independent resilience simulation audit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/resilience-simulation-audit.yml'
+  push:
+    branches: [audit/resilience-simulation-20261011]
+    paths:
+      - '.github/workflows/resilience-simulation-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25.x'
+          cache: false
+      - name: Verify consensus invariants in repeated deterministic simulations
+        run: |
+          set -euo pipefail
+          go test ./internal/auronq -run '^Test(DifficultyAdjustmentClampsOneBlockJumps|BlockRejectsMedianTimePastAndFutureTimestamp|CoinbaseMaturityBoundary|BlockRejectsDoubleSpendWithinSameBlock)$' -count=10 -timeout=10m -v
+      - name: Simulate partitions, failover, restarts and seed loss
+        run: |
+          set -euo pipefail
+          go test ./internal/auronq -run '^Test(FiveNodePartitionReorgAndRestartConvergence|TwentyNodeMultiPartitionConvergence|RestartWithoutBootstrapKeepsPersistedPublicPeers|MalformedPeerHelloCannotChangeChain|NetworkContinuesAfterOriginalSeedNodesDisappear)$' -count=10 -timeout=20m -v
+      - name: Race detector for peer and consensus components
+        run: |
+          set -euo pipefail
+          go test -race ./internal/auronq -run '^Test(FiveNodePartitionReorgAndRestartConvergence|TwentyNodeMultiPartitionConvergence|NetworkContinuesAfterOriginalSeedNodesDisappear)$' -count=2 -timeout=15m
+      - name: Fuzz peer input parsers (bounded audit budget)
+        run: |
+          set -euo pipefail
+          for target in FuzzDecodeAddressNeverPanics FuzzParseAmountNeverPanics FuzzTransactionJSONNeverPanics FuzzBlockJSONNeverPanics; do
+            go test ./internal/auronq -run='^$' "-fuzz=^$target$" -fuzztime=20s -timeout=3m
+          done
