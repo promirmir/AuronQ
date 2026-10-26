@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-var ErrMiningTemplateStale = errors.New("mining template is stale")
+var (
+	ErrMiningTemplateStale   = errors.New("mining template is stale")
+	ErrMiningNodeUnavailable = errors.New("mining node unavailable")
+)
 
 // MiningTemplateCurrent reports whether template still extends the node's
 // currently selected canonical tip. Comparing both height and PrevHash catches
@@ -41,11 +44,19 @@ func MineRemoteTemplate(
 	defer cancel()
 
 	stale := make(chan struct{}, 1)
+	unavailable := make(chan struct{}, 1)
 	watcherDone := make(chan struct{})
 
 	markStale := func() {
 		select {
 		case stale <- struct{}{}:
+		default:
+		}
+		cancel()
+	}
+	markUnavailable := func() {
+		select {
+		case unavailable <- struct{}{}:
 		default:
 		}
 		cancel()
@@ -56,13 +67,23 @@ func MineRemoteTemplate(
 		ticker := time.NewTicker(pollInterval)
 		defer ticker.Stop()
 
+		consecutiveStatusFailures := 0
 		check := func() bool {
 			status, err := client.StatusContext(mineCtx)
 			if err != nil {
-				// A temporary status failure must not destroy otherwise valid
-				// work. Submit will still fail safely if the node is unavailable.
+				if mineCtx.Err() != nil {
+					return true
+				}
+				if IsRetryableNodeError(err) {
+					consecutiveStatusFailures++
+					if consecutiveStatusFailures >= 3 {
+						markUnavailable()
+						return true
+					}
+				}
 				return false
 			}
+			consecutiveStatusFailures = 0
 			if !MiningTemplateCurrent(template, status) {
 				markStale()
 				return true
@@ -93,6 +114,11 @@ func MineRemoteTemplate(
 	select {
 	case <-stale:
 		return MineResult{}, ErrMiningTemplateStale
+	default:
+	}
+	select {
+	case <-unavailable:
+		return MineResult{}, ErrMiningNodeUnavailable
 	default:
 	}
 
