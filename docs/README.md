@@ -1,6 +1,6 @@
 # AuronQ documentation
 
-**Current status (26 October 2026):** AuronQ Mainnet is live; consensus changes are frozen for normal releases. Protected source `main` includes GitHub-independent peer discovery and verified thin-client/miner failover, while the currently published Desktop v1.7.13, Android 0.5.6 Alpha and Miner v0.4.8 Alpha predate those final changes. Stability, wallet correctness, independent security review and witnessed founder-independent operation **are not yet fully certified**.
+**Current status (26 October 2026):** AuronQ Mainnet is live, with consensus changes frozen for ordinary releases. Published Desktop v1.7.14, Android 0.5.7 Alpha and Universal Miner v0.4.9 Alpha package reviewed GitHub-independent peer discovery and verified failover. All are unaudited; long-term stability, wallet correctness under adversarial conditions, and witnessed founder-independent operation **are not yet fully certified**. Older published binaries are historical and do not upgrade automatically.
 
 **Start with [canonical project status](../PROJECT-STATUS.md).** This index helps readers navigate without digging through historical experiment files. It does not replace the protocol.
 
