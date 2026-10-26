@@ -519,27 +519,8 @@ public class MainActivity extends Activity {
     }
 
     private String discoverResilientNode() throws Exception {
-        Set<String> candidates = new LinkedHashSet<>();
-        if (nodeUrl != null && !nodeUrl.isEmpty()) candidates.add(nodeUrl);
-
         String cached = prefs.getString("known_nodes", "[]");
-        try {
-            JSONArray a = new JSONArray(cached);
-            for (int i = 0; i < a.length() && i < 32; i++) {
-                String p = a.optString(i, "").trim();
-                if (p.startsWith("https://") || p.startsWith("http://")) candidates.add(p);
-            }
-        } catch (Exception ignored) {
-        }
-
-        for (String candidate : candidates) {
-            try {
-                Bridge.status(candidate);
-                return candidate;
-            } catch (Exception ignored) {
-            }
-        }
-        return Bridge.discoverNode();
+        return Bridge.discoverResilientNode(nodeUrl == null ? "" : nodeUrl, cached);
     }
 
     private void rememberNetwork(String node) {
