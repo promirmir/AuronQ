@@ -51,20 +51,44 @@ func (c *Client) post(path string, in, out any) error {
 	}
 	return json.NewDecoder(r.Body).Decode(out)
 }
+type nodeHTTPError struct {
+	StatusCode int
+	Status     string
+	Message    string
+}
+
+func (e *nodeHTTPError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("node HTTP %s: %s", e.Status, e.Message)
+	}
+	return fmt.Sprintf("node HTTP %s", e.Status)
+}
+
 func decodeHTTPError(r *http.Response) error {
 	b, _ := io.ReadAll(io.LimitReader(r.Body, 8192))
+	msg := strings.TrimSpace(string(b))
 	var v map[string]any
 	if json.Unmarshal(b, &v) == nil {
 		if e, ok := v["error"].(string); ok {
-			return fmt.Errorf("node: %s", e)
+			msg = e
 		}
 	}
-	return fmt.Errorf("node HTTP %s: %s", r.Status, strings.TrimSpace(string(b)))
+	return &nodeHTTPError{StatusCode: r.StatusCode, Status: r.Status, Message: msg}
 }
 func (c *Client) StatusContext(ctx context.Context) (Status, error) {
 	var x Status
 	err := c.getContext(ctx, "/v1/status", &x)
 	return x, err
+}
+
+func (c *Client) HelloContext(ctx context.Context) (Hello, error) {
+	var x Hello
+	err := c.getContext(ctx, "/p2p/hello", &x)
+	return x, err
+}
+
+func (c *Client) Hello() (Hello, error) {
+	return c.HelloContext(context.Background())
 }
 
 func (c *Client) Status() (Status, error) {
