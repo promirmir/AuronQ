@@ -808,7 +808,10 @@ func (n *Node) refreshDNSSeeds(ctx context.Context) {
 				continue
 			}
 			peer := "http://" + net.JoinHostPort(ip.String(), fmt.Sprintf("%d", port))
-			go n.verifyAndAddPeer(peer)
+			// DNS results are discovery candidates only. They can participate in
+			// sync attempts, but publicPeerList excludes them until recordPeerSuccess
+			// verifies protocol + Network ID through a real /p2p/hello exchange.
+			n.addPeer(peer)
 		}
 	}
 }
