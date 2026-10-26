@@ -1276,19 +1276,28 @@ func FastBalanceOnObservedChain(knownNodesJSON, address, tip, work string, heigh
 func lightStateNetgroups(knownNodesJSON, tip, work string, height int64) ([]mobileNodeObservation, error) {
     observations, err := verifiedStateObservations(knownNodesJSON, tip, work, height)
     if err != nil { return nil, err }
+    nodes := distinctLightNetgroups(observations)
+    if len(nodes) < 3 {
+        return nil, errors.New("light mode needs three public IPv4 /16 groups on the exact same chain tip")
+    }
+    return nodes, nil
+}
+
+// One representative per publicly routable /16. DNS/private ranges cannot
+// accidentally satisfy a quorum; explicit sorting gives deterministic picks.
+func distinctLightNetgroups(observations []mobileNodeObservation) []mobileNodeObservation {
     byGroup := make(map[string]mobileNodeObservation)
     for _, o := range observations {
         group := mobileNetgroupKey(o.Node)
         if group == "" { continue }
-        if _, exists := byGroup[group]; !exists { byGroup[group] = o }
-    }
-    if len(byGroup) < 3 {
-        return nil, errors.New("light mode needs three public IPv4 /16 groups on the exact same chain tip")
+        if previous, exists := byGroup[group]; !exists || o.Node < previous.Node {
+            byGroup[group] = o
+        }
     }
     nodes := make([]mobileNodeObservation, 0, len(byGroup))
     for _, node := range byGroup { nodes = append(nodes, node) }
     sort.Slice(nodes, func(i, j int) bool { return nodes[i].Node < nodes[j].Node })
-    return nodes, nil
+    return nodes
 }
 
 // LightHistoryOnObservedChain fetches history from independently routed
