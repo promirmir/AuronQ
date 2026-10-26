@@ -631,6 +631,17 @@ public class MainActivity extends Activity {
                 int octet = Integer.parseInt(part);
                 if (octet < 0 || octet > 255) return "";
             }
+            int a = Integer.parseInt(parts[0]);
+            int b = Integer.parseInt(parts[1]);
+            int c = Integer.parseInt(parts[2]);
+            if (a == 0 || a == 10 || a == 127 || a >= 224
+                    || (a == 169 && b == 254)
+                    || (a == 172 && b >= 16 && b <= 31)
+                    || (a == 192 && b == 168)
+                    || (a == 100 && b >= 64 && b <= 127)
+                    || (a == 192 && b == 0 && c == 2)
+                    || (a == 198 && b == 51 && c == 100)
+                    || (a == 203 && b == 0 && c == 113)) return "";
             return parts[0] + "." + parts[1];
         } catch (Exception ignored) {
             return "";
