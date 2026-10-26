@@ -24,13 +24,14 @@ Do not copy a fixed peer count from this document: the registry can change as pu
 
 ## First-start flow
 
-1. Validate the bundled `network.json`.
-2. Load persisted/configured peers.
-3. Fetch the HTTPS bootstrap manifest and require an exact Network ID match.
-4. Contact available peers and compare chain metadata.
-5. Download blocks in bounded batches and validate each block locally.
-6. Learn verified public peer addresses through gossip.
-7. Persist useful public peers for later restarts.
+1. Validate the bundled `network.json` and fixed Mainnet identity.
+2. Load persisted/configured peers plus bundled seed/DNS candidates.
+3. Contact available candidates and require the exact AuronQ Mainnet Network ID before promoting them to the verified set.
+4. Use HTTPS bootstrap manifests only as optional supplemental discovery metadata; manifest entries remain candidates until separately verified.
+5. Compare chain metadata across reachable peers and fail closed on incompatible network identity.
+6. Download blocks in bounded batches and validate each block locally.
+7. Learn additional public peer addresses through `/p2p/hello`, callback-verify them, then persist/gossip only verified endpoints.
+8. Reuse the local verified peer store on later restarts even when GitHub is unavailable.
 
 A node behind NAT/CGNAT participates normally through outbound connections. A directly reachable node may be callback-verified and admitted to public gossip.
 
@@ -43,6 +44,14 @@ A completely fresh installation still needs at least one discovery route. To red
 The crawler never changes consensus and never makes a peer trusted for blocks: every full node still validates the chain locally. A newly learned peer must be reachable, report the exact Mainnet Network ID and be advertised by at least two distinct peer netgroups before it can enter the automatic live registry; self-advertisement does not count as an independent endorsement. Before the live registry is published, the normal public-network health checker verifies height coherence, tip agreement at the top height and common canonical history among reachable peers. The reviewed `main` manifest remains an independent fallback.
 
 The public registry now includes project rendezvous endpoints and crawler-verified public nodes learned from the network. That improves first-contact resilience, but raw endpoint count is not the same as operator independence. The stronger target is sustained diversity across independently controlled operators, networks and discovery routes. Existing nodes can already continue with persisted/gossiped peers when any particular bootstrap endpoint is unavailable.
+
+### Thin clients and standalone miners
+
+Current protected source also applies the same independence principle to components that are not full nodes. CLI client commands and standalone Universal Miner workers prefer the configured/local node, then a local cache of previously verified Mainnet endpoints, then bundled `network.json` seed hints. Each selected endpoint must report the exact Mainnet Network ID; peers learned through `/p2p/hello` are independently probed before persistence. Repeated failures are quarantined locally and a clear same-height conflicting tip causes fail-closed behavior rather than silently choosing one chain.
+
+These thin clients do **not** advertise themselves as P2P full nodes. Public peer advertisement remains a full-node responsibility.
+
+The source implementation above was merged on 26 October 2026. The currently published Desktop v1.7.13, Android 0.5.6 Alpha and Universal Miner v0.4.8 Alpha predate the final runtime-independence changes; users need a newer tested release to receive them in packaged applications.
 
 AuronQ also supports DNS seeds. Adding independently operated DNS seeds later gives a second discovery mechanism that does not depend on the repository manifest.
 
