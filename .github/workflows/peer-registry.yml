@@ -9,8 +9,10 @@ on:
     paths:
       - 'cmd/auronq-peer-crawler/**'
       - '.github/workflows/peer-registry.yml'
+      - '.github/workflows/peer-registry-validation.yml'
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -26,6 +28,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: true
 
       - uses: actions/setup-go@v5
         with:
@@ -45,6 +48,8 @@ jobs:
         id: registry
         shell: bash
         run: |
+          set -euo pipefail
+
           if git diff --quiet -- bootstrap.json bootstrap.mainnet.json; then
             echo "No bootstrap changes."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -59,49 +64,94 @@ jobs:
           git add bootstrap.json bootstrap.mainnet.json
           git commit -m "Refresh verified AuronQ public peers"
           git push --force origin "HEAD:$branch"
+          echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Open or update protected-main pull request
+        if: steps.registry.outputs.changed == 'true'
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          existing="$(gh pr list --head automation/peer-registry --base main --state open --json number --jq '.[0].number // empty')"
+
+          if [ -n "$existing" ]; then
+            echo "Using existing peer-registry PR #$existing"
+            echo "number=$existing" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          set +e
+          output="$(gh pr create             --base main             --head automation/peer-registry             --title "Refresh verified AuronQ public peers"             --body "Automated peer-registry refresh. The crawler includes only reachable peers that report the AuronQ Mainnet Network ID. The update is validated by dedicated CI, the frozen-Mainnet guard and public network health before automatic squash merge." 2>&1)"
+          rc=$?
+          set -e
+
+          if [ "$rc" -ne 0 ]; then
+            if grep -Fq "GitHub Actions is not permitted to create or approve pull requests" <<<"$output"; then
+              echo "::error::Repository setting blocks GitHub Actions from creating pull requests. Enable Settings > Actions > General > Workflow permissions > Allow GitHub Actions to create and approve pull requests."
+              exit 1
+            fi
+            echo "$output" >&2
+            exit "$rc"
+          fi
+
+          number="$(gh pr list --head automation/peer-registry --base main --state open --json number --jq '.[0].number')"
+          echo "Opened peer-registry PR #$number"
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch protected validation
         if: steps.registry.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          existing="$(gh pr list --head automation/peer-registry --base main --state open --json number --jq '.[0].number // empty')"
-          if [ -n "$existing" ]; then
-            echo "Updated existing peer-registry PR #$existing"
-            exit 0
-          fi
+          set -euo pipefail
+          branch="automation/peer-registry"
+          gh workflow run peer-registry-validation.yml --ref "$branch"
+          gh workflow run frozen-mainnet-gate.yml --ref "$branch"
+          gh workflow run network-health.yml --ref "$branch"
 
-          set +e
-          output="$(gh pr create \
-            --base main \
-            --head automation/peer-registry \
-            --title "Refresh verified AuronQ public peers" \
-            --body "Automated peer-registry refresh. The crawler includes only reachable peers that report the AuronQ Mainnet Network ID. This PR intentionally goes through the protected main branch and normal CI before merge." 2>&1)"
-          rc=$?
-          set -e
+      - name: Wait for validation workflows
+        if: steps.registry.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ steps.registry.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
 
-          if [ "$rc" -eq 0 ]; then
-            echo "$output"
-            exit 0
-          fi
+          wait_for_run() {
+            workflow="$1"
+            run_id=""
 
-          if grep -Fq "GitHub Actions is not permitted to create or approve pull requests" <<<"$output"; then
-            echo "::notice::Verified peer registry published; the GitHub Actions token cannot create PRs under the current repository policy. Manual review PR required."
-            {
-              cat <<'SUMMARY'
-          ### Verified peer registry update ready for review
+            for _ in $(seq 1 30); do
+              run_id="$(gh run list                 --workflow "$workflow"                 --branch automation/peer-registry                 --event workflow_dispatch                 --limit 20                 --json databaseId,headSha                 --jq ".[] | select(.headSha == \"$HEAD_SHA\") | .databaseId" | head -n1)"
+              if [ -n "$run_id" ]; then
+                break
+              fi
+              sleep 2
+            done
 
-          The crawler published a verified supplemental registry on `automation/peer-registry`.
-          Nodes configured to use that branch's live registry can consume it without changing main.
-          Repository settings intentionally block PR creation by GitHub Actions. This is not a crawler or network-health failure.
+            if [ -z "$run_id" ]; then
+              echo "::error::Could not locate dispatched $workflow run for $HEAD_SHA"
+              return 1
+            fi
 
-          Review the changes and open a PR against the protected main branch:
-          https://github.com/promirmir/AuronQ/compare/main...automation/peer-registry?expand=1
-          SUMMARY
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
+            echo "Waiting for $workflow run $run_id"
+            gh run watch "$run_id" --exit-status
+          }
 
-          echo "$output" >&2
-          exit "$rc"
+          wait_for_run peer-registry-validation.yml
+          wait_for_run frozen-mainnet-gate.yml
+          wait_for_run network-health.yml
+
+      - name: Squash merge verified registry update
+        if: steps.registry.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh pr merge "$PR_NUMBER" --squash --delete-branch             --subject "network: refresh verified public peer registry"             --body "Automated verified peer-registry refresh. Consensus and Mainnet identity unchanged."
