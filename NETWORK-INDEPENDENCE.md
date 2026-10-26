@@ -78,4 +78,4 @@ The live network now has multiple reachable public full nodes and the crawler is
 
 ## Packaging status — 26 October 2026
 
-undefined
+The reviewed runtime-independence implementation from PR #187 and PR #189 is included in **published Desktop v1.7.14, Android 0.5.7 Alpha and Universal Miner v0.4.9 Alpha** (26 October 2026). These builds are available in [official GitHub Releases](https://github.com/promirmir/AuronQ/releases), with published SHA-256 checksums. Previous Desktop v1.7.13, Android 0.5.6 Alpha and Miner v0.4.8 Alpha binaries remain historical and do not update themselves automatically. Packaging is verified; an independent clean-install/offline-founder resilience drill is still required to establish operational independence.
