@@ -1,0 +1,222 @@
+name: Publish Universal Miner v0.4.9 Alpha
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.release/miner-v0.4.9-alpha'
+      - '.github/workflows/publish-miner-v0.4.9-alpha.yml'
+
+permissions:
+  contents: write
+
+env:
+  MINER_VERSION: 0.4.9-alpha
+  MINER_TAG: miner-v0.4.9-alpha
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Verify source and Mainnet identity
+        run: |
+          set -euo pipefail
+          grep -Fq 'AuronQ Universal Miner v0.4.9-alpha' cmd/auronq-gpu-miner/main.go
+          grep -Fq 'guiVersion       = "0.4.9-alpha"' cmd/auronq-gpu-miner-gui/main_windows.go
+          go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1 -timeout=4m
+          go test ./...
+          go vet ./...
+          go test -race ./...
+
+  windows-legacy:
+    needs: verify
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install CUDA 12.6
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '12.6.3'
+          method: network
+          use-github-cache: 'true'
+      - shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-legacy.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-049-windows-legacy
+          path: gpu/cuda/auronq-aqm64-cuda-legacy.dll
+          if-no-files-found: error
+
+  windows-kepler:
+    needs: verify
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install CUDA 11.8
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '11.8.0'
+          method: network
+          use-github-cache: 'true'
+      - shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows-kepler.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-049-windows-kepler
+          path: gpu/cuda/auronq-aqm64-cuda-kepler.dll
+          if-no-files-found: error
+
+  windows-full:
+    needs: [verify, windows-legacy, windows-kepler]
+    runs-on: windows-2022
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Install CUDA 13.2
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '13.2.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Build current CUDA and OpenCL
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\cuda\build-windows.ps1
+          powershell -NoProfile -ExecutionPolicy Bypass -File .\gpu\opencl\build-windows.ps1
+      - uses: actions/download-artifact@v4
+        with:
+          name: miner-049-windows-legacy
+          path: legacy
+      - uses: actions/download-artifact@v4
+        with:
+          name: miner-049-windows-kepler
+          path: kepler
+      - name: Assemble Windows package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $name = "AuronQ-Miner-v$env:MINER_VERSION-Windows-x64-GUI-GPU"
+          $dir = Join-Path $PWD "dist\$name"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          go build -trimpath -o (Join-Path $dir "auronq-miner-worker.exe") .\cmd\auronq-gpu-miner
+          go build -trimpath -ldflags "-H=windowsgui" -o (Join-Path $dir "AuronQ-Miner.exe") .\cmd\auronq-gpu-miner-gui
+          go build -trimpath -o (Join-Path $dir "auronq.exe") .\cmd\auronq
+          Copy-Item .\gpu\cuda\auronq-aqm64-cuda.dll $dir
+          Copy-Item .\legacy\auronq-aqm64-cuda-legacy.dll $dir
+          Copy-Item .\kepler\auronq-aqm64-cuda-kepler.dll $dir
+          Copy-Item .\gpu\opencl\auronq-aqm64-opencl.dll $dir
+          Copy-Item .\network.json,.\bootstrap.json,.\UNIVERSAL-MINER-GUIDE.md,.\GPU-MINER-GUIDE.md,.\LICENSE $dir
+          & (Join-Path $dir "auronq-miner-worker.exe") --backend cpu --cpu-threads 1 --self-test
+          if ($LASTEXITCODE -ne 0) { throw "CPU self-test failed" }
+          Compress-Archive -Path (Join-Path $dir "*") -DestinationPath "dist\$name.zip" -CompressionLevel Optimal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-049-windows-full
+          path: dist/AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip
+          if-no-files-found: error
+
+  linux-full:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build legacy CUDA backends in containers
+        run: |
+          set -euo pipefail
+          docker run --rm -v "$PWD:/src" -w /src nvidia/cuda:12.6.3-devel-ubuntu24.04 bash ./gpu/cuda/build-linux-legacy.sh
+          docker run --rm -v "$PWD:/src" -w /src nvidia/cuda:11.8.0-devel-ubuntu22.04 bash ./gpu/cuda/build-linux-kepler.sh
+      - name: Install CUDA 13.2
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: '13.2.0'
+          method: network
+          use-github-cache: 'true'
+      - name: Build current CUDA and OpenCL
+        run: |
+          set -euo pipefail
+          bash ./gpu/cuda/build-linux.sh
+          bash ./gpu/opencl/build-linux.sh
+      - name: Assemble Linux package
+        run: |
+          set -euo pipefail
+          name="AuronQ-Miner-v$MINER_VERSION-Linux-x64-GPU"
+          dir="dist/$name"
+          mkdir -p "$dir"
+          CGO_ENABLED=1 go build -trimpath -o "$dir/auronq-miner" ./cmd/auronq-gpu-miner
+          CGO_ENABLED=1 go build -trimpath -o "$dir/auronq" ./cmd/auronq
+          cp gpu/cuda/libauronq-aqm64-cuda.so gpu/cuda/libauronq-aqm64-cuda-legacy.so gpu/cuda/libauronq-aqm64-cuda-kepler.so "$dir/"
+          cp gpu/opencl/libauronq-aqm64-opencl.so "$dir/"
+          cp network.json bootstrap.json UNIVERSAL-MINER-GUIDE.md GPU-MINER-GUIDE.md LICENSE "$dir/"
+          chmod +x "$dir/auronq-miner" "$dir/auronq"
+          "$dir/auronq-miner" --backend cpu --cpu-threads 1 --self-test
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-049-linux-full
+          path: dist/AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz
+          if-no-files-found: error
+
+  portable:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Build portable CPU-safe matrix
+        run: bash ./build-universal-miner-packages.sh "$MINER_VERSION"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: miner-049-portable
+          path: |
+            dist/universal-v0.4.9-alpha/*.zip
+            dist/universal-v0.4.9-alpha/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: [windows-full, linux-full, portable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Verify release asset set and checksums
+        run: |
+          set -euo pipefail
+          cd release
+          test -s AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip
+          test -s AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz
+          test -s AuronQ-Universal-Miner-v0.4.9-alpha-windows-amd64.zip
+          test -s AuronQ-Universal-Miner-v0.4.9-alpha-linux-amd64.tar.gz
+          sha256sum *.zip *.tar.gz | sort > SHA256SUMS-AURONQ-MINER.txt
+          cat SHA256SUMS-AURONQ-MINER.txt
+      - name: Publish miner prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$MINER_TAG" >/dev/null 2>&1; then
+            echo "Release $MINER_TAG already exists; refusing to overwrite." >&2
+            exit 1
+          fi
+          gh release create "$MINER_TAG" release/*.zip release/*.tar.gz release/SHA256SUMS-AURONQ-MINER.txt             --target "$GITHUB_SHA"             --title "AuronQ Universal Miner v0.4.9 Alpha"             --notes-file MINER-RELEASE-NOTES.md             --prerelease
