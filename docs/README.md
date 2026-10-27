@@ -1,6 +1,6 @@
 # AuronQ documentation
 
-**Current status (26 October 2026):** AuronQ Mainnet is live, with consensus changes frozen for ordinary releases. Published Desktop v1.7.14, Android 0.5.7 Alpha and Universal Miner v0.4.9 Alpha package reviewed GitHub-independent peer discovery and verified failover. All are unaudited; long-term stability, wallet correctness under adversarial conditions, and witnessed founder-independent operation **are not yet fully certified**. Older published binaries are historical and do not upgrade automatically.
+**Current status (27 October 2026):** Public Mainnet is live and ordinary consensus changes remain frozen. Published Desktop v1.7.14 Windows, Linux graphical Desktop `.deb` v1.7.14.1, Android v0.5.9 Alpha and Universal Miner v0.4.9 Alpha are the current downloads. Installs do not automatically update. **AuronQ requires an independent security audit.**
 
 **Start with [canonical project status](../PROJECT-STATUS.md).** This index helps readers navigate without digging through historical experiment files. It does not replace the protocol.
 
@@ -11,7 +11,7 @@
 | Protocol identity | [Mainnet](../MAINNET.md) · [Protocol](../PROTOCOL.md) · [AQM64](../AQM64.md) · [Technical Whitepaper](../WHITEPAPER.md) |
 | Coin supply | [Canonical Mainnet definition](../MAINNET.md) · [Whitepaper issuance](../WHITEPAPER.md) |
 | Independent network | [Network independence](../NETWORK-INDEPENDENCE.md) · [Decentralization](../DECENTRALIZATION.md) · [Operator handoff](INDEPENDENT-OPERATION.md) |
-| Wallets | [Android documentation](../android/README.md) · [Current cautions](../SECURITY.md) |
+| Wallets | [Android documentation](../android/README.md) · [Security policy](../SECURITY.md) |
 | Mining | [Universal miner](../UNIVERSAL-MINER-GUIDE.md) · [GPU guidance](../GPU-MINER-GUIDE.md) · [Hardware support](../HARDWARE-SUPPORT.md) |
 | Integrations | [Pool operator](../POOL-INTEGRATION.md) · [Independent exchange policy](../EXCHANGE-INTEGRATION.md) · [Exchange runbook](../EXCHANGE-OPERATOR-RUNBOOK.md) |
 | Security | [Security policy](../SECURITY.md) · [Threat model](../THREAT-MODEL.md) · [Test matrix](../TEST-MATRIX.md) |

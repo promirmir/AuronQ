@@ -8,7 +8,7 @@ AuronQ (AURQ) is an open-source UTXO Proof-of-Work cryptocurrency written in Go.
 
 AuronQ uses ML-DSA-87 for transaction signatures. ML-DSA is a standardized post-quantum digital-signature scheme. This protects the transaction-signature layer against the class of attacks ML-DSA is designed to address.
 
-That does **not** mean the entire cryptocurrency is proven “quantum-proof.” Consensus, networking, implementation security, wallet security and AQM64 must be evaluated separately. AuronQ has not received an independent professional cryptographic or security audit.
+That does not establish end-to-end security of the whole implementation; consensus, networking, wallets and AQM64 require independent audit.
 
 ## What is ML-DSA-87?
 
@@ -18,7 +18,7 @@ ML-DSA-87 is the highest-security parameter set of the ML-DSA post-quantum digit
 
 AQM64 is AuronQ's project-specific Proof-of-Work construction. Its technical description is available in [AQM64.md](AQM64.md).
 
-AQM64 is not presented as an externally audited cryptographic primitive. Independent review is encouraged.
+AQM64 is project-specific and requires independent review as part of the AuronQ audit.
 
 ## Is AuronQ Proof-of-Work?
 
@@ -30,7 +30,7 @@ Yes. AuronQ uses a UTXO transaction model.
 
 ## Is the AuronQ Mainnet live?
 
-Yes. The current stable full-node/Desktop release documented by this repository is AuronQ 1.7.13 Mainnet.
+Yes. The public Mainnet is live. Current full-node/Desktop release: Windows v1.7.14 and Linux graphical `.deb` v1.7.14.1.
 
 ## Where can I download AuronQ?
 
@@ -38,9 +38,9 @@ Use the official [GitHub Releases](https://github.com/promirmir/AuronQ/releases)
 
 ## Which operating systems are supported?
 
-The current official Desktop/full-node release is **v1.7.13 Mainnet**, published for **Windows x64 and Linux amd64**. The current official Android wallet is **0.5.6 Alpha — Password Confirmed (Fast Sync)**. It is a light client and installs separately from previous Android package IDs; see the [Android installation and recovery warning](android/README.md).
+The current Desktop/full-node is **Windows x64 v1.7.14** or **Linux graphical Desktop v1.7.14.1 `.deb`** (Ubuntu/Mint/Debian x86-64). The Linux v1.7.14 `.tar.gz` is CLI-only. Current Android wallet: **0.5.9 Alpha — Light Quorum / Fast Start**. See [Linux guide](README-LINUX.md) and [Android guide](android/README.md).
 
-The current published **Universal Miner v0.4.8 Alpha** includes a **Windows x64 GUI/GPU package** and a **Linux amd64 CPU/OpenCL package**. Older miner releases and references to v0.4.0 are historical, not the current recommended version. Consult the [official releases](https://github.com/promirmir/AuronQ/releases), [miner guide](UNIVERSAL-MINER-GUIDE.md) and [GPU guide](GPU-MINER-GUIDE.md) for compatibility details.
+The current published **Universal Miner v0.4.9 Alpha** has Windows x64 GUI/GPU and Linux x64 accelerated packages. See [Releases](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha) and the [miner guide](UNIVERSAL-MINER-GUIDE.md).
 
 ## Is the Android app a full node?
 
@@ -66,7 +66,7 @@ Yes. Publicly reachable full nodes improve peer discovery and network resilience
 
 ## Is AuronQ audited?
 
-No independent professional security or cryptographic audit has been completed. Internal tests, CI and project documentation are not substitutes for independent review.
+**AuronQ requires an independent security audit.** Internal tests do not replace independent review.
 
 ## Is AuronQ open source?
 

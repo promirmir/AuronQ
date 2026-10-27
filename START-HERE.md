@@ -2,7 +2,7 @@
 
 ## Linux — desktop by click (Ubuntu / Mint / Debian, x86-64)
 
-1. Download the graphical **Linux Desktop .deb** from [Linux Desktop release](https://github.com/promirmir/AuronQ/releases/tag/linux-desktop-v1.7.14.1), and verify it against `SHA256SUMS.txt` from that release.
+1. Download [AuronQ Desktop Linux `.deb`](https://github.com/promirmir/AuronQ/releases/download/linux-desktop-v1.7.14.1/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb) and compare SHA-256: `79f2859dc1ced75beb321b98bc9ed1edd0e5ab0c18a07be2c0d8ddd7ea90d73a`.
 2. **Double-click** the downloaded `.deb`, then choose **Install** in the graphical package installer.
 3. From the Linux applications menu, click **AuronQ Desktop**. Its wallet, miner, node and Explorer are the same Desktop UI as on Windows, opened by the default Linux browser.
 4. Wait for the initial local blockchain validation/synchronization; this can postpone opening the browser.
@@ -12,7 +12,7 @@ See the [complete Linux one-click guide](README-LINUX.md). The older `AuronQ-1.7
 ## Windows
 
 1. Open the official Desktop/full-node v1.7.14 release: https://github.com/promirmir/AuronQ/releases/tag/v1.7.14
-2. Download the current `AuronQ-<version>-Windows-x64.zip` archive.
+2. Download `AuronQ-1.7.14-Windows-x64.zip`.
 3. Download `SHA256SUMS.txt` from the same release and verify the archive SHA-256 before running it.
 4. Extract the complete ZIP to a new folder.
 5. Run `START-AURONQ.cmd`.
@@ -39,10 +39,10 @@ The manifest can contain multiple currently verified public rendezvous peers and
 
 After first contact, nodes learn and persist additional peers through native AuronQ peer gossip.
 
-## Security
+## Audit status
 
-AuronQ Mainnet is live experimental financial software and has not received an independent professional consensus, networking or cryptographic security audit.
+AuronQ requires an independent security audit. [Security policy](SECURITY.md).
 
-Verify release checksums, back up wallets before use and do not use substantial value while the project remains in the stabilization phase.
+Verify checksums and preserve wallet backups. For Android, [install 0.5.9](android/README.md) without removing an older funded wallet.
 
 See [SECURITY.md](SECURITY.md), [MAINNET-CHANGE-POLICY.md](MAINNET-CHANGE-POLICY.md) and [STABILIZATION.md](STABILIZATION.md).
