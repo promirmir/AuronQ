@@ -88,5 +88,33 @@ class PinnedReleaseIntegrityTests(unittest.TestCase):
                 watch.manifest_load(path)
 
 
+
+    def test_baseline_supports_current_and_historical_releases(self):
+        fake = {
+            "schema": 1,
+            "repository": "promirmir/AuronQ",
+            "releases": [dict(self.expected, tag=f"tag-{n}") for n in range(7)],
+        }
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root, "release.json")
+            path.write_text(json.dumps(fake), encoding="utf-8")
+            self.assertEqual(len(watch.manifest_load(path)["releases"]), 7)
+            fake["releases"].append(dict(self.expected, tag="tag-1"))
+            path.write_text(json.dumps(fake), encoding="utf-8")
+            with self.assertRaisesRegex(watch.IntegrityError, "duplicate/invalid tag"):
+                watch.manifest_load(path)
+
+    def test_baseline_rejects_missing_inventory(self):
+        fake = {
+            "schema": 1,
+            "repository": "promirmir/AuronQ",
+            "releases": [dict(self.expected, tag="only-one")],
+        }
+        with tempfile.TemporaryDirectory() as root:
+            path = Path(root, "release.json")
+            path.write_text(json.dumps(fake), encoding="utf-8")
+            with self.assertRaisesRegex(watch.IntegrityError, "3 to 50"):
+                watch.manifest_load(path)
+
 if __name__ == "__main__":
     unittest.main()
