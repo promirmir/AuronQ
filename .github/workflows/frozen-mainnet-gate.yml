@@ -51,6 +51,10 @@ jobs:
             # identity, or any future unapproved change still fail closed.
             while IFS= read -r file; do
               case "$file" in
+                # Linux Desktop click-to-open data directory parity; exact reviewed blob only.
+                # No consensus/network/wallet serialization changes.
+                cmd/auronq-desktop/main.go)
+                  expected=4a8c49a358f9eb6271db1bbaee52d4ad500e0387 ;;
                 android/app/src/main/java/com/auronq/mobile/MainActivity.java)
                   expected=7d24966b4a373e4d2c729fb40c7b09756f0ff565 ;;
                 android/app/build.gradle)
