@@ -6,7 +6,7 @@
 
 | Start here | What to read |
 | --- | --- |
-| Run AuronQ | [Quick start](../START-HERE.md) · [Windows](../README-WINDOWS.md) · [Public node](../PUBLIC-NETWORK.md) |
+| Run AuronQ | [Quick start](../START-HERE.md) · [Windows](../README-WINDOWS.md) · [Linux Desktop .deb](../README-LINUX.md) · [Public node](../PUBLIC-NETWORK.md) |
 | Software downloads | [Official releases](https://github.com/promirmir/AuronQ/releases) · [Version and checksum ledger](../PROJECT-STATUS.md) |
 | Protocol identity | [Mainnet](../MAINNET.md) · [Protocol](../PROTOCOL.md) · [AQM64](../AQM64.md) · [Technical Whitepaper](../WHITEPAPER.md) |
 | Coin supply | [Canonical Mainnet definition](../MAINNET.md) · [Whitepaper issuance](../WHITEPAPER.md) |
