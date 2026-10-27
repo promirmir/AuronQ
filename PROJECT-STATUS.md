@@ -1,8 +1,8 @@
 # AuronQ — canonical project status and preservation
 
-**Updated: 26 October 2026 (runtime-independence and release-status reconciliation).** This is the navigation and release-integrity reference for the **existing public Mainnet**. The protocol and historical chain are not being reset or migrated.
+**Updated: 27 October 2026 (release/download documentation reconciliation).** This document covers the existing public Mainnet. The protocol and blockchain history are unchanged.
 
-> **Status: Mainnet live, protocol change freeze in effect, stabilization incomplete.** Protected `main` includes reviewed non-consensus runtime-independence improvements, but no claim of a finished professional security audit, witnessed founder-independent bootstrap, risk-free custody, or permanent immutability of GitHub account settings is made.
+**Status:** Public Mainnet live, protocol changes frozen for ordinary maintenance. **AuronQ requires an independent security audit.** Independent founder-offline bootstrap tests are still outstanding.
 
 ## 1. One source of truth for each subject
 
@@ -37,21 +37,22 @@ Neither a GitHub administrator nor an explorer can unilaterally rewrite blocks a
 
 ## 3. Public release artifacts — identity and verification
 
-These are the **published** files identified on GitHub as of this document's date, not certified secure production releases. Verify downloaded bytes locally and verify the release page before use.
+These published files and SHA-256 digests were verified against GitHub Release metadata on 27 October 2026.
 
 | Component | Canonical release | Asset SHA-256 (hex) |
 | --- | --- | --- |
 | Desktop/full node v1.7.14 Windows x64 | [AuronQ-1.7.14-Windows-x64.zip](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Windows-x64.zip) | `5e6c3537286aefa5a59d9074e6ad810bd903ad755d238c8d98224356c3455a97` |
-| Desktop/full node v1.7.14 Linux amd64 | [AuronQ-1.7.14-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz) | `a86a0f7f9814de1fe2a0c85fd5d30e7bc8882e2f579b93e59acfa2e9cb6a160f` |
-| Android 0.5.8 Alpha — Fast Balance + Logo | [AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.8-alpha-fast-balance-logo/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk) | `dcf8c06c87e3c3509252b247c4f889f8d383f86f71243d00109bc13c5ede9844` |
+| Desktop/full node v1.7.14 Linux amd64 (CLI only) | [AuronQ-1.7.14-Linux-amd64.tar.gz](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz) | `a86a0f7f9814de1fe2a0c85fd5d30e7bc8882e2f579b93e59acfa2e9cb6a160f` |
+| **Linux graphical Desktop .deb v1.7.14.1** | [Download .deb](https://github.com/promirmir/AuronQ/releases/download/linux-desktop-v1.7.14.1/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb) · [Installation](README-LINUX.md) | `79f2859dc1ced75beb321b98bc9ed1edd0e5ab0c18a07be2c0d8ddd7ea90d73a` |
+| Android 0.5.9 Alpha — Light Quorum | [AuronQ-Mobile-0.5.9-Alpha-Light.apk](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk) · [Installation](android/README.md) | `4ce9f59f07fa7544e4edb66cac0c3158c80a12808b75f820dbfc20cf54b9915f` |
 | Miner v0.4.9 Alpha Windows GUI/GPU x64 | [AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip) | `2ba02cb17c56359f54da28fb52474e36a90465a30f82c00e5d34c7154f219547` |
 | Miner v0.4.9 Alpha Linux GPU x64 | [AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz) | `4939ac1e444c12628f816cd8deb1324ccf01fd7b28204dc65d66b144d096f2ee` |
 
-Android 0.5.8 uses application ID `com.auronq.mobile.fast058` and a CI debug signing certificate. **It does not upgrade or automatically migrate wallets from Android 0.5.6/0.5.7.** The fast balance view is peer-reported from three public IPv4 network groups, not independently verified AQM64; transaction sending retains separate validation. Never uninstall funded older apps without verified offline recovery.
+Android 0.5.9 uses separately installed CI debug-signed package `com.auronq.mobile.light059`. It does not automatically migrate wallet data from 0.5.6/0.5.7/0.5.8. The light balance and UTXO view rely on peer-group agreement, not independent on-phone AQM64 validation. Preserve previous wallets and backups.
 
 ### Runtime-independence changes shipped in the current binaries
 
-As of 26 October 2026, reviewed network-independence changes PRs #187/#189 are packaged in Desktop 1.7.14, Android 0.5.8 Alpha and Miner 0.4.9 Alpha. Desktop builds derive from `6db1784b054c56540cee8dc68751552d6a5f0abc`, Android 0.5.8 from `c2d8b37d662cf2d7cd74e8ff845170989e9f77b8`, and Miner 0.4.9 from `6269ac5ec128668775ecf59f277a3df696e2c3c8`. Android 0.5.8 additionally adds a fast peer-reported balance and official launcher/header logo without consensus or wallet-format changes:
+As of 27 October 2026, network-independence maintenance from PRs #187/#189 is included in Desktop v1.7.14, Android v0.5.9 Alpha and Miner v0.4.9 Alpha. Linux Desktop `.deb` v1.7.14.1 packages the same graphical Desktop source/UI as Windows (PR #202). No Mainnet consensus changes:
 
 - full-node/Desktop discovery separates candidates from callback-verified public peers and persists/gossips only verified peers;
 - Android prefers cached/bundled Mainnet peers before optional GitHub manifests and verifies gossip candidates before persistence;
@@ -59,11 +60,11 @@ As of 26 October 2026, reviewed network-independence changes PRs #187/#189 are p
 - repeated endpoint failures are locally quarantined, and clear same-height conflicting tips fail closed;
 - the Universal Miner multi-GPU path propagates the same network/failover settings to child workers.
 
-The source changes passed PR CI plus post-merge Windows/Linux CI, race detection, Mainnet identity/safety checks, Android build, reproducible-build tests and Miner compatibility checks. All three current packages were built and published through successful GitHub Actions workflows; the older 1.7.13/0.5.6/0.4.8 packages are historical, and installations do not update themselves automatically. Passing CI and publishing packages **do not establish adversarial resistance, physical-device reliability, or an independent professional audit**.
+Linux Desktop `.deb` packaging, Go build/test, frozen-Mainnet source checks and its release publication completed successfully in GitHub Actions. A physical Linux desktop installation and GUI click-to-start test have not been independently performed. Automated CI does not replace an independent security audit.
 
 **Release-immutability gap (verified 26 October 2026):** The 1.7.14, Android 0.5.7 and Miner 0.4.9 GitHub Releases reported `immutable: false` during checks; do not assume the new 0.5.8 release is immutable either without verifying GitHub settings. Published SHA-256 identifies observed bytes but does not prohibit replacement at the same URL. Independent off-GitHub archives and signing/provenance controls remain desirable. Do not reissue untested binaries to change release settings.
 
-**Read-only release integrity monitoring:** [The pinned baseline](.github/release-integrity-baseline.json), [integrity watch](.github/workflows/release-integrity-watch.yml) and [verifier](scripts/verify_release_integrity.py) currently monitor the three historically pinned Desktop 1.7.13 / Android 0.5.6 / Miner 0.4.8 releases. Desktop 1.7.14, Android 0.5.8 and Miner 0.4.9 are not yet included in that periodic full-download baseline. Published SHA-256 sums are available; monitoring detects changes, but cannot prevent them.
+**Read-only release integrity monitoring:** [The pinned baseline](.github/release-integrity-baseline.json) and [integrity watch](.github/workflows/release-integrity-watch.yml) monitor three historical releases: Desktop 1.7.13, Android 0.5.6 and Miner 0.4.8. This periodic full-download baseline does **not** currently include Desktop 1.7.14, Linux graphical Desktop 1.7.14.1, Android 0.5.9 or Miner 0.4.9. Their current GitHub Release digests are listed above, but checksum publication alone does not lock an asset.
 
 ## 4. Repository controls — verified and remaining
 

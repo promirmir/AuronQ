@@ -2,7 +2,7 @@
 
 ## Normalny użytkownik
 
-1. Otwórz [GitHub Releases](https://github.com/promirmir/AuronQ/releases/tag/v1.7.14) i pobierz bieżący `AuronQ-<version>-Windows-x64.zip`.
+1. Otwórz [wydanie Desktop v1.7.14](https://github.com/promirmir/AuronQ/releases/tag/v1.7.14) i pobierz `AuronQ-1.7.14-Windows-x64.zip`.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
@@ -69,6 +69,6 @@ Genesis:
 
 Usuwanie portfela dotyczy wyłącznie lokalnego zaszyfrowanego pliku `.wallet`; nie przenosi ani nie niszczy monet zapisanych w blockchainie. Przed usunięciem ostatniej kopii portfela wykonaj **Backup**.
 
-## Bezpieczeństwo
+## Audyt
 
-AuronQ Mainnet jest publiczną siecią, ale AQM64 i cały konsensus/network stack **nie przeszły niezależnego profesjonalnego audytu kryptograficznego i bezpieczeństwa**. Testy CI, fuzzing, race detector i testy sieci rozproszonej istotnie podnoszą jakość, ale nie zastępują zewnętrznego audytu.
+AuronQ wymaga niezależnego audytu bezpieczeństwa. [Polityka bezpieczeństwa](SECURITY.md).

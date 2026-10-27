@@ -15,17 +15,17 @@
 - **Asset:** AuronQ (**AURQ**) — native coin of an independent, public Proof-of-Work Layer-1 network (not an ERC-20 token).
 - **Integration permission:** No prior approval or exclusive agreement is required from the AuronQ project.
 - **Integration resources:** [Exchange policy](EXCHANGE-INTEGRATION.md) · [Exchange operator runbook](EXCHANGE-OPERATOR-RUNBOOK.md) · [Machine-readable JSON](auronq-project.json) · [Mainnet identifiers](MAINNET.md) · [Protocol](PROTOCOL.md) · [Releases](https://github.com/promirmir/AuronQ/releases).
-- **Important limitations:** No independent professional security audit has been completed. Listing decisions require the exchange's own compliance review, node integration, deposit/withdrawal and reorganization testing. No listing, approval or future market value is promised.
+- **Integration requirements:** Exchange operators must independently test deposits, withdrawals and chain reorganizations, and carry out their own legal and operational review. No listing, approval or future market value is promised. The AuronQ security audit remains required.
 
 [Linux Desktop — instalacja przez dwuklik](README-LINUX.md) · [Documentation index](docs/README.md) · [Project status](PROJECT-STATUS.md) · [Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Roadmap](ROADMAP.md) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
-**Current Android wallet:** [AuronQ Mobile 0.5.9 Alpha — Light Quorum / Fast Start (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk) · [Release notes and SHA-256](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.9-alpha-light-quorum) · [Installation guide](android/README.md). The interface starts without replaying AQM64 headers on the phone; peer-reported balance appears only after matching responses from three public IPv4 /16 groups. **This is not independent PoW, difficulty, Merkle or UTXO verification**, and /16 groups may share an operator. Debug-signed `com.auronq.mobile.light059` installs **side by side** and never migrates older wallet files automatically. **Never uninstall a funded wallet; verify offline recovery first.** Alpha, unaudited, not recommended for valuable funds.
+**Current Android wallet:** [AuronQ Mobile 0.5.9 Alpha — Light Quorum / Fast Start (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk) · [Installation and compatibility](android/README.md). Light-mode state depends on peer reports; it does not independently validate AQM64/UTXO. The APK installs beside older Android wallets and cannot automatically import their local data.
 
 **Project state — stabilization / maintenance:** Mainnet consensus remains frozen for ordinary releases, while reviewed non-consensus security, availability and independence fixes may continue. On 26 October 2026, protected `main` added GitHub-independent peer discovery plus verified node failover for full nodes, Android, CLI clients and the Universal Miner without changing genesis, Network ID, AQM64, difficulty, monetary policy or validity rules. [Release/freeze decision](PROJECT-FREEZE.md) · [Network independence](NETWORK-INDEPENDENCE.md).
 
-AuronQ is a public UTXO Layer-1 network written in Go. Full nodes independently validate transactions and blocks using AQM64 Proof of Work and ML-DSA-87 transaction signatures. **Mainnet is live, but the project remains experimental and in stabilization.**
+AuronQ is a public UTXO Layer-1 network written in Go. Full nodes independently validate transactions and blocks using AQM64 Proof of Work and ML-DSA-87 transaction signatures. **The public Mainnet is live and in maintenance/stabilization.**
 
-> **Security status:** AuronQ is a live Mainnet undergoing stabilization. An independent professional security audit is still pending. Verify downloads and back up wallets; avoid substantial funds until security review is completed. [Full security policy](SECURITY.md).
+> **Audit status:** AuronQ requires an independent security audit. [Security policy](SECURITY.md).
 
 ## Independent AuronQ ecosystem — pools and tracking
 
@@ -41,22 +41,22 @@ Third-party hashrate, worker counts and pool-share estimates may be stale or inc
 
 ## Downloads
 
-These are **published builds**, not claims of defect-free or production-ready operation. Each download points to a specific GitHub Release. **Release references rechecked 26 October 2026.** Historical ANN posts and third-party aggregators may cite older versions; use this table and [GitHub Releases](https://github.com/promirmir/AuronQ/releases) for current downloads, and [Mainnet identifiers](MAINNET.md) to verify network identity.
+Official published builds, with links pinned to specific releases. **File names and checksums verified against GitHub Releases on 27 October 2026.** [Windows setup](README-WINDOWS.md) · [Linux installation](README-LINUX.md) · [Android installation](android/README.md).
 
-> **Published network-independence versions:** Desktop v1.7.14, Android v0.5.9 Alpha and Universal Miner v0.4.9 Alpha include non-consensus peer discovery/failover. Android v0.5.9 Light Quorum removes automatic on-phone AQM64 header replay, not the trust in the full nodes that report balances and UTXOs. The APK is separate and not an automatic upgrade. Check the hash before installing; software remains experimental and unaudited.
+> **Current releases:** Desktop v1.7.14 (Windows), Linux graphical Desktop `.deb` v1.7.14.1, Android v0.5.9 Alpha and Universal Miner v0.4.9 Alpha. Android light balances are peer-reported rather than independently verified on-device.
 
 | Software | Published release | Download and details |
 | --- | --- | --- |
-| **Desktop / Full Node** | v1.7.14 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Windows-x64.zip) · **[Linux Desktop .deb — click to install](https://github.com/promirmir/AuronQ/releases/tag/linux-desktop-v1.7.14.1)** · [Linux CLI only](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz) · [Linux guide](README-LINUX.md) |
+| **Desktop / Full Node** | v1.7.14 · Mainnet | [Windows x64 ZIP](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Windows-x64.zip) · **[Linux graphical Desktop .deb (double-click to install)](https://github.com/promirmir/AuronQ/releases/download/linux-desktop-v1.7.14.1/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb)** · [Linux CLI only](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz) · [Linux guide](README-LINUX.md) |
 | **AuronQ Mobile** | v0.5.9 Alpha · Light Quorum / Fast Start · Android arm64 | **[Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk)** · [Release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.9-alpha-light-quorum) |
 | **Universal Miner** | v0.4.9 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and checksums](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha) |
 | **Universal Miner — Linux x64** | v0.4.9 Alpha · GPU / CPU | **[Download Linux tar.gz](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz)** · [Release and checksums](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha) |
 
 **The Linux 0.4.9 GPU package** is published in GitHub Releases; CUDA/OpenCL compatibility and performance on physical Linux devices still require independent testing.
 
-**Official Android release — verification and compatibility:** Android 0.5.9 Alpha starts without replaying AQM64 PoW on the phone. It compares peer-reported tip, height, chain work, balances and UTXOs from three public IPv4 /16 groups. **These checks do not cryptographically verify the blockchain, ensure independent operators, or prove UTXO completeness.** APK SHA-256: `4ce9f59f07fa7544e4edb66cac0c3158c80a12808b75f820dbfc20cf54b9915f`. Debug-signed package `com.auronq.mobile.light059` is separate from funded older installations and does not migrate their encrypted wallets. **Do not uninstall funded earlier installations or clear wallet data.** For full validation, run an AuronQ full node.
+**Android 0.5.9 compatibility:** the app compares reports from three public IPv4 /16 peer groups rather than independently verifying AQM64 PoW or complete UTXOs. The separate package `com.auronq.mobile.light059` does not migrate older wallet data automatically. APK SHA-256: `4ce9f59f07fa7544e4edb66cac0c3158c80a12808b75f820dbfc20cf54b9915f`. [Android install guide](android/README.md).
 
-The Android wallet is a **peer-quorum light client, not a full validating node**. The interface does not wait for on-device AQM64 synchronization, but reaching agreement across three qualifying public network groups and showing the balance may still take time or fail when nodes are unavailable. Alpha builds have not been independently security-audited or validated for long-term reliability.
+The Android wallet is a **peer-quorum light client, not a full validating node**. Balance and transaction availability depend on peer agreement. Keep your previous wallet and recovery backups intact.
 
 ## Getting started
 

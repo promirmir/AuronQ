@@ -6,6 +6,8 @@ For installation, node operation, mining, wallet usage and build questions, firs
 - [FAQ.md](FAQ.md)
 - [START-HERE.md](START-HERE.md)
 - [README-WINDOWS.md](README-WINDOWS.md)
+- [Linux graphical installation](README-LINUX.md)
+- [Android installation](android/README.md)
 - [PUBLIC-NETWORK.md](PUBLIC-NETWORK.md)
 - [NETWORK-INDEPENDENCE.md](NETWORK-INDEPENDENCE.md)
 
@@ -21,4 +23,4 @@ Do **not** publish exploitable security vulnerabilities in a public issue. Follo
 
 ## Important safety note
 
-AuronQ is a young public cryptocurrency network and has not yet received an independent professional security or cryptographic audit. Until that review is completed and the network has accumulated a longer operating history, do not rely on it for substantial value without independently evaluating the risks.
+AuronQ requires an independent security audit. See [SECURITY.md](SECURITY.md) for technical details and vulnerability reporting.

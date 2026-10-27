@@ -172,8 +172,8 @@
 
     <section class="content wrap" id="downloads" aria-labelledby="downloads-title">
       <h2 id="downloads-title">Download AuronQ</h2>
-      <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk"><strong>Download AuronQ Mobile 0.5.9 Alpha — Light Quorum / Fast Start</strong></a>. Experimental and debug-signed. Verify SHA-256 and wallet recovery material before migrating; do not uninstall a funded older app to force an upgrade. Other packages are below.</p>
-      <p class="note"><strong>Release status — 26 October 2026:</strong> Desktop v1.7.14, Android 0.5.9 Alpha and Universal Miner v0.4.9 Alpha package GitHub-independent peer discovery and verified failover from reviewed PRs #187/#189. Previous releases do not update themselves. Source changes do not alter Mainnet consensus, and long-term founder-independent operation remains unproven.</p>
+      <p class="intro">Android wallet: <a href="https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk"><strong>Download AuronQ Mobile 0.5.9 Alpha — Light Quorum / Fast Start</strong></a>. This version installs alongside older wallets; it does not automatically transfer existing data. Preserve your wallet backup. Other packages are below.</p>
+      <p class="note"><strong>Release status — 27 October 2026:</strong> Desktop v1.7.14 (Windows), graphical Linux Desktop `.deb` v1.7.14.1, Android v0.5.9 Alpha and Universal Miner v0.4.9 Alpha have been published. Mainnet consensus is unchanged. <strong>AuronQ requires an independent security audit.</strong></p>
       <div class="grid">
         <article class="card">
           <span class="label">Run a full node</span>
@@ -182,7 +182,9 @@
           <p>Validate the blockchain independently, manage a local wallet and inspect your node's Explorer.</p>
           <div class="links">
             <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Windows-x64.zip">Windows x64 ↓</a>
-            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz">Linux amd64 ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/linux-desktop-v1.7.14.1/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb">Linux Desktop .deb (click to install) ↓</a>
+            <a href="https://github.com/promirmir/AuronQ/blob/main/README-LINUX.md">Linux installation instructions →</a>
+            <a href="https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz">Linux CLI only ↓</a>
             <a href="https://github.com/promirmir/AuronQ/releases/tag/v1.7.14">Release details →</a>
           </div>
         </article>
@@ -190,7 +192,7 @@
           <span class="label">Mine AURQ</span>
           <h3>Universal Miner</h3>
           <div class="version">v0.4.9 Alpha · Windows x64</div>
-          <p>Windows GUI with CPU and supported CUDA/OpenCL GPU backends, automatic selection and local safety controls. Early-stage software.</p>
+          <p>Windows graphical miner with CPU and compatible CUDA/OpenCL GPU backends, automatic selection and local thermal controls. A Linux accelerated build is also available.</p>
           <div class="links">
             <a href="https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip">Windows x64 ↓</a>
             <a href="https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha">Release details →</a>
@@ -209,19 +211,21 @@
           </div>
         </article>
       </div>
-      <p class="note">Android 0.5.9 APK SHA-256: <code>4ce9f59f07fa7544e4edb66cac0c3158c80a12808b75f820dbfc20cf54b9915f</code>. The APK is a <strong>separate installation</strong> (<code>com.auronq.mobile.light059</code>) with CI debug signing; it cannot update or access an older app's local wallet in place. Balance and spending rely on peer reports and do NOT independently validate PoW or UTXOs. Never uninstall a funded wallet or clear wallet data to resolve signing or upgrade issues. Mainnet consensus remains frozen for ordinary releases; reviewed non-consensus maintenance may continue: <a href="https://github.com/promirmir/AuronQ/blob/main/PROJECT-FREEZE.md">project maintenance status</a>. Windows builds may trigger SmartScreen because they are not Authenticode-signed. Published versions are not a live network-health indicator.</p>
+      <p class="note">Verified SHA-256: Linux graphical Desktop .deb <code>79f2859dc1ced75beb321b98bc9ed1edd0e5ab0c18a07be2c0d8ddd7ea90d73a</code>; Android 0.5.9 APK <code>4ce9f59f07fa7544e4edb66cac0c3158c80a12808b75f820dbfc20cf54b9915f</code>. Android 0.5.9 installs separately (<code>com.auronq.mobile.light059</code>) and uses peer-reported state rather than independent chain validation. Preserve wallet backups. <a href="https://github.com/promirmir/AuronQ/blob/main/android/README.md">Android installation</a> · <a href="https://github.com/promirmir/AuronQ/blob/main/README-LINUX.md">Linux installation</a>.</p>
     </section>
 
     <section class="content wrap" id="start" aria-labelledby="start-title">
       <h2 id="start-title">Get started</h2>
       <p class="intro">No account is needed to operate a full node.</p>
       <div class="steps">
-        <div><span class="step-num">01 / Download</span><h3>Get the full node</h3><p>Download your platform's release and extract the entire archive to a folder.</p></div>
+        <div><span class="step-num">01 / Download</span><h3>Install the full node</h3><p>Windows: extract the ZIP and run <code>START-AURONQ.cmd</code>. Ubuntu / Linux Mint / Debian: double-click the graphical <code>.deb</code>, choose Install, then open AuronQ Desktop from the application menu.</p></div>
         <div><span class="step-num">02 / Synchronize</span><h3>Connect to the network</h3><p>Start the node and let it discover peers and validate the chain.</p></div>
         <div><span class="step-num">03 / Participate</span><h3>Use a wallet or miner</h3><p>Back up your wallet securely before transactions. Mining is optional.</p></div>
       </div>
       <div class="links-row">
         <a href="https://github.com/promirmir/AuronQ/blob/main/README-WINDOWS.md">Windows setup guide →</a>
+        <a href="https://github.com/promirmir/AuronQ/blob/main/README-LINUX.md">Linux install by double-click →</a>
+        <a href="https://github.com/promirmir/AuronQ/blob/main/android/README.md">Android installation →</a>
         <a href="https://github.com/promirmir/AuronQ/blob/main/UNIVERSAL-MINER-GUIDE.md">Mining guide →</a>
         <a href="https://github.com/promirmir/AuronQ/blob/main/HARDWARE-SUPPORT.md">Hardware support →</a>
       </div>
@@ -294,8 +298,8 @@
 
     <section class="content wrap" aria-labelledby="security-title">
       <div class="notice">
-        <h3 id="security-title">Security and maturity</h3>
-        <p>AuronQ is a young public network. AQM64 and the complete consensus, wallet and networking implementations have not received an independent professional security or cryptographic audit. ML-DSA-87 is a standardized signature algorithm; using it does not prove the complete system is post-quantum secure. Avoid storing or transferring substantial value until independent review and longer operational testing are complete.</p>
+        <h3 id="security-title">Audit status</h3>
+        <p>AuronQ requires an independent security audit of its protocol, wallet and networking implementations. <a href="https://github.com/promirmir/AuronQ/blob/main/SECURITY.md">Security policy and reporting</a>.</p>
       </div>
     </section>
   </main>
