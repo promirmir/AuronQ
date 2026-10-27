@@ -1,0 +1,33 @@
+name: Keep canonical Desktop/full-node release as latest
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.release/restore-v1.7.14-latest'
+      - '.github/workflows/restore-latest-desktop.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  restore-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Verify canonical desktop artifacts and restore Latest pointer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          repo="$GITHUB_REPOSITORY"
+          gh release view v1.7.14 --repo "$repo" --json assets --jq '.assets[].name' | grep -Fx 'AuronQ-1.7.14-Windows-x64.zip'
+          gh release view v1.7.14 --repo "$repo" --json assets --jq '.assets[].name' | grep -Fx 'AuronQ-1.7.14-Linux-amd64.tar.gz'
+          gh release view linux-desktop-v1.7.14.1 --repo "$repo" --json assets --jq '.assets[].name' | grep -Fx 'AuronQ-Desktop-1.7.14-1-Linux-amd64.deb'
+          # A separate Linux-only add-on should not replace the canonical Windows+CLI release.
+          gh release edit v1.7.14 --repo "$repo" --latest
+          actual="$(gh api "repos/$repo/releases/latest" --jq '.tag_name')"
+          test "$actual" = "v1.7.14" || { echo "::error::Unexpected latest release: $actual"; exit 1; }

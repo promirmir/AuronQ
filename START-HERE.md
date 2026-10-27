@@ -11,7 +11,7 @@ See the [complete Linux one-click guide](README-LINUX.md). The older `AuronQ-1.7
 
 ## Windows
 
-1. Open the official latest release: https://github.com/promirmir/AuronQ/releases/latest
+1. Open the official Desktop/full-node v1.7.14 release: https://github.com/promirmir/AuronQ/releases/tag/v1.7.14
 2. Download the current `AuronQ-<version>-Windows-x64.zip` archive.
 3. Download `SHA256SUMS.txt` from the same release and verify the archive SHA-256 before running it.
 4. Extract the complete ZIP to a new folder.
