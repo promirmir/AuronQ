@@ -18,8 +18,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: linux-desktop-release-1.7.14.1
-  cancel-in-progress: false
+  group: linux-desktop-release-1.7.14.1-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify-and-package:
