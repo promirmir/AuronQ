@@ -17,7 +17,7 @@
 - **Integration resources:** [Exchange policy](EXCHANGE-INTEGRATION.md) · [Exchange operator runbook](EXCHANGE-OPERATOR-RUNBOOK.md) · [Machine-readable JSON](auronq-project.json) · [Mainnet identifiers](MAINNET.md) · [Protocol](PROTOCOL.md) · [Releases](https://github.com/promirmir/AuronQ/releases).
 - **Important limitations:** No independent professional security audit has been completed. Listing decisions require the exchange's own compliance review, node integration, deposit/withdrawal and reorganization testing. No listing, approval or future market value is promised.
 
-[Documentation index](docs/README.md) · [Project status](PROJECT-STATUS.md) · [Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Roadmap](ROADMAP.md) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
+[Linux Desktop — instalacja przez dwuklik](README-LINUX.md) · [Documentation index](docs/README.md) · [Project status](PROJECT-STATUS.md) · [Project website](https://promirmir.github.io/AuronQ/) · [Discord community](https://discord.gg/rmmNY9RhA) · [Downloads](https://github.com/promirmir/AuronQ/releases) · [Roadmap](ROADMAP.md) · [Whitepaper](WHITEPAPER.md) · [Protocol](PROTOCOL.md) · [Report a problem](https://github.com/promirmir/AuronQ/issues)
 
 **Current Android wallet:** [AuronQ Mobile 0.5.9 Alpha — Light Quorum / Fast Start (APK)](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk) · [Release notes and SHA-256](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.9-alpha-light-quorum) · [Installation guide](android/README.md). The interface starts without replaying AQM64 headers on the phone; peer-reported balance appears only after matching responses from three public IPv4 /16 groups. **This is not independent PoW, difficulty, Merkle or UTXO verification**, and /16 groups may share an operator. Debug-signed `com.auronq.mobile.light059` installs **side by side** and never migrates older wallet files automatically. **Never uninstall a funded wallet; verify offline recovery first.** Alpha, unaudited, not recommended for valuable funds.
 
@@ -25,7 +25,7 @@
 
 AuronQ is a public UTXO Layer-1 network written in Go. Full nodes independently validate transactions and blocks using AQM64 Proof of Work and ML-DSA-87 transaction signatures. **Mainnet is live, but the project remains experimental and in stabilization.**
 
-> **Security notice:** The complete consensus, wallet, peer-to-peer and cryptographic implementations have not received an independent professional security audit. Do not store substantial value or treat this software as mature financial infrastructure.
+> **Security status:** AuronQ is a live Mainnet undergoing stabilization. An independent professional security audit is still pending. Verify downloads and back up wallets; avoid substantial funds until security review is completed. [Full security policy](SECURITY.md).
 
 ## Independent AuronQ ecosystem — pools and tracking
 
@@ -47,7 +47,7 @@ These are **published builds**, not claims of defect-free or production-ready op
 
 | Software | Published release | Download and details |
 | --- | --- | --- |
-| **Desktop / Full Node** | v1.7.14 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Windows-x64.zip) · [Linux amd64](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz) · [Release notes](https://github.com/promirmir/AuronQ/releases/tag/v1.7.14) |
+| **Desktop / Full Node** | v1.7.14 · Mainnet | [Windows x64](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Windows-x64.zip) · **[Linux Desktop .deb — click to install](https://github.com/promirmir/AuronQ/releases/tag/linux-desktop-v1.7.14.1)** · [Linux CLI only](https://github.com/promirmir/AuronQ/releases/download/v1.7.14/AuronQ-1.7.14-Linux-amd64.tar.gz) · [Linux guide](README-LINUX.md) |
 | **AuronQ Mobile** | v0.5.9 Alpha · Light Quorum / Fast Start · Android arm64 | **[Download APK](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.9-alpha-light-quorum/AuronQ-Mobile-0.5.9-Alpha-Light.apk)** · [Release](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.9-alpha-light-quorum) |
 | **Universal Miner** | v0.4.9 Alpha · Windows x64 | [Windows GUI / GPU](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Windows-x64-GUI-GPU.zip) · [Release notes and checksums](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha) |
 | **Universal Miner — Linux x64** | v0.4.9 Alpha · GPU / CPU | **[Download Linux tar.gz](https://github.com/promirmir/AuronQ/releases/download/miner-v0.4.9-alpha/AuronQ-Miner-v0.4.9-alpha-Linux-x64-GPU.tar.gz)** · [Release and checksums](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha) |
@@ -60,7 +60,7 @@ The Android wallet is a **peer-quorum light client, not a full validating node**
 
 ## Getting started
 
-1. **Desktop node:** download, extract the complete archive, and follow [Start here](START-HERE.md) or the [Windows guide](README-WINDOWS.md). Full nodes validate the chain themselves.
+1. **Desktop node:** on Windows, download and extract ZIP then launch `START-AURONQ.cmd` ([Windows guide](README-WINDOWS.md)); on Ubuntu/Mint/Debian, install the **Linux Desktop .deb by double-clicking** and launch AuronQ from the applications menu ([Linux guide](README-LINUX.md)). Both use the same graphical Desktop application and locally validating full node.
 2. **Android wallet:** read the [Android guide](android/README.md), compare the APK checksum and securely back up wallet recovery material before changes or transactions.
 3. **Mining (optional):** follow the [Universal Miner guide](UNIVERSAL-MINER-GUIDE.md) and [hardware guidance](HARDWARE-SUPPORT.md). Solo mining uses a local full node; pool mining uses a third-party service.
 
@@ -103,7 +103,7 @@ Permissionless independent integrations are welcome: [Pool integration](POOL-INT
 | Subject | References |
 | --- | --- |
 | Overview | [Whitepaper](WHITEPAPER.md) · [FAQ](FAQ.md) · [Roadmap](ROADMAP.md) |
-| Installation | [Start here](START-HERE.md) · [Windows](README-WINDOWS.md) · [Android](android/README.md) · [Miner](UNIVERSAL-MINER-GUIDE.md) · [GPU guide](GPU-MINER-GUIDE.md) |
+| Installation | [Start here](START-HERE.md) · [Windows](README-WINDOWS.md) · [Linux Desktop](README-LINUX.md) · [Android](android/README.md) · [Miner](UNIVERSAL-MINER-GUIDE.md) · [GPU guide](GPU-MINER-GUIDE.md) |
 | Network | [Mainnet](MAINNET.md) · [Protocol](PROTOCOL.md) · [Network independence](NETWORK-INDEPENDENCE.md) |
 | Independent operation | [Operator handoff & acceptance tests](docs/INDEPENDENT-OPERATION.md) · [Documentation directory](docs/README.md) |
 | Safety and maintenance | [Security](SECURITY.md) · [Threat model](THREAT-MODEL.md) · [Test matrix](TEST-MATRIX.md) · [Stabilization](STABILIZATION.md) |

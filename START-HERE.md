@@ -1,5 +1,14 @@
 # Start here — AuronQ Mainnet
 
+## Linux — desktop by click (Ubuntu / Mint / Debian, x86-64)
+
+1. Download the graphical **Linux Desktop .deb** from [Linux Desktop release](https://github.com/promirmir/AuronQ/releases/tag/linux-desktop-v1.7.14.1), and verify it against `SHA256SUMS.txt` from that release.
+2. **Double-click** the downloaded `.deb`, then choose **Install** in the graphical package installer.
+3. From the Linux applications menu, click **AuronQ Desktop**. Its wallet, miner, node and Explorer are the same Desktop UI as on Windows, opened by the default Linux browser.
+4. Wait for the initial local blockchain validation/synchronization; this can postpone opening the browser.
+
+See the [complete Linux one-click guide](README-LINUX.md). The older `AuronQ-1.7.14-Linux-amd64.tar.gz` archive contains only CLI, not the graphical Desktop.
+
 ## Windows
 
 1. Open the official latest release: https://github.com/promirmir/AuronQ/releases/latest

@@ -1372,6 +1372,8 @@ func (a *App) handleMinerStop(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleOpenData(w http.ResponseWriter, r *http.Request) {
 	if runtime.GOOS == "windows" {
 		_ = exec.Command("explorer.exe", a.baseDir).Start()
+	} else if runtime.GOOS == "linux" {
+		_ = exec.Command("xdg-open", a.baseDir).Start()
 	}
 	writeJSON(w, map[string]any{"ok": true})
 }
