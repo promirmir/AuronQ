@@ -18,7 +18,7 @@
 | Operator handoff and founder-free acceptance | [Independent operation checklist](docs/INDEPENDENT-OPERATION.md) |
 | Browse all project documentation | [Categorized documentation index](docs/README.md) |
 | Security limitations and private reports | [SECURITY.md](SECURITY.md) |
-| Current software / installation guidance | [README.md](README.md); [GitHub Releases](https://github.com/promirmir/AuronQ/releases) |
+| Current software / installation guidance | [README.md](README.md); [Linux Desktop — click to install](README-LINUX.md); [GitHub Releases](https://github.com/promirmir/AuronQ/releases) |
 | Independent exchange technical integration | [EXCHANGE-INTEGRATION.md](EXCHANGE-INTEGRATION.md); [EXCHANGE-OPERATOR-RUNBOOK.md](EXCHANGE-OPERATOR-RUNBOOK.md) |
 | Project-originated exchange correspondence | [LISTING-STATUS.md](LISTING-STATUS.md) (historic dated operational decision only) |
 | Old versions and historical notes | [CHANGELOG.md](CHANGELOG.md); [docs/archive/](docs/archive/) |
