@@ -1,0 +1,107 @@
+name: Publish one-click Linux AuronQ Desktop v1.7.14.1
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.release/linux-desktop-1.7.14.1'
+      - '.github/workflows/publish-linux-desktop-v1.7.14.1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: linux-desktop-release-1.7.14.1
+  cancel-in-progress: false
+
+jobs:
+  verify-and-package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.23.2'
+          cache: false
+      - name: Verify frozen Mainnet identity, Desktop tests and Go health
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'const version = "1.7.14"' cmd/auronq/main.go
+          grep -Fq 'const desktopVersion = "1.7.14"' cmd/auronq-desktop/main.go
+          go test ./internal/auronq -run '^TestMainnetIdentityIsFrozen$' -count=1 -timeout=4m
+          go test ./...
+          go vet ./...
+          go test -race ./...
+      - name: Build identical Linux Desktop UI from existing Windows/Desktop source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          export CGO_ENABLED=0
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o out/AuronQ-Desktop ./cmd/auronq-desktop
+          go build -trimpath -buildvcs=false -ldflags="-s -w -buildid=" -o out/auronq ./cmd/auronq
+          test -s out/AuronQ-Desktop
+          test -s out/auronq
+          test -s cmd/auronq-desktop/web/index.html
+          file out/AuronQ-Desktop | grep -E 'ELF 64-bit.*x86-64'
+          chmod +x packaging/linux/build-deb.sh
+          bash packaging/linux/build-deb.sh out/debroot out/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb out/AuronQ-Desktop out/auronq
+          dpkg-deb --info out/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb
+          dpkg-deb --extract out/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb out/inspect
+          test -x out/inspect/opt/auronq/AuronQ-Desktop
+          test -x out/inspect/opt/auronq/auronq
+          test -s out/inspect/opt/auronq/network.json
+          test -s out/inspect/opt/auronq/bootstrap.json
+          test -s out/inspect/usr/share/applications/auronq.desktop
+          grep -Fq 'Terminal=false' out/inspect/usr/share/applications/auronq.desktop
+          grep -Fq 'Exec=/opt/auronq/AuronQ-Desktop' out/inspect/usr/share/applications/auronq.desktop
+          file out/inspect/opt/auronq/AuronQ-Desktop | grep -E 'ELF 64-bit.*x86-64'
+          (cd out && sha256sum AuronQ-Desktop-1.7.14-1-Linux-amd64.deb > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: auronq-linux-desktop-1.7.14.1
+          path: |
+            out/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify-and-package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: auronq-linux-desktop-1.7.14.1
+          path: artifacts
+      - name: Verify and publish a NEW additive Linux-only release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s artifacts/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb
+          test -s artifacts/SHA256SUMS.txt
+          (cd artifacts && sha256sum -c SHA256SUMS.txt)
+          tag=linux-desktop-v1.7.14.1
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $tag already exists. Do not overwrite a published artifact."
+            exit 1
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+            artifacts/AuronQ-Desktop-1.7.14-1-Linux-amd64.deb \
+            artifacts/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "AuronQ Desktop v1.7.14 — one-click Linux DEB" \
+            --notes "Linux Debian/Ubuntu/Mint x86-64 graphical build of the SAME AuronQ Desktop v1.7.14 code/UI used on Windows (wallet, Mainnet full node, miner, peer status and local explorer). Download the DEB, verify SHA256SUMS.txt, double-click Install, then click AuronQ Desktop in your applications menu. On Linux the UI opens through the default browser at 127.0.0.1:18445. First chain verification can delay opening. Documentation: https://github.com/promirmir/AuronQ/blob/main/README-LINUX.md . Additive Linux packaging only; Mainnet, consensus, network identity and earlier release assets unchanged. AuronQ remains unaudited experimental financial software; back up wallets and do not rely on it for substantial value."
