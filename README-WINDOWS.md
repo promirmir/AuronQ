@@ -2,7 +2,7 @@
 
 ## Normalny użytkownik
 
-1. Otwórz [GitHub Releases](https://github.com/promirmir/AuronQ/releases/latest) i pobierz bieżący `AuronQ-<version>-Windows-x64.zip`.
+1. Otwórz [GitHub Releases](https://github.com/promirmir/AuronQ/releases/tag/v1.7.14) i pobierz bieżący `AuronQ-<version>-Windows-x64.zip`.
 2. Sprawdź SHA-256 pliku.
 3. Rozpakuj cały ZIP do jednego folderu.
 4. Uruchom `START-AURONQ.cmd`.
