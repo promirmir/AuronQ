@@ -1,24 +1,20 @@
 # AuronQ — Mainnet feature freeze and release policy
 **Decision: 10 October 2026. Status: maintenance / verification, not a claim of a completed security audit.**
 
-## Current published Android release — 26 October 2026
+## Current public software and maintenance — 27 October 2026
 
-- **Current APK:** [AuronQ Mobile 0.5.8 Alpha — Fast Balance + Logo](https://github.com/promirmir/AuronQ/releases/download/android-v0.5.8-alpha-fast-balance-logo/AuronQ-Mobile-0.5.8-Alpha-Fast-Balance.apk).
-- **Published APK SHA-256:** `dcf8c06c87e3c3509252b247c4f889f8d383f86f71243d00109bc13c5ede9844`.
-- [Official release metadata](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.8-alpha-fast-balance-logo). The app ID is `com.auronq.mobile.fast058`, signed with CI debug credentials. It **installs separately from previous funded wallet apps** and cannot automatically access or migrate their local data. Never uninstall an existing funded wallet without verified recovery.
-- **Current project/release navigation:** [PROJECT-STATUS.md](PROJECT-STATUS.md). Earlier release and freeze decisions below are retained as dated historical records, not current download guidance.
+The Mainnet consensus freeze remains in effect. Reviewed maintenance can correct non-consensus availability, security, compatibility and release issues without changing genesis, Network ID, AQM64, monetary policy or validity rules.
 
-## Current maintenance state — 26 October 2026
+| Component | Public release | Installation |
+| --- | --- | --- |
+| Windows Desktop/full node | [v1.7.14](https://github.com/promirmir/AuronQ/releases/tag/v1.7.14) | [Windows](README-WINDOWS.md) |
+| Linux graphical Desktop | [v1.7.14.1 DEB](https://github.com/promirmir/AuronQ/releases/tag/linux-desktop-v1.7.14.1) | [Linux](README-LINUX.md) |
+| Android light wallet | [0.5.9 Alpha Light Quorum](https://github.com/promirmir/AuronQ/releases/tag/android-v0.5.9-alpha-light-quorum) | [Android](android/README.md) |
+| Universal Miner | [0.4.9 Alpha](https://github.com/promirmir/AuronQ/releases/tag/miner-v0.4.9-alpha) | [Miner guide](UNIVERSAL-MINER-GUIDE.md) |
 
-The consensus freeze remains in force, but it does **not** prohibit reviewed non-consensus security/availability/independence maintenance. Two controlled maintenance exceptions have now been merged to protected `main`:
+Android 0.5.9 is a **separately installed, debug-signed light wallet** (app ID `com.auronq.mobile.light059`). It does not upgrade or automatically import previously installed funded wallets. Its balance/history/UTXO views rely on agreeing full-node reports, not independent on-device AQM64 chain verification. Preserve backups and do not delete earlier funded wallet data.
 
-- PR #187: GitHub-independent runtime peer discovery, verified peer persistence/gossip and updated Android fallback behavior;
-- PR #189 / issue #188: verified failover for CLI thin clients and standalone/multi-GPU Universal Miner workers.
-
-The network maintenance changes preserved Mainnet identity and consensus rules and passed cross-platform CI and Frozen Mainnet checks. Packaged applications were published as **Desktop 1.7.14, Android 0.5.7 Alpha and Miner 0.4.9 Alpha** after reviewed release PRs #192 and #193; [release verification](PROJECT-STATUS.md) records current asset hashes.
-
-**Distribution:** verified downloads of Desktop v1.7.14, Android 0.5.7 Alpha and Universal Miner v0.4.9 Alpha include the 26 October runtime-independence work. Historic 1.7.13 / 0.5.6 / 0.4.8 installed binaries do not update themselves automatically. Publishing software does not prove professional security review or founder-independent long-duration network operation.
-- Neither a version number nor a published checksum proves the light wallet has been professionally audited; the scaling and wallet-safety issues remain open.
+Mainnet runtime-independent discovery/failover was reviewed in PRs #187 and #189; Linux graphical packaging was merged in PR #202. The published binaries are not updated automatically on existing devices. **AuronQ requires an independent security audit.** [Current release checksums](PROJECT-STATUS.md).
 
 ## Historical 10 October 2026 Android release snapshot (superseded)
 
@@ -52,7 +48,7 @@ The `main` branch is protected on GitHub. The [Frozen Mainnet source guard](.git
 ## Operational checklist for finishing
 
 - Verify the canonical Android download/HTTPS release and SHA-256 stay available.
-- Give users one small written installation guide and a clearly marked *alpha/no-large-funds* warning.
+- Keep one current set of [Windows](README-WINDOWS.md), [Linux](README-LINUX.md) and [Android](android/README.md) installation instructions and a clear audit-status statement.
 - Preserve full-node v1.7.13 historical and v1.7.14 current binaries and at least two independent physical operator backups of complete validated history.
 - Keep collecting reproducible bug reports, especially missing peers, transaction broadcast failures, signature migration errors and multi-node chain divergence.
 - Avoid expanding unreviewed checkpoint trust models. Retired GitHub Release entries are not current distribution channels; preserve source code, Git tags and protocol history.

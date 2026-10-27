@@ -26,8 +26,8 @@ def manifest_load(path):
     if data.get("schema") != 1 or data.get("repository") != "promirmir/AuronQ":
         raise IntegrityError("unexpected baseline schema/repository")
     releases = data.get("releases")
-    if not isinstance(releases, list) or len(releases) != 3:
-        raise IntegrityError("baseline must cover three current official releases")
+    if not isinstance(releases, list) or not 3 <= len(releases) <= 50:
+        raise IntegrityError("baseline must cover 3 to 50 pinned official releases")
     seen = set()
     for item in releases:
         tag = item.get("tag")

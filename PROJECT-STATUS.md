@@ -64,7 +64,7 @@ Linux Desktop `.deb` packaging, Go build/test, frozen-Mainnet source checks and 
 
 **Release-immutability gap (verified 26 October 2026):** The 1.7.14, Android 0.5.7 and Miner 0.4.9 GitHub Releases reported `immutable: false` during checks; do not assume the new 0.5.8 release is immutable either without verifying GitHub settings. Published SHA-256 identifies observed bytes but does not prohibit replacement at the same URL. Independent off-GitHub archives and signing/provenance controls remain desirable. Do not reissue untested binaries to change release settings.
 
-**Read-only release integrity monitoring:** [The pinned baseline](.github/release-integrity-baseline.json) and [integrity watch](.github/workflows/release-integrity-watch.yml) monitor three historical releases: Desktop 1.7.13, Android 0.5.6 and Miner 0.4.8. This periodic full-download baseline does **not** currently include Desktop 1.7.14, Linux graphical Desktop 1.7.14.1, Android 0.5.9 or Miner 0.4.9. Their current GitHub Release digests are listed above, but checksum publication alone does not lock an asset.
+**Read-only release integrity monitoring:** [The pinned baseline](.github/release-integrity-baseline.json), [integrity watch](.github/workflows/release-integrity-watch.yml) and [verifier](scripts/verify_release_integrity.py) cover seven verified published release tags: historical Desktop 1.7.13, Android 0.5.6, Miner 0.4.8, and current Windows Desktop 1.7.14, Linux graphical Desktop 1.7.14.1, Android 0.5.9, Miner 0.4.9. On PRs the monitor verifies metadata and test fixtures; scheduled/main runs additionally hash published asset bytes. This detects changes but does not make existing releases immutable.
 
 ## 4. Repository controls — verified and remaining
 

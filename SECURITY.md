@@ -1,6 +1,6 @@
 # AuronQ Security Policy and Threat Model
 
-AuronQ Mainnet is live experimental financial software. It is security-sensitive infrastructure, but it has **not** received an independent professional security or cryptographic audit. Passing tests is not equivalent to an audit.
+AuronQ Mainnet is live. **AuronQ requires an independent security audit** of the protocol, network and wallet implementations. Automated tests support development but do not replace independent review.
 
 ## Reporting a vulnerability
 
@@ -64,7 +64,7 @@ Current Windows binaries are not Authenticode-signed. Users should download only
 
 ## Published release integrity
 
-The [read-only release integrity workflow](.github/workflows/release-integrity-watch.yml) checks the officially linked Desktop, Android and Miner asset SHA-256 hashes and source tag references against a [separate Git history baseline](.github/release-integrity-baseline.json). It detects unexpected asset/tag changes after publication; it cannot stop administrator tampering, and it does not authenticate an independently trusted signing key. GitHub **immutable releases for future publications** and release tag protection still require repository settings updates. Do not treat checksum-monitor success as an independent binary security audit.
+The [read-only release integrity workflow](.github/workflows/release-integrity-watch.yml) checks seven pinned historic and current releases, including Linux graphical Desktop 1.7.14.1 and Android 0.5.9, against a [separate Git history baseline](.github/release-integrity-baseline.json). It detects unexpected asset/tag changes after publication; it cannot stop administrator tampering, and it does not authenticate an independently trusted signing key. GitHub **immutable releases for future publications** and release tag protection still require repository settings updates. Do not treat checksum-monitor success as an independent binary security audit.
 
 ## Responsible claims
 
