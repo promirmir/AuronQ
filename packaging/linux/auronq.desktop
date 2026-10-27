@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=AuronQ Desktop
+GenericName=AuronQ Wallet and Full Node
+GenericName[pl]=Portfel AuronQ i pełny węzeł
+Comment=AuronQ graphical wallet, node, miner and explorer
+Comment[pl]=Graficzny portfel, węzeł, koparka i Explorer AuronQ
+Exec=/opt/auronq/AuronQ-Desktop
+TryExec=/opt/auronq/AuronQ-Desktop
+Icon=auronq
+Terminal=false
+StartupNotify=true
+Categories=Network;Finance;
